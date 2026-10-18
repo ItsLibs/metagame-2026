@@ -275,6 +275,7 @@ function Group({
                     value={submission.shepherd}
                     options={decisionOptions[SHEPHERD_FIELD]}
                     colors={colors[SHEPHERD_FIELD]}
+                    allowAdd
                   />
                 </span>
               </li>

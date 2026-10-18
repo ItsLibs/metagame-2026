@@ -453,11 +453,6 @@ export const SHEPHERD_CONTACT_FIELDS = [
     description: "Host's Discord handle.",
   },
   {
-    field: "Discord?",
-    label: "On the Discord?",
-    description: "Are they on the discord with the role?",
-  },
-  {
     field: "Cohost(s)",
     label: "Cohost(s)",
     description: "If they plan to run this with others, those people’s names.",
@@ -577,6 +572,8 @@ export function hostPicture(
 // which means a brand-new option just won't be offered yet.
 
 const SCHEMA_TTL_SECONDS = 300;
+/** Cache tag on the schema read, so adding a select option can refresh it. */
+export const SCHEMA_TAG = "rfp-schema";
 
 type FieldSchema = {
   options?: string[];
@@ -600,7 +597,7 @@ async function fieldSchema(): Promise<Record<string, FieldSchema>> {
       `https://api.airtable.com/v0/meta/bases/${airtableConfig.baseId}/tables`,
       {
         headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-        next: { revalidate: SCHEMA_TTL_SECONDS },
+        next: { revalidate: SCHEMA_TTL_SECONDS, tags: [SCHEMA_TAG] },
       },
     );
     if (!res.ok) {
@@ -810,5 +807,26 @@ export async function saveGrades(
   await airtable(tableUrl(recordId), {
     method: "PATCH",
     body: JSON.stringify({ fields: grades, typecast: false }),
+  });
+}
+
+/**
+ * Assign a shepherd who isn't a Shepherd option yet. The one write with
+ * `typecast` on, which is what makes Airtable add the name as a new choice —
+ * the meta API can't edit a select's choices. Only ever sends this one field.
+ */
+export async function assignNewShepherd(
+  recordId: string,
+  name: string,
+): Promise<void> {
+  if (!/^rec[A-Za-z0-9]{14}$/.test(recordId)) {
+    throw new Error("Invalid record id");
+  }
+  await airtable(tableUrl(recordId), {
+    method: "PATCH",
+    body: JSON.stringify({
+      fields: { [SHEPHERD_FIELD]: name },
+      typecast: true,
+    }),
   });
 }

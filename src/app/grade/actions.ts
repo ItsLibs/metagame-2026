@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import {
   checkPassword,
   endAccess,
@@ -10,12 +10,16 @@ import {
 } from "@/lib/grader-auth";
 import { SOMEONE_ELSE } from "@/lib/grader-identity";
 import {
+  assignNewShepherd,
+  DECISION_FIELDS,
   GRADER_FIELD,
   listSubmissions,
   NEXT_STEPS_FIELD,
+  resolveEditableFields,
   resolveGraderNames,
   sanitizeGrades,
   saveGrades,
+  SCHEMA_TAG,
   SHEPHERD_FIELD,
   VERDICT_FIELD,
 } from "@/lib/rfp-rubric";
@@ -103,6 +107,41 @@ export async function setOverviewField(
   // mid-edit is worse than it being one refresh stale.
   revalidatePath(`/grade/${recordId}`);
   return {};
+}
+
+/**
+ * Assign a shepherd by name from the overview, adding them to the Shepherd
+ * options if they aren't there yet. Returns the name as Airtable now spells it.
+ */
+export async function addShepherd(
+  recordId: string,
+  rawName: string,
+): Promise<{ name?: string; error?: string }> {
+  if (!(await gradeAccess())?.identity)
+    return { error: "Your session expired." };
+
+  const name = rawName.replace(/\s+/g, " ").trim();
+  if (!name || name.length > 60) return { error: "Enter a name." };
+
+  const [shepherd] = await resolveEditableFields(
+    DECISION_FIELDS.filter((f) => f.field === SHEPHERD_FIELD),
+  );
+  // Reuse an existing option rather than minting a near-duplicate.
+  const existing = shepherd?.options.find(
+    (o) => o.toLowerCase() === name.toLowerCase(),
+  );
+
+  try {
+    if (existing) await saveGrades(recordId, { [SHEPHERD_FIELD]: existing });
+    else await assignNewShepherd(recordId, name);
+  } catch (err) {
+    console.error("[grade] adding shepherd failed:", err);
+    return { error: "Airtable rejected the new shepherd." };
+  }
+
+  updateTag(SCHEMA_TAG);
+  revalidatePath(`/grade/${recordId}`);
+  return { name: existing ?? name };
 }
 
 export type SaveState = { savedAt?: number; error?: string };
