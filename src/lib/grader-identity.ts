@@ -8,7 +8,7 @@ export const SOMEONE_ELSE = "Someone else";
 /**
  * "Someone else" has exactly the same access as a named grader — it only means
  * there's no name to match against the Grader and Shepherd columns, so
- * "Assigned to me" has nothing to filter on.
+ * the "assigned to me" tabs have nothing to filter on.
  */
 export type Identity = { kind: "grader"; name: string } | { kind: "anon" };
 

@@ -130,12 +130,14 @@ export default function GradeForm({
   recordId,
   initial,
   metaFields,
+  shepherdFields,
   nextSteps,
   advanceTo,
 }: {
   recordId: string;
   initial: Record<string, unknown>;
   metaFields: ResolvedField[];
+  shepherdFields: ResolvedField[];
   /** The proposal's current pipeline step. */
   nextSteps: string | null;
   /** Where a finished grader moves it, or null if Airtable dropped the step. */
@@ -221,6 +223,14 @@ export default function GradeForm({
       <Section title="Details">
         <div className="space-y-5">
           {metaFields.map((field) => (
+            <Field key={field.field} field={field} initial={initial} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Shepherd notes">
+        <div className="space-y-5">
+          {shepherdFields.map((field) => (
             <Field key={field.field} field={field} initial={initial} />
           ))}
         </div>

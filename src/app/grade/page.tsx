@@ -21,7 +21,8 @@ import {
 } from "@/lib/rfp-rubric";
 
 const VIEWS = [
-  { key: "mine", label: "Assigned to me" },
+  { key: "grading", label: "Grading assigned to me" },
+  { key: "shepherding", label: "Shepherding assigned to me" },
   { key: "all", label: "Everything" },
 ] as const;
 
@@ -173,8 +174,7 @@ function Group({
   const shepherdInfo = descriptions[SHEPHERD_FIELD];
 
   // Everything past the title is sized to its content so the title keeps the
-  // rest. Grader earns a column in both views now: "Assigned to me" also holds
-  // rows you only shepherd, so it isn't always you any more.
+  // rest.
   const cols = "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]";
 
   return (
@@ -303,15 +303,16 @@ export default async function GradePage(props: PageProps<"/grade">) {
     return <GraderPicker graders={await resolveGraderNames(submissions)} />;
   }
   if (access.via === "account" && identity.kind === "grader") {
-    // The Airtable roster's spelling, so "Assigned to me" matches.
+    // The Airtable roster's spelling, so the "assigned to me" tabs match.
     const roster = await resolveGraderNames(submissions);
     identity = { kind: "grader", name: matchLabel(identity.name, roster) };
   }
 
   // Null for "Someone else": no name to match rows against, so there's nothing
-  // for "Assigned to me" to hold and the tab is dropped rather than shown empty.
+  // for the "assigned to me" tabs to hold and they're dropped rather than shown
+  // empty.
   const me = identityName(identity);
-  const views = me === null ? VIEWS.filter((v) => v.key !== "mine") : VIEWS;
+  const views = me === null ? VIEWS.filter((v) => v.key === "all") : VIEWS;
 
   const params = await props.searchParams;
   // "Everything" is the landing view: the committee reads the whole pipeline
@@ -339,8 +340,8 @@ export default async function GradePage(props: PageProps<"/grade">) {
     SHEPHERD_FIELD,
   ]);
   const byView: Record<ViewKey, Submission[]> = {
-    // Shepherding a session counts as yours too, not just grading it.
-    mine: submissions.filter((s) => s.grader === me || s.shepherd === me),
+    grading: submissions.filter((s) => s.grader === me),
+    shepherding: submissions.filter((s) => s.shepherd === me),
     all: submissions,
   };
   const visible = byView[view]

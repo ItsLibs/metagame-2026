@@ -203,6 +203,31 @@ export const META_FIELDS = [
   },
 ] as const;
 
+/** The shepherd's running notes on the host, written from the proposal page. */
+export const SHEPHERD_NOTES_FIELDS = [
+  {
+    field: "Communication notes",
+    label: "Communication notes",
+    kind: "text",
+    description:
+      "Who on the Metagame side has reached out to the host, and the state of the most recent reply: open asks/questions that still need an answer.",
+  },
+  {
+    field: "Housing status",
+    label: "Housing status",
+    kind: "text",
+    description:
+      "Whether we plan to cover housing, whether the host already has their own housing, and whether we are covering travel and its status.",
+  },
+  {
+    field: "Ticket state",
+    label: "Ticket state",
+    kind: "text",
+    description:
+      "Whether the host has a ticket, whether a free/comp ticket was offered, and its current state.",
+  },
+] as const;
+
 export const GRADER_FIELD = "Rubric: Grader";
 export const VERDICT_FIELD = "Verdict";
 export const NEXT_STEPS_FIELD = "Next steps";
@@ -294,7 +319,7 @@ const WRITABLE_FALLBACK: Record<string, Writable> = {
     ]),
   ),
   ...Object.fromEntries(
-    [...META_FIELDS, ...DECISION_FIELDS].map((f) => [
+    [...META_FIELDS, ...SHEPHERD_NOTES_FIELDS, ...DECISION_FIELDS].map((f) => [
       f.field,
       ("options" in f
         ? { kind: f.kind, options: f.options }

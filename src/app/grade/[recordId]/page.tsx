@@ -17,6 +17,7 @@ import {
   META_FIELDS,
   resolveDisplayFields,
   resolveEditableFields,
+  SHEPHERD_NOTES_FIELDS,
   type Submission,
 } from "@/lib/rfp-rubric";
 
@@ -103,14 +104,21 @@ export default async function SubmissionPage(
   if (!submission) notFound();
 
   const picture = hostPicture(submission);
-  const [internalFields, contextFields, metaFields, decisionFields, colors] =
-    await Promise.all([
-      resolveDisplayFields(INTERNAL_FIELDS),
-      resolveDisplayFields(CONTEXT_FIELDS),
-      resolveEditableFields(META_FIELDS),
-      resolveEditableFields(DECISION_FIELDS),
-      optionColors([VERDICT_FIELD, NEXT_STEPS_FIELD]),
-    ]);
+  const [
+    internalFields,
+    contextFields,
+    metaFields,
+    shepherdFields,
+    decisionFields,
+    colors,
+  ] = await Promise.all([
+    resolveDisplayFields(INTERNAL_FIELDS),
+    resolveDisplayFields(CONTEXT_FIELDS),
+    resolveEditableFields(META_FIELDS),
+    resolveEditableFields(SHEPHERD_NOTES_FIELDS),
+    resolveEditableFields(DECISION_FIELDS),
+    optionColors([VERDICT_FIELD, NEXT_STEPS_FIELD]),
+  ]);
 
   // Null if Airtable stopped offering the step, so the form drops the prompt
   // rather than writing a value the column would reject without saying so.
@@ -181,6 +189,7 @@ export default async function SubmissionPage(
         recordId={submission.id}
         initial={submission.fields}
         metaFields={metaFields}
+        shepherdFields={shepherdFields}
         nextSteps={submission.nextSteps}
         advanceTo={advanceTo}
       />
