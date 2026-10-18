@@ -131,6 +131,7 @@ export default function GradeForm({
   initial,
   metaFields,
   shepherdFields,
+  shepherdContact,
   nextSteps,
   advanceTo,
 }: {
@@ -138,6 +139,8 @@ export default function GradeForm({
   initial: Record<string, unknown>;
   metaFields: ResolvedField[];
   shepherdFields: ResolvedField[];
+  /** Read-only host contact details, rendered server-side. */
+  shepherdContact?: React.ReactNode;
   /** The proposal's current pipeline step. */
   nextSteps: string | null;
   /** Where a finished grader moves it, or null if Airtable dropped the step. */
@@ -229,6 +232,7 @@ export default function GradeForm({
       </Section>
 
       <Section title="Shepherd notes">
+        {shepherdContact}
         <div className="space-y-5">
           {shepherdFields.map((field) => (
             <Field key={field.field} field={field} initial={initial} />

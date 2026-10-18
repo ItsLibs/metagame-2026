@@ -17,6 +17,7 @@ import {
   META_FIELDS,
   resolveDisplayFields,
   resolveEditableFields,
+  SHEPHERD_CONTACT_FIELDS,
   SHEPHERD_NOTES_FIELDS,
   type Submission,
 } from "@/lib/rfp-rubric";
@@ -108,6 +109,7 @@ export default async function SubmissionPage(
     internalFields,
     contextFields,
     metaFields,
+    shepherdContactFields,
     shepherdFields,
     decisionFields,
     colors,
@@ -115,6 +117,7 @@ export default async function SubmissionPage(
     resolveDisplayFields(INTERNAL_FIELDS),
     resolveDisplayFields(CONTEXT_FIELDS),
     resolveEditableFields(META_FIELDS),
+    resolveDisplayFields(SHEPHERD_CONTACT_FIELDS),
     resolveEditableFields(SHEPHERD_NOTES_FIELDS),
     resolveEditableFields(DECISION_FIELDS),
     optionColors([VERDICT_FIELD, NEXT_STEPS_FIELD]),
@@ -127,6 +130,8 @@ export default async function SubmissionPage(
     ?.options.includes(NEXT_STEPS_DECIDE)
     ? NEXT_STEPS_DECIDE
     : null;
+
+  const contactRows = rowsFor(submission, shepherdContactFields);
 
   return (
     <div className="space-y-8">
@@ -190,6 +195,15 @@ export default async function SubmissionPage(
         initial={submission.fields}
         metaFields={metaFields}
         shepherdFields={shepherdFields}
+        shepherdContact={
+          contactRows.length > 0 && (
+            <dl className="space-y-3">
+              {contactRows.map((row) => (
+                <Row key={row.label} {...row} />
+              ))}
+            </dl>
+          )
+        }
         nextSteps={submission.nextSteps}
         advanceTo={advanceTo}
       />

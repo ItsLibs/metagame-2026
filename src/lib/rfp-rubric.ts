@@ -420,11 +420,6 @@ export const CONTEXT_FIELDS = [
     description: "Free space for hosts to provide more information.",
   },
   {
-    field: "Cohost(s)",
-    label: "Cohost(s)",
-    description: "If they plan to run this with others, those people’s names.",
-  },
-  {
     field: "Link (host)",
     label: "Host link",
     description:
@@ -442,6 +437,30 @@ export const INTERNAL_FIELDS = [
     field: "Ricki's notes",
     label: "Ricki’s notes",
     description: "Miscellaneous notes from Ricki that might be relevant.",
+  },
+] as const;
+
+/** Read-only contact details shown at the top of the shepherd notes. */
+export const SHEPHERD_CONTACT_FIELDS = [
+  {
+    field: "Email (host)",
+    label: "Email",
+    description: "Submitter email address.",
+  },
+  {
+    field: "Discord (host)",
+    label: "Discord",
+    description: "Host's Discord handle.",
+  },
+  {
+    field: "Discord?",
+    label: "On the Discord?",
+    description: "Are they on the discord with the role?",
+  },
+  {
+    field: "Cohost(s)",
+    label: "Cohost(s)",
+    description: "If they plan to run this with others, those people’s names.",
   },
 ] as const;
 
