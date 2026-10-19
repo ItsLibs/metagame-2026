@@ -1,10 +1,14 @@
+import aemilia from "../../../public/images/speakers/aemilia_dixon.jpg";
 import amy from "../../../public/images/speakers/amy_schneider.jpg";
 import andrew from "../../../public/images/speakers/andrew_nathenson.jpg";
 import caro from "../../../public/images/speakers/caro_murphy.jpg";
 import chris from "../../../public/images/speakers/chris_grace.jpg";
 import david from "../../../public/images/speakers/david_turner.jpg";
 import elli from "../../../public/images/speakers/elli_furedy.jpg";
+import iris from "../../../public/images/speakers/iris_lemony.jpg";
+import jamie from "../../../public/images/speakers/jamie_wahls.jpg";
 import lexi from "../../../public/images/speakers/lexi_kohanski.jpg";
+import marlee from "../../../public/images/speakers/marlee_honton.jpg";
 import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
 import randy from "../../../public/images/speakers/randy_lubin.jpg";
 import raph from "../../../public/images/speakers/raph_damico.jpg";
@@ -85,6 +89,30 @@ export const SPEAKERS: Person[] = [
     title: "Leveraged Play",
     titleUrl: "https://leveragedplay.com/",
     photo: randy,
+  },
+  {
+    name: "Jamie Wahls",
+    title: "jamiewahls.com",
+    titleUrl: "https://jamiewahls.com/",
+    photo: jamie,
+  },
+  {
+    name: "Marlee Honton",
+    title: "Shine On Collective",
+    titleUrl: "https://www.shineoncollective.com/",
+    photo: marlee,
+  },
+  {
+    name: "Aemilia Dixon",
+    title: "The Treacherous Turn",
+    titleUrl: "https://thetreacherousturn.ai/",
+    photo: aemilia,
+  },
+  {
+    name: "iris lemony",
+    title: "The Treacherous Turn",
+    titleUrl: "https://thetreacherousturn.ai/",
+    photo: iris,
   },
   {
     name: "Ricki Heicklen",
