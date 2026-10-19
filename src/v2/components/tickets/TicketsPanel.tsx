@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import BtcModal from "@/v2/components/tickets/BtcModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
+import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import {
   stripeCheckoutHref,
   supporterTier,
 } from "@/v2/lib/tickets";
+import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { withUtm } from "@/lib/utm";
 import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
@@ -78,6 +80,7 @@ export default function TicketsPanel({
   const standard = getTicket("standard");
   const [supporterOpen, setSupporterOpen] = useState(false);
   const [dayPassOpen, setDayPassOpen] = useState(false);
+  const [familyPackOpen, setFamilyPackOpen] = useState(false);
   // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
   // gives the browser its scroll target. Closing drops the hash so a repeat
   // click on the same link changes the URL again and reopens it.
@@ -265,6 +268,25 @@ export default function TicketsPanel({
             {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
           </span>
         </Button>
+        <Button
+          type="button"
+          variant="raised"
+          onClick={() => setFamilyPackOpen(true)}
+          className={TILE}
+        >
+          <span className={TILE_LABEL}>Family &amp; Friends</span>
+          <span className="flex items-baseline gap-2.5 leading-none">
+            <span className="text-[18px] font-bold text-cream/40 line-through">
+              ${STANDARD_USD}
+            </span>
+            <span className={`${HEADING} text-[30px] text-tan`}>
+              ${FAMILY_PACK.usd}
+            </span>
+          </span>
+          <span className={TILE_NOTE}>
+            each · {FAMILY_PACK.min}–{FAMILY_PACK.max} ticket bundle
+          </span>
+        </Button>
         {/* Volunteer + financial aid: plain application links, deliberately not
             styled like the purchase tiles. */}
         <div
@@ -293,6 +315,9 @@ export default function TicketsPanel({
       </div>
       {supporterOpen && <SupporterModal onClose={closeSupporter} />}
       {dayPassOpen && <DayPassModal onClose={() => setDayPassOpen(false)} />}
+      {familyPackOpen && (
+        <FamilyPackModal onClose={() => setFamilyPackOpen(false)} />
+      )}
       {btcOpen && standard && (
         <BtcModal
           ticket={standard}
