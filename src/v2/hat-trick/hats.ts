@@ -7,6 +7,7 @@ import topHat from "../../../public/images/hats/monopoly-top-hat.svg";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
 import megachess from "../../../public/images/megachess.jpg";
 import roundRobin from "../../../public/images/misc_photos/board_game_round_robin_2.jpg";
+import aemilia from "../../../public/images/speakers/aemilia_dixon.jpg";
 import elli from "../../../public/images/speakers/elli_furedy.jpg";
 import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
 import raph from "../../../public/images/speakers/raph_damico.jpg";
@@ -30,7 +31,8 @@ export type HatId =
   | "skyCap"
   | "navyCap"
   | "redHat"
-  | "beanie";
+  | "beanie"
+  | "aemilia";
 
 export type Hat = {
   id: HatId;
@@ -604,6 +606,37 @@ export const HATS: Record<HatId, Hat> = {
       [70.5, 48.8],
     ],
     wear: { width: 50 },
+  },
+  aemilia: {
+    id: "aemilia",
+    name: "Maroon cap",
+    image: aemilia,
+    points: [
+      [20.5, 22.0],
+      [20.0, 17.0],
+      [21.0, 12.5],
+      [23.5, 9.0],
+      [27.5, 6.0],
+      [32.5, 4.3],
+      [38.0, 3.6],
+      [43.5, 4.0],
+      [48.5, 5.0],
+      [53.5, 6.8],
+      [57.5, 9.0],
+      [60.5, 11.5],
+      [61.5, 13.5],
+      [61.0, 15.5],
+      [59.0, 17.8],
+      [56.5, 19.3],
+      [52.0, 19.0],
+      [47.0, 18.3],
+      [42.0, 18.0],
+      [37.0, 18.3],
+      [32.0, 19.0],
+      [27.5, 20.3],
+      [24.0, 21.8],
+    ],
+    wear: { width: 55 },
   },
 };
 

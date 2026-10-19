@@ -107,6 +107,7 @@ export const SPEAKERS: Person[] = [
     title: "The Treacherous Turn",
     titleUrl: "https://thetreacherousturn.ai/",
     photo: aemilia,
+    hats: [HATS.aemilia],
   },
   {
     name: "iris lemony",
