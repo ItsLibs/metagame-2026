@@ -21,7 +21,11 @@ export async function POST(request: Request) {
   if (!parsed.ok) return error(parsed.error, 400, parsed.field);
   let id: string;
   try {
-    id = await upsertLocation({ ...parsed.value, thumbnailUrl: null });
+    id = await upsertLocation({
+      ...parsed.value,
+      thumbnailUrl: null,
+      imageUrl: null,
+    });
   } catch (err) {
     return failed(err);
   }
