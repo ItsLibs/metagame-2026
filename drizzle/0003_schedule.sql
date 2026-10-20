@@ -1,0 +1,81 @@
+CREATE TYPE "public"."rsvp_status" AS ENUM('going', 'waitlist');--> statement-breakpoint
+CREATE TYPE "public"."session_ages" AS ENUM('all', 'kids', 'adults');--> statement-breakpoint
+CREATE TYPE "public"."session_category" AS ENUM('talk', 'workshop', 'game', 'other');--> statement-breakpoint
+CREATE TYPE "public"."session_status" AS ENUM('draft', 'published');--> statement-breakpoint
+CREATE TABLE "bookmarks" (
+	"session_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "bookmarks_session_id_user_id_pk" PRIMARY KEY("session_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "locations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"capacity" integer,
+	"campus_location" text,
+	"description" text,
+	"display_order" integer DEFAULT 100 NOT NULL,
+	"show_in_schedule" boolean DEFAULT false NOT NULL,
+	"thumbnail_url" text,
+	"airtable_record_id" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "locations_airtableRecordId_unique" UNIQUE("airtable_record_id"),
+	CONSTRAINT "locations_capacity_positive" CHECK ("locations"."capacity" > 0),
+	CONSTRAINT "locations_thumbnail_url_https" CHECK ("locations"."thumbnail_url" like 'https://%')
+);
+--> statement-breakpoint
+CREATE TABLE "rsvps" (
+	"session_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
+	"status" "rsvp_status" NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "rsvps_session_id_user_id_pk" PRIMARY KEY("session_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "session_hosts" (
+	"session_id" uuid NOT NULL,
+	"position" integer NOT NULL,
+	"user_id" text NOT NULL,
+	CONSTRAINT "session_hosts_session_id_position_pk" PRIMARY KEY("session_id","position"),
+	CONSTRAINT "session_hosts_session_user_unique" UNIQUE("session_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "sessions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"slug" text NOT NULL,
+	"title" text NOT NULL,
+	"description" text,
+	"category" "session_category",
+	"starts_at" timestamp with time zone,
+	"ends_at" timestamp with time zone,
+	"location_id" uuid,
+	"max_capacity" integer,
+	"min_capacity" integer,
+	"ages" "session_ages",
+	"needs" text,
+	"status" "session_status" DEFAULT 'draft' NOT NULL,
+	"airtable_rfp_record_id" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "sessions_slug_unique" UNIQUE("slug"),
+	CONSTRAINT "sessions_airtableRfpRecordId_unique" UNIQUE("airtable_rfp_record_id"),
+	CONSTRAINT "sessions_ends_after_start" CHECK ("sessions"."ends_at" > "sessions"."starts_at"),
+	CONSTRAINT "sessions_published_timed" CHECK ("sessions"."status" = 'draft' OR ("sessions"."starts_at" IS NOT NULL AND "sessions"."ends_at" IS NOT NULL)),
+	CONSTRAINT "sessions_max_capacity_positive" CHECK ("sessions"."max_capacity" > 0),
+	CONSTRAINT "sessions_min_within_max" CHECK ("sessions"."min_capacity" >= 0 AND "sessions"."min_capacity" <= "sessions"."max_capacity")
+);
+--> statement-breakpoint
+ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "rsvps" ADD CONSTRAINT "rsvps_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "rsvps" ADD CONSTRAINT "rsvps_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session_hosts" ADD CONSTRAINT "session_hosts_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session_hosts" ADD CONSTRAINT "session_hosts_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "bookmarks_user_id_idx" ON "bookmarks" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "rsvps_user_id_idx" ON "rsvps" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "session_hosts_user_id_idx" ON "session_hosts" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "sessions_starts_at_idx" ON "sessions" USING btree ("starts_at");--> statement-breakpoint
+CREATE INDEX "sessions_location_id_idx" ON "sessions" USING btree ("location_id");
