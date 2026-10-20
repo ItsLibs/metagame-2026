@@ -172,19 +172,46 @@ export async function ensureAccount(
   name: string,
   email: string,
 ): Promise<ScheduleAccount> {
-  const db = getDb();
-  const find = () =>
-    db
-      .select(accountColumns)
-      .from(user)
-      .leftJoin(profiles, eq(profiles.userId, user.id))
-      .where(eq(user.email, email.toLowerCase()))
-      .limit(1);
-  const [existing] = await find();
+  const existing = await findAccount(email);
   if (existing) return existing;
   await getAuth().api.createUser({ body: { email, name } });
-  const [made] = await find();
-  return made;
+  return (await findAccount(email))!;
+}
+
+export async function findAccount(
+  email: string,
+): Promise<ScheduleAccount | null> {
+  const [found] = await getDb()
+    .select(accountColumns)
+    .from(user)
+    .leftJoin(profiles, eq(profiles.userId, user.id))
+    .where(eq(user.email, email.toLowerCase()))
+    .limit(1);
+  return found ?? null;
+}
+
+export async function sessionIdBySlug(slug: string): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.slug, slug))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+export type RsvpCounts = Record<string, { going: number; waitlist: number }>;
+
+/** Going and waitlisted per session id; sessions with no RSVPs are absent. */
+export async function loadRsvpCounts(): Promise<RsvpCounts> {
+  const rows = await getDb()
+    .select({ sessionId: rsvps.sessionId, status: rsvps.status, n: count() })
+    .from(rsvps)
+    .groupBy(rsvps.sessionId, rsvps.status);
+  const out: RsvpCounts = {};
+  for (const { sessionId, status, n } of rows) {
+    (out[sessionId] ??= { going: 0, waitlist: 0 })[status] = n;
+  }
+  return out;
 }
 
 /** True when the error is the rsvps_capacity trigger refusing a seat. */
@@ -333,6 +360,57 @@ export async function loadViewerPlans(userId: string): Promise<ViewerPlans> {
     rsvps: Object.fromEntries(mine.map((r) => [r.sessionId, r.status])),
     bookmarks: marked.map((b) => b.sessionId),
   };
+}
+
+/** Who's going, waitlisted and bookmarked for one session, earliest first. */
+export async function loadSessionPlans(sessionId: string) {
+  const db = getDb();
+  const [rows, marked] = await Promise.all([
+    db
+      .select({ status: rsvps.status, ...accountColumns })
+      .from(rsvps)
+      .innerJoin(user, eq(user.id, rsvps.userId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(rsvps.sessionId, sessionId))
+      .orderBy(asc(rsvps.createdAt)),
+    db
+      .select(accountColumns)
+      .from(bookmarks)
+      .innerJoin(user, eq(user.id, bookmarks.userId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(bookmarks.sessionId, sessionId))
+      .orderBy(asc(bookmarks.createdAt)),
+  ]);
+  const with_ = (status: RsvpStatus) =>
+    rows
+      .filter((r) => r.status === status)
+      .map(({ userId, name, email }) => ({ userId, name, email }));
+  return {
+    going: with_("going"),
+    waitlist: with_("waitlist"),
+    bookmarkedBy: marked,
+  };
+}
+
+/** One account's RSVPs and bookmarks, by session slug. */
+export async function loadAccountPlans(userId: string) {
+  const db = getDb();
+  const session = { slug: sessions.slug, title: sessions.title };
+  const [going, marked] = await Promise.all([
+    db
+      .select({ ...session, status: rsvps.status })
+      .from(rsvps)
+      .innerJoin(sessions, eq(sessions.id, rsvps.sessionId))
+      .where(eq(rsvps.userId, userId))
+      .orderBy(asc(sessions.startsAt)),
+    db
+      .select(session)
+      .from(bookmarks)
+      .innerJoin(sessions, eq(sessions.id, bookmarks.sessionId))
+      .where(eq(bookmarks.userId, userId))
+      .orderBy(asc(sessions.startsAt)),
+  ]);
+  return { rsvps: going, bookmarks: marked };
 }
 
 export async function removeSession(id: string): Promise<void> {
