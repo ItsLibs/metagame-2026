@@ -1,112 +1,62 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addShepherd, setOverviewField } from "./actions";
+import { setPipelineField } from "./actions";
 import { swatch } from "@/lib/airtable-colors";
-
-// Can't collide with a real option: Airtable trims choice names.
-const ADD = " add";
+import type { PipelineField } from "@/lib/rfp-pipeline";
 
 /**
- * A select painted as its Airtable pill. Browsers won't style the options in
+ * A select painted as its pipeline pill. Browsers won't style the options in
  * the open menu — that's a native menu — but the closed control carries the
  * colour of the current value, which is the part that has to be scannable.
  *
  * Saves on change, optimistically: the pill recolours immediately and reverts
- * if Airtable says no.
- *
- * With `allowAdd` (the Shepherd column) the menu also offers a new name, which
- * Airtable adds to the column's options as it saves.
+ * if the save is refused.
  */
 export default function InlineSelect({
-  recordId,
+  sessionId,
   field,
   value,
   options,
   colors,
-  allowAdd = false,
 }: {
-  recordId: string;
-  field: string;
+  sessionId: string;
+  field: PipelineField;
+  /** The option label shown, or null. */
   value: string | null;
   options: readonly string[];
   colors: Record<string, string>;
-  allowAdd?: boolean;
 }) {
   const [current, setCurrent] = useState(value ?? "");
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
-  const [adding, setAdding] = useState(false);
-  // Names added from this row; the rest of the list catches up on reload.
-  const [added, setAdded] = useState<string[]>([]);
 
   const tone = swatch(colors[current]);
 
-  function add(name: string) {
-    setAdding(false);
-    if (!name.trim()) return;
-    const previous = current;
-    setCurrent(name.trim());
-    setFailed(false);
-    startSaving(async () => {
-      const result = await addShepherd(recordId, name);
-      if (result.name) {
-        const saved = result.name;
-        setCurrent(saved);
-        setAdded((names) =>
-          names.includes(saved) ? names : [...names, saved],
-        );
-      } else {
-        setCurrent(previous);
-        setFailed(true);
-      }
-    });
-  }
-
-  if (adding) {
-    return (
-      <input
-        autoFocus
-        aria-label={`New ${field}`}
-        placeholder="Name"
-        maxLength={60}
-        onBlur={(event) => add(event.currentTarget.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur();
-          // Emptied first, so the blur this triggers saves nothing.
-          if (event.key === "Escape") {
-            event.currentTarget.value = "";
-            event.currentTarget.blur();
-          }
-        }}
-        className="w-full rounded-full border border-navy bg-white px-2.5 py-1 text-xs outline-none"
-      />
-    );
-  }
-
+  // Covers a value the option list doesn't offer, e.g. a grader without an
+  // account yet.
   const shown = [
     ...options,
-    ...added.filter((name) => !options.includes(name)),
-    // Covers a name saved here before the page's option list knew about it.
-    ...(current && !options.includes(current) && !added.includes(current)
-      ? [current]
-      : []),
+    ...(current && !options.includes(current) ? [current] : []),
   ];
 
   function change(next: string) {
-    if (next === ADD) {
-      setAdding(true);
-      return;
-    }
     const previous = current;
     setCurrent(next);
-    setFailed(false);
+    setFailed(null);
+    setNote(null);
     startSaving(async () => {
-      const result = await setOverviewField(recordId, field, next);
-      if (result?.error) {
+      const result = await setPipelineField(sessionId, field, next);
+      if (result.error) {
         setCurrent(previous);
-        setFailed(true);
+        setFailed(result.error);
+        return;
       }
+      // What's stored can differ from the pick: a step that can't stick yet,
+      // or a grader added beside one who already graded.
+      if (result.value !== undefined) setCurrent(result.value ?? "");
+      setNote(result.note ?? null);
     });
   }
 
@@ -114,14 +64,14 @@ export default function InlineSelect({
     <span className="relative block min-w-0">
       <select
         aria-label={field}
-        title={failed ? "Couldn’t save — try again" : current || "Not set"}
+        title={failed ?? note ?? (current || "Not set")}
         value={current}
         disabled={saving}
         onChange={(event) => change(event.target.value)}
         style={tone ?? undefined}
         className={`w-full cursor-pointer appearance-none truncate rounded-full py-1 pr-5 pl-2.5 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/60 ${
           saving ? "opacity-60" : ""
-        } ${failed ? "ring-2 ring-meeple" : ""} ${
+        } ${failed ? "ring-2 ring-meeple" : note ? "ring-2 ring-tan" : ""} ${
           tone ? "" : "bg-ink/6 text-ink/55"
         }`}
       >
@@ -131,7 +81,6 @@ export default function InlineSelect({
             {option}
           </option>
         ))}
-        {allowAdd && <option value={ADD}>+ Add shepherd…</option>}
       </select>
       <span
         aria-hidden

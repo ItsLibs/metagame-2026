@@ -10,8 +10,8 @@ import {
 } from "react-icons/fa";
 import { adminAccess } from "@/lib/admin-auth";
 import { currentSession } from "@/lib/auth";
-import { rfpLinks } from "@/lib/rfp-links";
-import { cachedSubmission, schedulerNotes } from "@/lib/rfp-rubric";
+import { airtableRfpLink, gradeLink } from "@/lib/rfp-links";
+import { gradingSummary } from "@/lib/rfp-sessions";
 import {
   formatPacificDay,
   formatPacificTime,
@@ -58,19 +58,28 @@ export async function sessionMetadata(slug: string): Promise<Metadata> {
 
 const MUTED = "text-sm text-[#1b1530]/60";
 
-async function GraderNotes({ recordId }: { recordId: string }) {
-  let submission = null;
+async function GraderNotes({ sessionId }: { sessionId: string }) {
+  let summary = null;
   try {
-    submission = await cachedSubmission(recordId);
+    summary = await gradingSummary(sessionId);
   } catch (err) {
-    console.error("Airtable RFP fetch failed", recordId, err);
+    console.error("grades read failed", sessionId, err);
   }
-  if (!submission) {
-    return <p className={MUTED}>Couldn&rsquo;t load Airtable record</p>;
+  if (!summary) {
+    return <p className={MUTED}>Couldn&rsquo;t load the grades</p>;
   }
-  const notes = schedulerNotes(submission);
-  if (!notes) return null;
-  return <AdminNote title="Grader notes for scheduler" text={notes} />;
+  const { notes } = summary;
+  if (notes.length === 0) return null;
+  return (
+    <AdminNote
+      title="Grader notes for scheduler"
+      text={
+        notes.length === 1
+          ? notes[0].text
+          : notes.map((n) => `${n.grader}: ${n.text}`).join("\n\n")
+      }
+    />
+  );
 }
 
 function AdminNote({ title, text }: { title: string; text: string }) {
@@ -90,6 +99,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   const { sessions } = await loadRawSchedule();
   const raw = sessions.find((s) => s.id === sessionId);
   const recordId = raw?.airtableRfpRecordId ?? null;
+  const inPipeline = (await gradingSummary(sessionId))?.inPipeline ?? false;
   const needs = raw?.needs?.trim() || null;
   const shepherd = raw?.shepherd ?? null;
   const link = "font-semibold text-navy underline";
@@ -99,37 +109,33 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
       <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-[0.04em] text-[#1b1530]/55">
         Admin only
       </h2>
-      {recordId ? (
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-          <Link
-            href={rfpLinks(recordId).grade}
-            target="_blank"
-            className={link}
-          >
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        {(recordId || inPipeline) && (
+          <Link href={gradeLink(sessionId)} target="_blank" className={link}>
             Grading page
           </Link>
+        )}
+        {recordId ? (
           <a
-            href={rfpLinks(recordId).airtable}
+            href={airtableRfpLink(recordId)}
             target="_blank"
             rel="noopener noreferrer"
             className={link}
           >
             Airtable record
           </a>
-        </div>
-      ) : (
-        <p className={MUTED}>No RFP linked</p>
-      )}
+        ) : (
+          <span className={MUTED}>No RFP linked</span>
+        )}
+      </div>
       {shepherd && (
         <p className="text-[15px] text-[#1b1530]/85">
           <span className="text-[#1b1530]/55">Shepherd:</span> {shepherd.name}
         </p>
       )}
-      {recordId && (
-        <Suspense fallback={<p className={MUTED}>Loading grader notes…</p>}>
-          <GraderNotes recordId={recordId} />
-        </Suspense>
-      )}
+      <Suspense fallback={<p className={MUTED}>Loading grader notes…</p>}>
+        <GraderNotes sessionId={sessionId} />
+      </Suspense>
       {needs && <AdminNote title="Needs" text={needs} />}
     </section>
   );

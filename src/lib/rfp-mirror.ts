@@ -2,9 +2,9 @@ import { after } from "next/server";
 import { env } from "@/env";
 import { airtableConfig } from "./airtable-config";
 import type { GradeValues, SessionText, SessionTextKey } from "./grade-input";
+import { committeeName } from "./rfp-committee";
 import type { MirrorState, SpeakerTier } from "./rfp-sessions";
 import {
-  committeeName,
   DROPINS_LABELS,
   GRADER_VERDICT_LABELS,
   nextStepsFor,
@@ -145,6 +145,7 @@ const TEXT_FIELDS: Record<SessionTextKey, string> = {
 export function sessionFields(
   text: SessionText,
   speakerTier?: SpeakerTier | null,
+  marketingConsent?: boolean | null,
 ): Fields {
   const out: Fields = {};
   for (const [key, value] of Object.entries(text)) {
@@ -152,6 +153,9 @@ export function sessionFields(
   }
   if (speakerTier !== undefined) {
     out["Speaker tier"] = label(SPEAKER_TIER_LABELS, speakerTier);
+  }
+  if (marketingConsent !== undefined) {
+    out["Session marketing consent"] = marketingConsent ?? false;
   }
   return out;
 }
