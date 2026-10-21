@@ -5,10 +5,14 @@ import { adminAccess } from "@/lib/admin-auth";
 import { publicSchedule } from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
 
-// Pre-launch gate: admins only, a 404 for everyone else. Remove at launch.
+// Pre-launch gate: admins only. canSeeSchedule() for links, prelaunchGate() 404s. Remove at launch.
+export async function canSeeSchedule(): Promise<boolean> {
+  return !!(await adminAccess());
+}
+
 export async function prelaunchGate(): Promise<void> {
   await connection();
-  if (!(await adminAccess())) notFound();
+  if (!(await canSeeSchedule())) notFound();
 }
 
 export const loadPublicSchedule = cache(async () =>
