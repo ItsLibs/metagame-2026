@@ -3,6 +3,7 @@ import amy from "../../../public/images/speakers/amy_schneider.jpg";
 import andrew from "../../../public/images/speakers/andrew_nathenson.jpg";
 import caro from "../../../public/images/speakers/caro_murphy.jpg";
 import chris from "../../../public/images/speakers/chris_grace.jpg";
+import chrisKay from "../../../public/images/speakers/chris_kay.jpg";
 import david from "../../../public/images/speakers/david_turner.jpg";
 import elli from "../../../public/images/speakers/elli_furedy.jpg";
 import iris from "../../../public/images/speakers/iris_lemony.jpg";
@@ -13,6 +14,7 @@ import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
 import randy from "../../../public/images/speakers/randy_lubin.jpg";
 import raph from "../../../public/images/speakers/raph_damico.jpg";
 import ricki from "../../../public/images/speakers/ricki_heicklen.jpg";
+import spencer from "../../../public/images/speakers/spencer_beebe.jpg";
 import tommy from "../../../public/images/team/tommy.jpg";
 import { HATS } from "@/v2/hat-trick/hats";
 import type { Person } from "./team";
@@ -114,6 +116,18 @@ export const SPEAKERS: Person[] = [
     title: "The Treacherous Turn",
     titleUrl: "https://thetreacherousturn.ai/",
     photo: iris,
+  },
+  {
+    name: "Spencer Beebe",
+    title: "spencerispuzzling.com",
+    titleUrl: "https://www.spencerispuzzling.com/",
+    photo: spencer,
+  },
+  {
+    name: "Chris Kay",
+    title: "Candlecraft Games",
+    titleUrl: "https://candlecraftgames.com/",
+    photo: chrisKay,
   },
   {
     name: "Ricki Heicklen",
