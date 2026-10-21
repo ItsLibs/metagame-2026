@@ -50,7 +50,7 @@ export type ScheduleSession = {
 
 export type ScheduleAccount = {
   userId: string;
-  /** Preferred name, else account name, else email. */
+  /** Account name, else email. */
   name: string;
   email: string;
 };
