@@ -51,6 +51,8 @@ export const speakerTier = pgEnum("speaker_tier", [
 // The committee's call on tying a session into the Megagame; null is undecided.
 export const megagameIntegrationLevel = pgEnum("megagame_integration_level", [
   "deep",
+  "puzzle_and_rewards",
+  "premade_puzzle",
   "low_context_rewards",
   "none",
 ]);

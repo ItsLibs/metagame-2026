@@ -161,6 +161,8 @@ export const PIPELINE_COLORS: Record<PipelineField, Record<string, string>> = {
   },
   megagameIntegration: {
     "Deep integration": "purpleLight1",
+    "Include puzzle and rewards": "blueLight1",
+    "Include premade puzzle in session": "blueLight2",
     "Hand out low context rewards": "purpleLight2",
     "No integration": "grayLight2",
   },

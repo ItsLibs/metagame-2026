@@ -115,11 +115,19 @@ describe("compare", () => {
         [
           row({ id: "undecided" }),
           row({ id: "none", megagameIntegration: "No integration" }),
+          row({
+            id: "premade",
+            megagameIntegration: "Include premade puzzle in session",
+          }),
           row({ id: "deep", megagameIntegration: "Deep integration" }),
+          row({
+            id: "puzzle",
+            megagameIntegration: "Include puzzle and rewards",
+          }),
         ],
         "megagame",
       ),
-    ).toEqual(["deep", "none", "undecided"]);
+    ).toEqual(["deep", "puzzle", "premade", "none", "undecided"]);
   });
 });
 
