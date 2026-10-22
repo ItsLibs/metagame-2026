@@ -1,5 +1,9 @@
 import { loadPosterCatalog } from "@/lib/poster-catalog";
-import { isPosterLink, GENERIC_AREA } from "@/lib/poster-options";
+import {
+  isPosterLink,
+  GENERIC_AREA,
+  GENERIC_PLACEMENT,
+} from "@/lib/poster-options";
 import { findTrackingLink } from "@/lib/tracking-links";
 import { createPosterPdf } from "@/lib/poster-pdf";
 
@@ -38,7 +42,10 @@ export async function GET(request: Request) {
     const link = await findTrackingLink(choice.slug);
     if (
       !link ||
-      !isPosterLink(link, area === GENERIC_AREA ? "Generic" : choice.label)
+      !isPosterLink(
+        link,
+        area === GENERIC_AREA ? GENERIC_PLACEMENT : choice.label,
+      )
     ) {
       return Response.json(
         { error: "Poster link unavailable." },

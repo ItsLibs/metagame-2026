@@ -6,6 +6,7 @@ import {
 
 export const POSTER_ORIGIN = "https://metagame.games";
 export const GENERIC_AREA = "generic";
+export const GENERIC_PLACEMENT = "Generic poster";
 export type PosterOption = { value: string; label: string; available: boolean };
 export type PosterChoice = PosterOption & { slug: string | null };
 
@@ -52,7 +53,11 @@ export function posterChoices(
   links: TrackingLink[],
 ): PosterChoice[] {
   return [
-    { value: GENERIC_AREA, label: "Generic poster", placement: "Generic" },
+    {
+      value: GENERIC_AREA,
+      label: "Generic poster",
+      placement: GENERIC_PLACEMENT,
+    },
     ...areas.map((label) => ({
       value: `area:${label}`,
       label,

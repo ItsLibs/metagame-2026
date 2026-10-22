@@ -81,7 +81,7 @@ describe("public poster options", () => {
     expect(
       posterChoices(
         [],
-        [{ ...berkeley, slug: "fixture-generic", placement: "Generic" }],
+        [{ ...berkeley, slug: "fixture-generic", placement: "Generic poster" }],
       )[0].available,
     ).toBe(true);
   });

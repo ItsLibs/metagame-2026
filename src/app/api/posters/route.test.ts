@@ -23,6 +23,25 @@ const link = {
 } as TrackingLink;
 const request = (query = "area=area:Berkeley&design=d20&size=letter") =>
   new Request(`http://localhost/api/posters?${query}`);
+it("uses the existing admin workflow's Generic poster placement", async () => {
+  vi.mocked(loadPosterCatalog).mockResolvedValue([
+    {
+      value: "generic",
+      label: "Generic poster",
+      available: true,
+      slug: "poster",
+    },
+  ]);
+  vi.mocked(findTrackingLink).mockResolvedValue({
+    ...link,
+    slug: "poster",
+    placement: "Generic poster",
+  });
+  expect(
+    (await GET(request("area=generic&design=chess&size=letter"))).status,
+  ).toBe(200);
+  expect(createPosterPdf).toHaveBeenCalledWith("chess", "letter", "poster");
+});
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(loadPosterCatalog).mockResolvedValue([
