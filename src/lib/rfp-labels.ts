@@ -65,6 +65,8 @@ export const MEGAGAME_INTEGRATION_LABELS: Labels<
   typeof megagameIntegrationLevel
 > = {
   deep: "Deep integration",
+  puzzle_and_rewards: "Include puzzle and rewards",
+  premade_puzzle: "Include premade puzzle in session",
   low_context_rewards: "Hand out low context rewards",
   none: "No integration",
 };

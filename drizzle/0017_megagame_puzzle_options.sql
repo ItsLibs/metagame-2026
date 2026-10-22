@@ -1,0 +1,2 @@
+ALTER TYPE "public"."megagame_integration_level" ADD VALUE 'puzzle_and_rewards' BEFORE 'low_context_rewards';--> statement-breakpoint
+ALTER TYPE "public"."megagame_integration_level" ADD VALUE 'premade_puzzle' BEFORE 'low_context_rewards';
