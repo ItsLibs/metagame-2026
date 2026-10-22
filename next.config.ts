@@ -11,6 +11,9 @@ import { RFP_FORM_URL } from "./src/v2/lib/links";
 validateEnv();
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/api/posters": ["./assets/posters/*.pdf"],
+  },
   // public/ files are served max-age=0 by default, so the hero backdrop
   // revalidated on every visit. Filenames are stable; bump them if the
   // images change.
