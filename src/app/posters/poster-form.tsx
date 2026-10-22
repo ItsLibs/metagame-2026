@@ -73,7 +73,10 @@ export default function PosterForm({ options }: { options: PosterOption[] }) {
             aria-label="Design"
             className={inputClass}
             value={design}
-            onChange={(event) => setDesign(event.target.value)}
+            onChange={(event) => {
+              setDesign(event.target.value);
+              if (event.target.value === "chess") setSize("letter");
+            }}
           >
             <option value="d20">D20 dice</option>
             <option value="chess">Chess · Make your next move</option>
@@ -88,7 +91,7 @@ export default function PosterForm({ options }: { options: PosterOption[] }) {
             onChange={(event) => setSize(event.target.value)}
           >
             <option value="letter">US Letter · 8.5 × 11 in</option>
-            <option value="13x19">13 × 19 in</option>
+            {design === "d20" && <option value="13x19">13 × 19 in</option>}
           </select>
         </label>
       </div>

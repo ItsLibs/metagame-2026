@@ -18,7 +18,8 @@ export async function GET(request: Request) {
     !area ||
     area.length > 200 ||
     !["d20", "chess"].includes(design ?? "") ||
-    !["letter", "13x19"].includes(size ?? "")
+    !["letter", "13x19"].includes(size ?? "") ||
+    (design === "chess" && size !== "letter")
   ) {
     return Response.json(
       { error: "Choose an area, design, and paper size." },

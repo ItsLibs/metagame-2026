@@ -38,8 +38,9 @@ export default async function PostersPage() {
         )}
         <p className="mt-8 text-sm">
           Print at actual size (100%). PDFs include at least ¼-inch white
-          margins. Chess posters are landscape; D20 posters are portrait. The
-          original artwork is preserved.
+          margins. Chess is available in landscape Letter only. D20 is available
+          in portrait Letter and 13 × 19 inches. The original artwork is
+          preserved.
         </p>
       </div>
     </main>

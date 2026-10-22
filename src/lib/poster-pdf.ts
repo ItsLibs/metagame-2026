@@ -40,6 +40,9 @@ export async function createPosterPdf(
   size: PosterSize,
   slug: string,
 ): Promise<Uint8Array> {
+  if (design === "chess" && size !== "letter") {
+    throw new Error("Chess posters are available in Letter only");
+  }
   if (validateSlug(slug)) throw new Error("Invalid poster link");
   const templateKey: keyof typeof templates =
     design === "chess" ? "chess" : `d20-${size}`;

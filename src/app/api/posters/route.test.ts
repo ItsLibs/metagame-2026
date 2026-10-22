@@ -72,3 +72,22 @@ it("rejects invalid designs and hides provider errors", async () => {
   expect(response.status).toBe(503);
   expect(await response.text()).not.toContain("private");
 });
+it("rejects chess 13x19 before reading Airtable or generating a PDF", async () => {
+  expect(
+    (await GET(request("area=area:Berkeley&design=chess&size=13x19"))).status,
+  ).toBe(400);
+  expect(loadPosterCatalog).not.toHaveBeenCalled();
+  expect(findTrackingLink).not.toHaveBeenCalled();
+  expect(createPosterPdf).not.toHaveBeenCalled();
+});
+it.each([
+  ["d20", "letter"],
+  ["d20", "13x19"],
+  ["chess", "letter"],
+])("allows %s %s", async (design, size) => {
+  expect(
+    (await GET(request(`area=area:Berkeley&design=${design}&size=${size}`)))
+      .status,
+  ).toBe(200);
+  expect(createPosterPdf).toHaveBeenCalledWith(design, size, "berkeley");
+});
