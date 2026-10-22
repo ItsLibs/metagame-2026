@@ -5,7 +5,7 @@ import PosterForm from "./poster-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Poster print generator | Metagame",
+  title: "Posters | Metagame",
   robots: { index: false, follow: false },
 };
 
@@ -26,7 +26,7 @@ export default async function PostersPage() {
   return (
     <main className="min-h-screen bg-[#fffaf0] px-6 py-16 text-[#19345b]">
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-8 text-4xl font-bold">Poster print generator</h1>
+        <h1 className="mb-8 text-4xl font-bold">Posters</h1>
         {options ? (
           <PosterForm options={options} initialArea={GENERIC_AREA} />
         ) : (
