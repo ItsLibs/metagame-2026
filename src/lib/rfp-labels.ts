@@ -1,5 +1,6 @@
 import type {
   discordStatus,
+  megagameIntegrationLevel,
   megagameInterest,
   potentialPanel,
   rubricGrade,
@@ -57,6 +58,15 @@ export const SPEAKER_TIER_LABELS: Labels<typeof speakerTier> = {
   free_ticket_flights: "Free ticket + flights",
   free_ticket: "Free ticket",
   no_comp: "They can add it to the schedule if they want, but no ticket comp",
+};
+
+/** Site-only: Airtable has no column for this. */
+export const MEGAGAME_INTEGRATION_LABELS: Labels<
+  typeof megagameIntegrationLevel
+> = {
+  deep: "Deep integration",
+  low_context_rewards: "Hand out low context rewards",
+  none: "No integration",
 };
 
 export const MEGAGAME_INTEREST_LABELS: Labels<typeof megagameInterest> = {

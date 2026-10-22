@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { myCounts, stepsOf, tabRows, TABS } from "./pipeline";
+import { compare, myCounts, stepsOf, tabRows, TABS } from "./pipeline";
 import { durationMinutes } from "@/lib/rfp-fields";
 import type { Row } from "@/lib/rfp-pipeline";
 
@@ -15,6 +15,8 @@ const row = (over: Partial<Row>): Row => ({
   shepherdId: null,
   verdict: null,
   nextSteps: null,
+  speakerTier: null,
+  megagameIntegration: null,
   ...over,
 });
 
@@ -91,6 +93,33 @@ describe("stepsOf", () => {
       row({ nextSteps: null }),
     ]);
     expect(steps).toEqual([null, "1. Grade", "6. Add to schedule"]);
+  });
+});
+
+describe("compare", () => {
+  it("sorts tier and Megagame in option order, blanks last", () => {
+    const sorted = (rs: Row[], sort: "tier" | "megagame") =>
+      ids([...rs].sort((a, b) => compare(a, b, sort)));
+    expect(
+      sorted(
+        [
+          row({ id: "blank" }),
+          row({ id: "ticket", speakerTier: "Free ticket" }),
+          row({ id: "full", speakerTier: "Free ticket + flights + housing" }),
+        ],
+        "tier",
+      ),
+    ).toEqual(["full", "ticket", "blank"]);
+    expect(
+      sorted(
+        [
+          row({ id: "undecided" }),
+          row({ id: "none", megagameIntegration: "No integration" }),
+          row({ id: "deep", megagameIntegration: "Deep integration" }),
+        ],
+        "megagame",
+      ),
+    ).toEqual(["deep", "none", "undecided"]);
   });
 });
 

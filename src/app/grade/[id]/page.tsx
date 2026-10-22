@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import GradeForm from "./GradeForm";
 import InfoTip from "../InfoTip";
+import InlineSelect from "../InlineSelect";
 import { swatch } from "@/lib/airtable-colors";
 import { GRADE_KEYS, SPACE_OPTIONS_FIELD } from "@/lib/grade-input";
 import { gradeAccess, graderUserId } from "@/lib/grader-auth";
@@ -12,7 +13,11 @@ import {
 import {
   committeeLabel,
   hostNames,
+  MEGAGAME_INTEGRATION_INFO,
+  MEGAGAME_INTEGRATION_ORDER,
   PIPELINE_COLORS,
+  SPEAKER_TIER_INFO,
+  SPEAKER_TIER_ORDER,
   toRow,
 } from "@/lib/rfp-pipeline";
 import {
@@ -225,7 +230,9 @@ export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
   const { row: session } = rfpSession;
 
   return (
-    <div className="space-y-8">
+    // The layout is wide for the overview's columns; a proposal reads better
+    // narrower.
+    <div className="mx-auto max-w-4xl space-y-8">
       <Link href="/grade" className="text-sm text-ink/55 hover:text-meeple">
         ← All proposals
       </Link>
@@ -310,13 +317,53 @@ export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
           [MARKETING_CONSENT_FIELD]: session.marketingConsent,
         }}
         shepherdContact={
-          contactRows.length > 0 && (
-            <dl className="space-y-3">
-              {contactRows.map((r) => (
-                <Row key={r.label} {...r} />
+          <>
+            {/* Save on change like the overview's pills, apart from the
+                form's Save: they carry no name, so the form never posts them. */}
+            <dl className="grid gap-3 sm:grid-cols-2">
+              {(
+                [
+                  [
+                    "speakerTier",
+                    "Speaker tier",
+                    row.speakerTier,
+                    SPEAKER_TIER_ORDER,
+                    SPEAKER_TIER_INFO,
+                  ],
+                  [
+                    "megagameIntegration",
+                    "Megagame integration",
+                    row.megagameIntegration,
+                    MEGAGAME_INTEGRATION_ORDER,
+                    MEGAGAME_INTEGRATION_INFO,
+                  ],
+                ] as const
+              ).map(([field, label, value, options, info]) => (
+                <div key={field}>
+                  <dt className="mb-1 text-xs font-semibold tracking-wide text-ink/45 uppercase">
+                    {label}
+                    <InfoTip text={info} />
+                  </dt>
+                  <dd className="max-w-xs">
+                    <InlineSelect
+                      sessionId={rfpSession.sessionId}
+                      field={field}
+                      value={value}
+                      options={options}
+                      colors={PIPELINE_COLORS[field]}
+                    />
+                  </dd>
+                </div>
               ))}
             </dl>
-          )
+            {contactRows.length > 0 && (
+              <dl className="space-y-3">
+                {contactRows.map((r) => (
+                  <Row key={r.label} {...r} />
+                ))}
+              </dl>
+            )}
+          </>
         }
         phase={rfpSession.phase}
         blocked={blocked}

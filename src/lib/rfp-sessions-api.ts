@@ -18,9 +18,11 @@ import {
   getRfpSessionByRecordId,
   getRfpSessionBySlug,
   isSessionId,
+  MEGAGAME_INTEGRATION_LEVELS,
   PHASES,
   SPEAKER_TIERS,
   VERDICTS,
+  type MegagameIntegrationLevel,
   type Phase,
   type RfpSession,
   type SpeakerTier,
@@ -87,6 +89,7 @@ export type RfpSessionPatch = {
   phase?: Phase | null;
   verdict?: Verdict | null;
   speakerTier?: SpeakerTier | null;
+  megagameIntegrationLevel?: MegagameIntegrationLevel | null;
   /** A user id or email, resolved by the route; null clears it. */
   shepherd?: string | null;
   text: SessionText;
@@ -96,6 +99,7 @@ const PATCH_KEYS = new Set<string>([
   "phase",
   "verdict",
   "speakerTier",
+  "megagameIntegrationLevel",
   "shepherdUserId",
   "shepherdEmail",
   ...SESSION_TEXT_KEYS,
@@ -152,6 +156,12 @@ export function parseRfpSessionPatch(
       patch.verdict = optionalEnum(body, "verdict", VERDICTS);
     if ("speakerTier" in body)
       patch.speakerTier = optionalEnum(body, "speakerTier", SPEAKER_TIERS);
+    if ("megagameIntegrationLevel" in body)
+      patch.megagameIntegrationLevel = optionalEnum(
+        body,
+        "megagameIntegrationLevel",
+        MEGAGAME_INTEGRATION_LEVELS,
+      );
     const shepherd = accountRef(body, "shepherdUserId", "shepherdEmail", true);
     if (shepherd !== undefined) patch.shepherd = shepherd;
     const text = parseSessionText(body);

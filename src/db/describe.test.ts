@@ -93,6 +93,7 @@ describe("describeSchema", () => {
       "session_phase",
       "session_verdict",
       "speaker_tier",
+      "megagame_integration_level",
       "megagame_interest",
       "session_dropins",
       "discord_status",

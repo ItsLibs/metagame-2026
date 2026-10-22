@@ -22,7 +22,7 @@ import {
 import ToolSignIn from "@/components/ToolSignIn";
 import { adminSession } from "@/lib/auth";
 import { durationMinutes } from "@/lib/rfp-fields";
-import { NEXT_STEPS_ORDER, toRow, VERDICT_ORDER } from "@/lib/rfp-pipeline";
+import { pipelineOptions, toRow } from "@/lib/rfp-pipeline";
 import { committeeAccounts, listRfpSessions } from "@/lib/rfp-sessions";
 import { DEFAULT_DRAFT_MINUTES, END_GAP_MINUTES } from "@/lib/schedule";
 import { loadRsvpCounts, loadSchedule } from "@/lib/schedule-store";
@@ -135,14 +135,8 @@ export default async function SpeakerCommitteePage(
     base: { who: mode, tab: tab.key },
   };
 
-  const names = committee.map((a) => a.committeeName);
   const meta: TableMeta = {
-    options: {
-      grader: names,
-      shepherd: names,
-      verdict: VERDICT_ORDER,
-      nextSteps: NEXT_STEPS_ORDER,
-    },
+    options: pipelineOptions(committee.map((a) => a.committeeName)),
   };
 
   const visible = tabRows(rows, tab, me, mineOnly)

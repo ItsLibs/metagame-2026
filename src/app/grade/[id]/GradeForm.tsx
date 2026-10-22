@@ -188,7 +188,7 @@ export default function GradeForm({
   /** The session's shepherd notes. */
   notes: Record<string, unknown>;
   notesFields: readonly FormField[];
-  /** Read-only host contact details, rendered server-side. */
+  /** Rendered server-side above the notes: tier pills and host contact. */
   shepherdContact?: React.ReactNode;
   phase: string | null;
   /** Why this viewer can't save, if they can't. */
