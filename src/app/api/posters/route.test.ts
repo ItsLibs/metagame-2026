@@ -28,8 +28,10 @@ it("uses the existing admin workflow's Generic poster placement", async () => {
     {
       value: "generic",
       label: "Generic poster",
+      placement: "Generic poster",
       available: true,
       slug: "poster",
+      tracking: null,
     },
   ]);
   vi.mocked(findTrackingLink).mockResolvedValue({
@@ -48,8 +50,10 @@ beforeEach(() => {
     {
       value: "area:Berkeley",
       label: "Berkeley",
+      placement: "Berkeley",
       available: true,
       slug: "berkeley",
+      tracking: null,
     },
   ]);
   vi.mocked(findTrackingLink).mockResolvedValue(link);
@@ -58,7 +62,12 @@ it("downloads without login and never accepts an arbitrary URL or slug", async (
   const response = await GET(request());
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toBe("application/pdf");
+  expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
   expect(createPosterPdf).toHaveBeenCalledWith("d20", "letter", "berkeley");
+  const preview = await GET(
+    request("area=area:Berkeley&design=d20&size=letter&preview=1"),
+  );
+  expect(preview.headers.get("content-disposition")).toMatch(/^inline;/);
   expect(
     (
       await GET(

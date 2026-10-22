@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPosterLink, posterAreas, posterChoices } from "./poster-options";
+import { isPosterLink, posterChoices } from "./poster-options";
 import type { TrackingLink } from "./tracking-links";
 
 export const berkeley: TrackingLink = {
@@ -16,51 +16,62 @@ export const berkeley: TrackingLink = {
   active: true,
   template: false,
 };
+const generic = { ...berkeley, slug: "poster", placement: "Generic poster" };
+const oakland = { ...berkeley, slug: "oakland", placement: " Oakland " };
 
 describe("public poster options", () => {
-  it("deduplicates area labels and excludes blanks and the approved placeholders", () => {
-    expect(
-      posterAreas([
-        " Berkeley ",
-        "Berkeley",
-        null,
-        "",
-        "Oakland",
-        "Bay Area — venue TBD",
-        "Bay Area — individual stores TBD",
-        "East Bay — venue TBD",
-      ]),
-    ).toEqual(["Berkeley", "Oakland"]);
+  it("lists one choice per poster-link placement, Generic first", () => {
+    const choices = posterChoices([
+      oakland,
+      berkeley,
+      generic,
+      { ...berkeley, slug: "mox-post", placement: "Mox", medium: "qr" },
+    ]);
+    expect(choices.map((choice) => choice.value)).toEqual([
+      "generic",
+      "area:Berkeley",
+      "area:Oakland",
+    ]);
+    expect(choices[1]).toEqual({
+      value: "area:Berkeley",
+      label: "Berkeley",
+      placement: "Berkeley",
+      available: true,
+      slug: "berkeley",
+      tracking: {
+        qrUrl: "https://metagame.games/go/berkeley",
+        placement: "Berkeley",
+        destination: "https://metagame.games/",
+        redirectUrl:
+          "https://metagame.games/?utm_source=poster&utm_medium=print&utm_campaign=metagame-2026&utm_content=berkeley&utm_term=berkeley",
+      },
+    });
+    expect(choices[2].label).toBe("Oakland");
   });
-  it("does not infer slugs or reuse venue/person placements", () => {
-    const choices = posterChoices(
-      ["Berkeley", "Oakland"],
-      [berkeley, { ...berkeley, slug: "mox-post", placement: "Mox" }],
-    );
-    expect(choices).toEqual([
-      {
-        value: "generic",
-        label: "Generic poster",
-        available: false,
-        slug: null,
-      },
-      {
-        value: "area:Berkeley",
-        label: "Berkeley",
-        available: true,
-        slug: "berkeley",
-      },
-      { value: "area:Oakland", label: "Oakland", available: false, slug: null },
+  it("hides personal poster links", () => {
+    expect(
+      posterChoices([
+        berkeley,
+        { ...berkeley, slug: "carina", placement: "carina" },
+        { ...berkeley, slug: "spire", placement: "spire" },
+      ]).map((choice) => choice.label),
+    ).toEqual(["Berkeley"]);
+  });
+  it("omits Generic when no generic link exists", () => {
+    expect(posterChoices([berkeley]).map((choice) => choice.value)).toEqual([
+      "area:Berkeley",
     ]);
   });
-  it("rejects duplicate placements and duplicate slugs", () => {
+  it("keeps but disables placements with duplicate links or duplicate slugs", () => {
     for (const duplicate of [
       { ...berkeley, slug: "berkeley-2" },
-      { ...berkeley, active: false },
+      { ...berkeley, slug: "BERKELEY", source: "discord" },
     ]) {
-      expect(
-        posterChoices(["Berkeley"], [berkeley, duplicate])[1].available,
-      ).toBe(false);
+      const [choice] = posterChoices([berkeley, duplicate]);
+      expect(choice.label).toBe("Berkeley");
+      expect(choice.available).toBe(false);
+      expect(choice.slug).toBeNull();
+      expect(choice.tracking).toBeNull();
     }
   });
   it.each([
@@ -69,20 +80,17 @@ describe("public poster options", () => {
     { source: "discord" },
     { medium: "qr" },
     { campaign: "other" },
-    { placement: "Mox" },
+    { placement: "" },
     { slug: "bad/slug" },
     { destination: "https://evil.example/" },
     { destination: "https://metagame.games/go/mox-post" },
     { destination: "https://metagame.games/?person=someone" },
-  ])("rejects unsafe/incomplete mapping %j", (change) => {
-    expect(isPosterLink({ ...berkeley, ...change }, "Berkeley")).toBe(false);
+  ])("rejects unsafe/incomplete link %j", (change) => {
+    expect(isPosterLink({ ...berkeley, ...change })).toBe(false);
   });
-  it("allows a reusable generic link only when configured", () => {
-    expect(
-      posterChoices(
-        [],
-        [{ ...berkeley, slug: "fixture-generic", placement: "Generic poster" }],
-      )[0].available,
-    ).toBe(true);
+  it("checks the placement only when one is given", () => {
+    expect(isPosterLink(berkeley)).toBe(true);
+    expect(isPosterLink(berkeley, " berkeley ")).toBe(true);
+    expect(isPosterLink(berkeley, "Mox")).toBe(false);
   });
 });

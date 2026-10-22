@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { loadPosterCatalog } from "@/lib/poster-catalog";
+import { GENERIC_AREA } from "@/lib/poster-options";
 import PosterForm from "./poster-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Make a poster | Metagame",
+  title: "Poster print generator | Metagame",
   robots: { index: false, follow: false },
 };
 
@@ -12,36 +13,28 @@ export default async function PostersPage() {
   let options;
   try {
     options = (await loadPosterCatalog()).map(
-      ({ value, label, available }) => ({ value, label, available }),
+      ({ value, label, available, tracking }) => ({
+        value,
+        label,
+        available,
+        tracking,
+      }),
     );
   } catch {
     options = null;
   }
   return (
     <main className="min-h-screen bg-[#fffaf0] px-6 py-16 text-[#19345b]">
-      <div className="mx-auto max-w-2xl">
-        <p className="mb-3 font-mono text-sm tracking-widest uppercase">
-          Metagame · November 6–8, 2026
-        </p>
-        <h1 className="mb-4 text-5xl font-bold">Put play on the map.</h1>
-        <p className="mb-10 text-lg">
-          Choose where you’ll put up your poster. Every poster for the same area
-          uses the same QR code.
-        </p>
+      <div className="mx-auto max-w-5xl">
+        <h1 className="mb-8 text-4xl font-bold">Poster print generator</h1>
         {options ? (
-          <PosterForm options={options} />
+          <PosterForm options={options} initialArea={GENERIC_AREA} />
         ) : (
           <p role="alert" className="rounded-xl border border-current p-6">
             The poster options are temporarily unavailable. Please try again
             shortly.
           </p>
         )}
-        <p className="mt-8 text-sm">
-          Print at actual size (100%). PDFs include at least ¼-inch white
-          margins. Chess is available in landscape Letter only. D20 is available
-          in portrait Letter and 13 × 19 inches. The original artwork is
-          preserved.
-        </p>
       </div>
     </main>
   );

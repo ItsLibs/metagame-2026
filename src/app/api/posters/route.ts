@@ -1,9 +1,5 @@
 import { loadPosterCatalog } from "@/lib/poster-catalog";
-import {
-  isPosterLink,
-  GENERIC_AREA,
-  GENERIC_PLACEMENT,
-} from "@/lib/poster-options";
+import { isPosterLink } from "@/lib/poster-options";
 import { findTrackingLink } from "@/lib/tracking-links";
 import { createPosterPdf } from "@/lib/poster-pdf";
 
@@ -18,6 +14,7 @@ export async function GET(request: Request) {
   const area = params.get("area");
   const design = params.get("design");
   const size = params.get("size");
+  const disposition = params.get("preview") === "1" ? "inline" : "attachment";
   if (
     !area ||
     area.length > 200 ||
@@ -40,13 +37,7 @@ export async function GET(request: Request) {
         { status: 409, headers },
       );
     const link = await findTrackingLink(choice.slug);
-    if (
-      !link ||
-      !isPosterLink(
-        link,
-        area === GENERIC_AREA ? GENERIC_PLACEMENT : choice.label,
-      )
-    ) {
+    if (!link || !isPosterLink(link, choice.placement)) {
       return Response.json(
         { error: "Poster link unavailable." },
         { status: 409, headers },
@@ -61,7 +52,7 @@ export async function GET(request: Request) {
       headers: {
         ...headers,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="metagame-${design}-${choice.slug}-${size}.pdf"`,
+        "Content-Disposition": `${disposition}; filename="metagame-${design}-${choice.slug}-${size}.pdf"`,
         "X-Content-Type-Options": "nosniff",
       },
     });

@@ -1,27 +1,38 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import type { PosterOption } from "@/lib/poster-options";
+import { useId, useState, type FormEvent, type KeyboardEvent } from "react";
+import { ChevronDown } from "lucide-react";
+import type { PosterOption, PosterTracking } from "@/lib/poster-options";
 
-export default function PosterForm({ options }: { options: PosterOption[] }) {
-  const [area, setArea] = useState("");
+const inputClass =
+  "mt-2 w-full rounded-lg border border-[#19345b]/30 bg-white p-3 text-base";
+
+export default function PosterForm({
+  options,
+  initialArea,
+}: {
+  options: PosterOption[];
+  initialArea: string;
+}) {
+  const [area, setArea] = useState(
+    options.some((option) => option.value === initialArea) ? initialArea : "",
+  );
   const [design, setDesign] = useState("d20");
   const [size, setSize] = useState("letter");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const selected = options.find((option) => option.value === area);
+  const query = new URLSearchParams({ area, design, size }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setBusy(true);
     try {
-      const response = await fetch(
-        `/api/posters?${new URLSearchParams({ area, design, size })}`,
-      );
+      const response = await fetch(`/api/posters?${query}`);
       if (!response.ok)
         throw new Error(
           response.status === 409
-            ? "This area’s poster link is not ready yet. Please choose another area or try again later."
+            ? "This location’s poster link is not ready yet. Please choose another location or try again later."
             : "We couldn’t create your poster. Please try again shortly.",
         );
       const url = URL.createObjectURL(await response.blob());
@@ -36,37 +47,42 @@ export default function PosterForm({ options }: { options: PosterOption[] }) {
       setBusy(false);
     }
   }
-  const inputClass =
-    "mt-2 w-full rounded-lg border border-[#19345b]/30 bg-white p-3 text-base";
+  const landscape = design === "chess";
   return (
     <form
       onSubmit={download}
-      className="space-y-6 rounded-2xl border border-[#19345b]/20 bg-white/60 p-6 sm:p-8"
+      className="grid gap-8 rounded-2xl border border-[#19345b]/20 bg-white/60 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_320px]"
     >
-      <label className="block font-semibold">
-        Poster area
-        <select
-          aria-label="Poster area"
-          required
-          className={inputClass}
-          value={area}
-          onChange={(event) => setArea(event.target.value)}
-        >
-          <option value="" disabled>
-            Choose an area
-          </option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-              {option.available ? "" : " — coming soon"}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="text-sm">
-        Choose Generic poster if you don’t have a specific area.
-      </p>
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="min-w-0">
+        {selected?.available ? (
+          <iframe
+            key={query}
+            title="Poster preview"
+            src={`/api/posters?${query}&preview=1#toolbar=0&navpanes=0&view=Fit`}
+            className={`block w-full rounded-lg border border-[#19345b]/20 bg-white ${
+              landscape ? "" : "mx-auto max-w-md"
+            }`}
+            style={{
+              aspectRatio: landscape
+                ? "11 / 8.5"
+                : size === "letter"
+                  ? "8.5 / 11"
+                  : "13 / 19",
+            }}
+          />
+        ) : (
+          <p
+            role="status"
+            className="flex aspect-[8.5/11] max-w-md items-center justify-center rounded-lg border border-dashed border-[#19345b]/30 p-6 text-center text-sm"
+          >
+            {selected
+              ? "This location has more than one poster link, so its QR code is ambiguous. Fix the duplicate in the tracking links table."
+              : "Choose a poster location to see a preview."}
+          </p>
+        )}
+      </div>
+      <div className="space-y-6">
+        <LocationCombobox options={options} value={area} onChange={setArea} />
         <label className="block font-semibold">
           Design
           <select
@@ -78,8 +94,8 @@ export default function PosterForm({ options }: { options: PosterOption[] }) {
               if (event.target.value === "chess") setSize("letter");
             }}
           >
-            <option value="d20">D20 dice</option>
-            <option value="chess">Chess · Make your next move</option>
+            <option value="d20">Portrait · Dice puzzle</option>
+            <option value="chess">Landscape · Chess</option>
           </select>
         </label>
         <label className="block font-semibold">
@@ -91,31 +107,160 @@ export default function PosterForm({ options }: { options: PosterOption[] }) {
             onChange={(event) => setSize(event.target.value)}
           >
             <option value="letter">US Letter · 8.5 × 11 in</option>
-            {design === "d20" && <option value="13x19">13 × 19 in</option>}
+            {design === "d20" && (
+              <option value="13x19">Super B / A3+ (13 × 19 in)</option>
+            )}
           </select>
+          {size === "13x19" && (
+            <p className="mt-2 text-xs font-normal text-[#19345b]/60">
+              Print on Super B (A3+) paper.
+            </p>
+          )}
         </label>
+        {error && (
+          <p role="alert" className="text-red-800">
+            {error}
+          </p>
+        )}
+        <button
+          disabled={!selected?.available || busy}
+          className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {busy ? "Preparing your PDF…" : "Download print-ready PDF"}
+        </button>
+        <p className="text-sm" aria-live="polite">
+          {selected?.available
+            ? `${selected.label} · ${landscape ? "Landscape" : "Portrait"} · ${size === "letter" ? "US Letter" : "Super B 13 × 19 in"}`
+            : "Select an available location to download."}
+        </p>
       </div>
-      {selected && !selected.available && (
-        <p role="status">
-          This area’s poster link is coming soon. Please choose another area.
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-red-800">
-          {error}
-        </p>
-      )}
-      <button
-        disabled={!selected?.available || busy}
-        className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {busy ? "Preparing your PDF…" : "Download print-ready PDF"}
-      </button>
-      <p className="text-sm" aria-live="polite">
-        {selected?.available
-          ? `${selected.label} · ${design === "d20" ? "Portrait" : "Landscape"} · ${size === "letter" ? "US Letter" : "13 × 19 inches"}`
-          : "Select an available area to download."}
-      </p>
     </form>
+  );
+}
+
+function LocationCombobox({
+  options,
+  value,
+  onChange,
+}: {
+  options: PosterOption[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  const selected = options.find((option) => option.value === value);
+  const [text, setText] = useState(selected?.label ?? "");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const needle = text.trim().toLowerCase();
+  // Show the full list while the field still reads the current selection.
+  const filtered =
+    needle && text !== selected?.label
+      ? options.filter((option) => option.label.toLowerCase().includes(needle))
+      : options;
+  function choose(option: PosterOption) {
+    onChange(option.value);
+    setText(option.label);
+    setOpen(false);
+  }
+  function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      setActive((i) => (i + step + filtered.length) % filtered.length);
+    } else if (event.key === "Enter" && open && filtered[active]) {
+      event.preventDefault();
+      choose(filtered[active]);
+    } else if (event.key === "Escape") {
+      setOpen(false);
+    }
+  }
+  return (
+    <div className="relative">
+      <label htmlFor={id} className="block font-semibold">
+        Poster location
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={`${id}-list`}
+          aria-autocomplete="list"
+          autoComplete="off"
+          className={`${inputClass} pr-10`}
+          placeholder="Type to filter locations"
+          value={text}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+          onChange={(event) => {
+            setText(event.target.value);
+            setActive(0);
+            setOpen(true);
+            const exact = options.find(
+              (option) =>
+                option.label.toLowerCase() ===
+                event.target.value.trim().toLowerCase(),
+            );
+            onChange(exact?.value ?? "");
+          }}
+          onBlur={() => {
+            setOpen(false);
+            setText(selected?.label ?? "");
+          }}
+          onKeyDown={onKeyDown}
+        />
+        <ChevronDown
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 right-3 mt-1 size-5 -translate-y-1/2 text-[#19345b]/50"
+        />
+      </div>
+      {open && (
+        <ul
+          id={`${id}-list`}
+          role="listbox"
+          onMouseDown={(event) => event.preventDefault()}
+          className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-[#19345b]/30 bg-white py-1 shadow-lg"
+        >
+          {filtered.length === 0 && (
+            <li className="px-3 py-2 text-sm opacity-70">
+              No matching locations
+            </li>
+          )}
+          {filtered.map((option, index) => (
+            <li
+              key={option.value}
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => choose(option)}
+              onMouseEnter={() => setActive(index)}
+              className={`cursor-pointer px-3 py-2 text-sm ${
+                index === active ? "bg-[#19345b] text-white" : ""
+              } ${option.available ? "" : "opacity-60"}`}
+            >
+              {option.label}
+              {option.available ? "" : " — unavailable"}
+            </li>
+          ))}
+        </ul>
+      )}
+      {selected?.tracking && <TrackingSummary tracking={selected.tracking} />}
+    </div>
+  );
+}
+
+function TrackingSummary({ tracking }: { tracking: PosterTracking }) {
+  const utms = new URL(tracking.redirectUrl).searchParams;
+  const tags = ["utm_source", "utm_medium", "utm_content"]
+    .map((key) => utms.get(key))
+    .join(" · ");
+  return (
+    <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5 text-xs text-[#19345b]/60">
+      <dt>QR</dt>
+      <dd className="font-mono break-all">{tracking.qrUrl}</dd>
+      <dt>Tracking</dt>
+      <dd className="font-mono">{tags}</dd>
+    </dl>
   );
 }
