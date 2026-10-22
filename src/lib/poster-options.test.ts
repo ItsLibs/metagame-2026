@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isPosterLink, posterChoices } from "./poster-options";
 import type { TrackingLink } from "./tracking-links";
 
-export const berkeley: TrackingLink = {
+const berkeley: TrackingLink = {
   id: "recW2dLVFSsIrLxaN",
   slug: "berkeley",
   destination: "https://metagame.games/",

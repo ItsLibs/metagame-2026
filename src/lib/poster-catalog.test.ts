@@ -1,10 +1,19 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { berkeley } from "./poster-options.test";
 vi.mock("@/lib/tracking-links", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/tracking-links")>()),
   listTrackingLinks: vi.fn(),
 }));
-import { listTrackingLinks } from "@/lib/tracking-links";
+import { listTrackingLinks, type TrackingLink } from "@/lib/tracking-links";
+const berkeley = {
+  slug: "berkeley",
+  destination: "https://metagame.games/",
+  source: "poster",
+  medium: "print",
+  campaign: "metagame-2026",
+  placement: "Berkeley",
+  active: true,
+  template: false,
+} as TrackingLink;
 afterEach(() => vi.resetModules());
 it("builds the catalog from tracking links once and shares concurrent reads", async () => {
   vi.mocked(listTrackingLinks).mockResolvedValue([berkeley]);
