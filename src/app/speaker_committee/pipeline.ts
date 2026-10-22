@@ -39,6 +39,12 @@ export const TABS = [
     role: "grader",
   },
   {
+    key: "email-verdict",
+    label: "Email verdict",
+    in: (r) => r.phase === "notifying",
+    role: "either",
+  },
+  {
     key: "assign-shepherd",
     label: "Assign shepherd",
     in: (r) => r.phase === "shepherding" && !shepherded(r),

@@ -70,6 +70,18 @@ describe("tabRows", () => {
     expect(ids(tabRows(rows, tab("all"), "bo", true))).toEqual(["2", "3", "8"]);
   });
 
+  it("puts proposals waiting on a verdict email in their own tab", () => {
+    const notifying = [
+      row({ id: "a", phase: "notifying", graderIds: ["ana"] }),
+      row({ id: "b", phase: "notifying", shepherdId: "bo" }),
+      row({ id: "c", phase: "deciding", graderIds: ["ana"] }),
+    ];
+    const emailTab = tab("email-verdict");
+    expect(ids(tabRows(notifying, emailTab, "ana", false))).toEqual(["a", "b"]);
+    expect(ids(tabRows(notifying, emailTab, "ana", true))).toEqual(["a"]);
+    expect(ids(tabRows(notifying, emailTab, "bo", true))).toEqual(["b"]);
+  });
+
   it("matches nothing as mine without an account", () => {
     expect(tabRows(rows, tab("all"), null, true)).toEqual([]);
   });
