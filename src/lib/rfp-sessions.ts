@@ -48,6 +48,10 @@ export type Verdict = (typeof VERDICTS)[number];
 
 export const SPEAKER_TIERS = schema.speakerTier.enumValues;
 export type SpeakerTier = (typeof SPEAKER_TIERS)[number];
+export const MEGAGAME_INTEGRATION_LEVELS =
+  schema.megagameIntegrationLevel.enumValues;
+export type MegagameIntegrationLevel =
+  (typeof MEGAGAME_INTEGRATION_LEVELS)[number];
 
 export const isPhase = (v: string): v is Phase =>
   (PHASES as readonly string[]).includes(v);
@@ -549,6 +553,8 @@ export type RfpSessionUpdate = {
   verdict?: Verdict | null;
   shepherdUserId?: string | null;
   speakerTier?: SpeakerTier | null;
+  /** Not mirrored: Airtable has no column for it. */
+  megagameIntegrationLevel?: MegagameIntegrationLevel | null;
   marketingConsent?: boolean | null;
   text?: SessionText;
 };

@@ -58,6 +58,21 @@ describe("parseRfpSessionPatch", () => {
     expect(!r.ok && r.field).toBe("speakerTier");
     const s = parseRfpSessionPatch({ shepherdUserId: 4 });
     expect(!s.ok && s.field).toBe("shepherdUserId");
+    const m = parseRfpSessionPatch({ megagameIntegrationLevel: "undecided" });
+    expect(!m.ok && m.field).toBe("megagameIntegrationLevel");
+  });
+
+  it("sets or clears the Megagame integration level", () => {
+    expect(
+      parseRfpSessionPatch({ megagameIntegrationLevel: "low_context_rewards" }),
+    ).toEqual({
+      ok: true,
+      value: { megagameIntegrationLevel: "low_context_rewards", text: {} },
+    });
+    expect(parseRfpSessionPatch({ megagameIntegrationLevel: null })).toEqual({
+      ok: true,
+      value: { megagameIntegrationLevel: null, text: {} },
+    });
   });
 });
 

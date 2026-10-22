@@ -1,0 +1,2 @@
+CREATE TYPE "public"."megagame_integration_level" AS ENUM('deep', 'low_context_rewards', 'none');--> statement-breakpoint
+ALTER TABLE "sessions" ADD COLUMN "megagame_integration_level" "megagame_integration_level";

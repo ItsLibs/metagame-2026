@@ -48,6 +48,12 @@ export const speakerTier = pgEnum("speaker_tier", [
   "free_ticket",
   "no_comp",
 ]);
+// The committee's call on tying a session into the Megagame; null is undecided.
+export const megagameIntegrationLevel = pgEnum("megagame_integration_level", [
+  "deep",
+  "low_context_rewards",
+  "none",
+]);
 export const megagameInterest = pgEnum("megagame_interest", [
   "not_a_fit",
   "neutral",
@@ -120,6 +126,7 @@ export const sessions = pgTable(
     phase: sessionPhase(),
     verdict: sessionVerdict(),
     speakerTier: speakerTier(),
+    megagameIntegrationLevel: megagameIntegrationLevel(),
     // The host's RFP answers.
     context: text(),
     requestedDuration: text(),

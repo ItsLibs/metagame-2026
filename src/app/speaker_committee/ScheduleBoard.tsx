@@ -345,6 +345,8 @@ export default function ScheduleBoard({
                     ["Verdict", openRow.verdict],
                     ["Shepherd", openRow.shepherd],
                     ["Next steps", openRow.nextSteps],
+                    ["Speaker tier", openRow.speakerTier],
+                    ["Megagame", openRow.megagameIntegration],
                   ] as const
                 ).map(([label, value]) => (
                   <div key={label} className="contents">

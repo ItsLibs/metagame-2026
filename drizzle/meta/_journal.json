@@ -113,6 +113,13 @@
       "when": 1792615353899,
       "tag": "0015_drop_preferred_name",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792699757181,
+      "tag": "0016_megagame_integration_level",
+      "breakpoints": true
     }
   ]
 }

@@ -2,8 +2,10 @@ import Link from "next/link";
 import InfoTip from "@/app/grade/InfoTip";
 import InlineSelect from "@/app/grade/InlineSelect";
 import {
+  MEGAGAME_INTEGRATION_INFO,
   PIPELINE_COLORS,
   SHEPHERD_INFO,
+  SPEAKER_TIER_INFO,
   type PipelineField,
   type Row,
 } from "@/lib/rfp-pipeline";
@@ -22,6 +24,8 @@ export const SORTS = [
   "verdict",
   "next",
   "shepherd",
+  "tier",
+  "megagame",
 ] as const;
 export type SortKey = (typeof SORTS)[number];
 
@@ -91,8 +95,8 @@ export function SubmissionGroup({
   if (rows.length === 0) return null;
 
   const cols = lead
-    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]"
-    : "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]";
+    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(6,6.5rem)]"
+    : "lg:grid-cols-[minmax(0,1fr)_repeat(6,6.5rem)]";
 
   const pill = (
     row: Row,
@@ -138,6 +142,14 @@ export function SubmissionGroup({
             <SortLink column="shepherd" label="Shepherd" state={state} />
             <InfoTip text={SHEPHERD_INFO} />
           </span>
+          <span className="flex items-center whitespace-nowrap">
+            <SortLink column="tier" label="Tier" state={state} />
+            <InfoTip text={SPEAKER_TIER_INFO} />
+          </span>
+          <span className="flex items-center whitespace-nowrap">
+            <SortLink column="megagame" label="Megagame" state={state} />
+            <InfoTip text={MEGAGAME_INTEGRATION_INFO} />
+          </span>
         </div>
 
         <ul className="divide-y divide-line">
@@ -162,6 +174,13 @@ export function SubmissionGroup({
               {pill(row, "verdict", row.verdict, "Verdict")}
               {pill(row, "nextSteps", row.nextSteps, "Next steps")}
               {pill(row, "shepherd", row.shepherd, "Shepherd")}
+              {pill(row, "speakerTier", row.speakerTier, "Speaker tier")}
+              {pill(
+                row,
+                "megagameIntegration",
+                row.megagameIntegration,
+                "Megagame",
+              )}
             </li>
           ))}
         </ul>

@@ -1,5 +1,10 @@
 import type { RfpSession } from "./rfp-sessions";
-import { NEXT_STEPS_PHASE, VERDICT_LABELS } from "./rfp-labels";
+import {
+  MEGAGAME_INTEGRATION_LABELS,
+  NEXT_STEPS_PHASE,
+  SPEAKER_TIER_LABELS,
+  VERDICT_LABELS,
+} from "./rfp-labels";
 
 // The pipeline columns as the /grade and /speaker_committee tables show them:
 // one row per session, each select's option labels, and the pill colours.
@@ -11,6 +16,8 @@ export const PIPELINE_FIELDS = [
   "verdict",
   "nextSteps",
   "shepherd",
+  "speakerTier",
+  "megagameIntegration",
 ] as const;
 export type PipelineField = (typeof PIPELINE_FIELDS)[number];
 
@@ -32,6 +39,10 @@ export type Row = {
   verdict: string | null;
   /** The "Next steps" option the phase stands for. */
   nextSteps: string | null;
+  /** The Speaker tier option label. */
+  speakerTier: string | null;
+  /** The Megagame integration label; null is undecided. */
+  megagameIntegration: string | null;
 };
 
 /** A name worth showing: null when the account only has its email. */
@@ -63,6 +74,12 @@ export function toRow(s: RfpSession): Row {
     shepherdId: s.shepherd?.userId ?? null,
     verdict: s.verdict ? VERDICT_LABELS[s.verdict] : null,
     nextSteps: s.nextSteps,
+    speakerTier: s.row.speakerTier
+      ? SPEAKER_TIER_LABELS[s.row.speakerTier]
+      : null,
+    megagameIntegration: s.row.megagameIntegrationLevel
+      ? MEGAGAME_INTEGRATION_LABELS[s.row.megagameIntegrationLevel]
+      : null,
   };
 }
 
@@ -70,6 +87,28 @@ export function toRow(s: RfpSession): Row {
 export const VERDICT_ORDER: readonly string[] = Object.values(VERDICT_LABELS);
 export const NEXT_STEPS_ORDER: readonly string[] =
   Object.keys(NEXT_STEPS_PHASE);
+export const SPEAKER_TIER_ORDER: readonly string[] =
+  Object.values(SPEAKER_TIER_LABELS);
+export const MEGAGAME_INTEGRATION_ORDER: readonly string[] = Object.values(
+  MEGAGAME_INTEGRATION_LABELS,
+);
+
+/** Each inline select's options, given the committee's names. */
+export const pipelineOptions = (
+  names: readonly string[],
+): Record<PipelineField, readonly string[]> => ({
+  grader: names,
+  shepherd: names,
+  verdict: VERDICT_ORDER,
+  nextSteps: NEXT_STEPS_ORDER,
+  speakerTier: SPEAKER_TIER_ORDER,
+  megagameIntegration: MEGAGAME_INTEGRATION_ORDER,
+});
+
+export const SPEAKER_TIER_INFO =
+  "What we offer the host: a comped ticket, travel and housing, or nothing beyond a spot on the schedule.";
+export const MEGAGAME_INTEGRATION_INFO =
+  "How far this session ties into the Megagame. Blank means undecided.";
 
 export const SHEPHERD_INFO =
   "The individual responsible for emailing, meeting with, following up with, and ensuring this speaker has a good experience on an ongoing basis";
@@ -112,6 +151,18 @@ export const PIPELINE_COLORS: Record<PipelineField, Record<string, string>> = {
     "6. Add to schedule": "blueBright",
     "7. None! We're good :) ": "grayLight2",
     "N/A": "grayLight2",
+  },
+  speakerTier: {
+    "Free ticket + flights + housing": "blueLight2",
+    "Free ticket + flights": "cyanLight2",
+    "Free ticket": "tealLight2",
+    "They can add it to the schedule if they want, but no ticket comp":
+      "greenLight2",
+  },
+  megagameIntegration: {
+    "Deep integration": "purpleLight1",
+    "Hand out low context rewards": "purpleLight2",
+    "No integration": "grayLight2",
   },
 };
 

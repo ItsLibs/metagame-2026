@@ -28,7 +28,8 @@ export async function GET(_request: Request, ctx: Ctx) {
 
 /**
  * Changes only the fields given: phase, verdict, speakerTier,
- * shepherdUserId or shepherdEmail, and the RFP text columns.
+ * megagameIntegrationLevel, shepherdUserId or shepherdEmail, and the RFP text
+ * columns.
  */
 export async function PATCH(request: Request, ctx: Ctx) {
   const access = await authorize();

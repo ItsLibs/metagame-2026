@@ -20,7 +20,9 @@ import { SOMEONE_ELSE } from "@/lib/grader-identity";
 import {
   COMMITTEE_NAMES,
   fromLabel,
+  MEGAGAME_INTEGRATION_LABELS,
   NEXT_STEPS_PHASE,
+  SPEAKER_TIER_LABELS,
   VERDICT_LABELS,
 } from "@/lib/rfp-labels";
 import {
@@ -132,6 +134,22 @@ export async function setPipelineField(
         const verdict = value ? fromLabel(VERDICT_LABELS, value) : null;
         if (value && !verdict) return { error: "Unrecognised value." };
         await updateRfpSession(sessionId, { verdict });
+        break;
+      }
+      case "speakerTier": {
+        const speakerTier = value
+          ? fromLabel(SPEAKER_TIER_LABELS, value)
+          : null;
+        if (value && !speakerTier) return { error: "Unrecognised value." };
+        await updateRfpSession(sessionId, { speakerTier });
+        break;
+      }
+      case "megagameIntegration": {
+        const level = value
+          ? fromLabel(MEGAGAME_INTEGRATION_LABELS, value)
+          : null;
+        if (value && !level) return { error: "Unrecognised value." };
+        await updateRfpSession(sessionId, { megagameIntegrationLevel: level });
         break;
       }
       case "nextSteps": {

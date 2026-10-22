@@ -19,7 +19,7 @@ export default async function GradeLayout({
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link
             href="/grade"
             className="font-bebas text-xl tracking-wide text-navy"
@@ -53,7 +53,7 @@ export default async function GradeLayout({
           )}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-4xl px-4 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
     </div>
   );
 }

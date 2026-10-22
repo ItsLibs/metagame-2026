@@ -8,10 +8,15 @@ import InlineSelect from "./InlineSelect";
 import { COMMITTEE_NAMES } from "@/lib/rfp-labels";
 import {
   groupLabel,
+  MEGAGAME_INTEGRATION_INFO,
+  MEGAGAME_INTEGRATION_ORDER,
   NEXT_STEPS_ORDER,
   PIPELINE_COLORS,
+  pipelineOptions,
   rank,
   SHEPHERD_INFO,
+  SPEAKER_TIER_INFO,
+  SPEAKER_TIER_ORDER,
   stepsOf,
   toRow,
   VERDICT_ORDER,
@@ -35,6 +40,8 @@ const SORTS = [
   "verdict",
   "next",
   "shepherd",
+  "tier",
+  "megagame",
 ] as const;
 type SortKey = (typeof SORTS)[number];
 
@@ -63,6 +70,20 @@ function compare(a: Row, b: Row, sort: SortKey) {
     return (
       rank(NEXT_STEPS_ORDER, a.nextSteps) -
         rank(NEXT_STEPS_ORDER, b.nextSteps) || a.title.localeCompare(b.title)
+    );
+  }
+  if (sort === "tier") {
+    return (
+      rank(SPEAKER_TIER_ORDER, a.speakerTier) -
+        rank(SPEAKER_TIER_ORDER, b.speakerTier) ||
+      a.title.localeCompare(b.title)
+    );
+  }
+  if (sort === "megagame") {
+    return (
+      rank(MEGAGAME_INTEGRATION_ORDER, a.megagameIntegration) -
+        rank(MEGAGAME_INTEGRATION_ORDER, b.megagameIntegration) ||
+      a.title.localeCompare(b.title)
     );
   }
   return a.title.localeCompare(b.title);
@@ -126,7 +147,7 @@ function Group({
 
   // Everything past the title is sized to its content so the title keeps the
   // rest.
-  const cols = "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]";
+  const cols = "lg:grid-cols-[minmax(0,1fr)_repeat(6,6.5rem)]";
 
   const pill = (
     row: Row,
@@ -169,11 +190,19 @@ function Group({
           <SortLink column="grader" label="Grader" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
           <SortLink column="next" label="Next steps" state={state} />
-          {/* Last column, so the ⓘ can spill into the row's right padding
-              rather than forcing the header to wrap. */}
           <span className="flex items-center whitespace-nowrap">
             <SortLink column="shepherd" label="Shepherd" state={state} />
             <InfoTip text={SHEPHERD_INFO} />
+          </span>
+          <span className="flex items-center whitespace-nowrap">
+            <SortLink column="tier" label="Tier" state={state} />
+            <InfoTip text={SPEAKER_TIER_INFO} />
+          </span>
+          {/* Last column, so the ⓘ can spill into the row's right padding
+              rather than forcing the header to wrap. */}
+          <span className="flex items-center whitespace-nowrap">
+            <SortLink column="megagame" label="Megagame" state={state} />
+            <InfoTip text={MEGAGAME_INTEGRATION_INFO} />
           </span>
         </div>
 
@@ -200,6 +229,13 @@ function Group({
               {pill(row, "verdict", row.verdict, "Verdict")}
               {pill(row, "nextSteps", row.nextSteps, "Next steps")}
               {pill(row, "shepherd", row.shepherd, "Shepherd")}
+              {pill(row, "speakerTier", row.speakerTier, "Speaker tier")}
+              {pill(
+                row,
+                "megagameIntegration",
+                row.megagameIntegration,
+                "Megagame",
+              )}
             </li>
           ))}
         </ul>
@@ -242,13 +278,7 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const dir = first(params.dir) === "desc" ? "desc" : "asc";
   const state: SortState = { sort, dir, view, q: rawQuery };
 
-  const names = committee.map((a) => a.committeeName);
-  const options: Record<PipelineField, readonly string[]> = {
-    grader: names,
-    shepherd: names,
-    verdict: VERDICT_ORDER,
-    nextSteps: NEXT_STEPS_ORDER,
-  };
+  const options = pipelineOptions(committee.map((a) => a.committeeName));
   const byView: Record<ViewKey, Row[]> = {
     grading: rows.filter((s) => me !== null && s.graderIds.includes(me)),
     shepherding: rows.filter((s) => me !== null && s.shepherdId === me),
