@@ -228,13 +228,18 @@ export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
   );
   const contactRows = rowsFor(contactOf(rfpSession), SHEPHERD_CONTACT_FIELDS);
   const { row: session } = rfpSession;
+  // /speaker_committee takes accounts only; the shared password stops at /grade.
+  const back =
+    access.via === "account"
+      ? { href: "/speaker_committee", label: "← Speaker committee" }
+      : { href: "/grade", label: "← All proposals" };
 
   return (
     // The layout is wide for the overview's columns; a proposal reads better
     // narrower.
     <div className="mx-auto max-w-4xl space-y-8">
-      <Link href="/grade" className="text-sm text-ink/55 hover:text-meeple">
-        ← All proposals
+      <Link href={back.href} className="text-sm text-ink/55 hover:text-meeple">
+        {back.label}
       </Link>
 
       <header className="flex items-start gap-4">
