@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
-import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import Carousel from "@/v2/components/Carousel";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
@@ -40,6 +39,7 @@ import {
   SILVER_SPONSORS,
 } from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
+import { VOLUNTEER_TEAMS, WHEN_LABEL } from "@/v2/data/volunteer-teams";
 import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import {
   HOTELS_SEARCH_URL,
@@ -49,7 +49,6 @@ import {
   MEGAGAME_PROPOSAL_FORM_URL,
   NIGHT_MARKET_FORM_URL,
   RFP_FORM_URL,
-  VOLUNTEER_FORM_PATH,
 } from "@/v2/lib/links";
 import HatImage from "@/v2/hat-trick/HatImage";
 import { HATS } from "@/v2/hat-trick/hats";
@@ -355,23 +354,29 @@ export default function Home() {
                 title: "Volunteer",
                 body: (
                   <>
-                    Help out before or during the con by joining one of the
-                    volunteer teams:
-                    <ul className="mt-2 list-disc pl-5 font-medium">
-                      <li className="text-[#d16d8b]">Registration desk</li>
-                      <li className="text-[#d98a54]">Room check</li>
-                      <li className="text-[#c9a227]">Physical labor</li>
-                      <li className="text-[#6faa6f]">Set design</li>
-                      <li className="text-[#5ba8a0]">Marketing</li>
-                      <li className="text-[#7a8fd4]">Speaker coordination</li>
-                      <li className="text-[#a582c9]">Megagame design</li>
-                      <li className="text-[#c76a6a]">&hellip; and more!</li>
-                    </ul>
+                    Some teams need help now, before the con; others on the
+                    weekend.
+                    {(["now", "weekend"] as const).map((when) => (
+                      <div key={when} className="mt-3">
+                        <p className="font-space-mono text-xs tracking-[0.08em] text-ink/50 uppercase">
+                          {when === "now" ? "Start now" : WHEN_LABEL.weekend}
+                        </p>
+                        <ul className="mt-1 list-disc pl-5 font-medium">
+                          {VOLUNTEER_TEAMS.filter(
+                            (t) => t.when === when || t.when === "both",
+                          ).map((team) => (
+                            <li key={team.name} className={team.color}>
+                              {team.name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </>
                 ),
-                cta: "Apply to volunteer",
-                href: VOLUNTEER_FORM_PATH,
-                external: true,
+                cta: "See how to help",
+                href: "/volunteer",
+                external: false,
               },
               {
                 title: "Sponsor Metagame",
@@ -405,9 +410,7 @@ export default function Home() {
                   {body}
                 </div>
                 <Button asChild variant="default" className="mt-6 w-fit">
-                  {href === VOLUNTEER_FORM_PATH ? (
-                    <VolunteerFormLink>{cta}</VolunteerFormLink>
-                  ) : external ? (
+                  {external ? (
                     <a href={href} target="_blank" rel="noopener noreferrer">
                       {cta}
                     </a>
