@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
 import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
@@ -25,6 +24,8 @@ import RulebookExpansions from "@/v2/components/RulebookExpansions";
 import RulebookObject from "@/v2/components/RulebookObject";
 import RulebookSetup from "@/v2/components/RulebookSetup";
 import SignupForm from "@/v2/components/signup/SignupForm";
+import SpecialRules from "@/v2/components/SpecialRules";
+import SponsorDeck from "@/v2/components/SponsorDeck";
 import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
 import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
@@ -32,11 +33,6 @@ import TurnOrder from "@/v2/components/TurnOrder";
 import { Button } from "@/v2/components/ui/button";
 import { CHAPTERS, CREDITS } from "@/v2/data/chapters";
 import { upcomingKeyDates } from "@/v2/data/key-dates";
-import {
-  GOLD_SPONSORS,
-  PATRON_SPONSORS,
-  SILVER_SPONSORS,
-} from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
 import {
   FINANCIAL_AID_FORM_URL,
@@ -278,7 +274,7 @@ export default function Home() {
           >
             Examples of play
           </h3>
-          <span className="font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase">
+          <span className="w-full font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase md:ml-auto md:w-auto">
             A hand dealt from 2025
           </span>
         </div>
@@ -317,26 +313,7 @@ export default function Home() {
       </ChapterSection>
 
       <ChapterSection chapter={CHAPTERS.special} rule={<ScrabbleDivider />}>
-        {/* Columns, not a grid, so the rules read down each column. */}
-        <ol className="md:columns-2 md:gap-11">
-          {FAQS.map(({ id, question, answer }, i) => (
-            <li
-              key={question}
-              id={id}
-              className="grid break-inside-avoid grid-cols-[52px_minmax(0,1fr)] border-b border-line py-3.5"
-            >
-              <b className="font-space-mono text-[13px] leading-[1.9] text-meeple">
-                7.{i + 1}
-              </b>
-              <div>
-                <h3 className="text-[16.5px] leading-snug font-bold text-navy">
-                  {question}
-                </h3>
-                <div className="mt-1 text-[15px] text-ink/70">{answer}</div>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <SpecialRules rules={FAQS} />
         <div className="mt-10 grid items-start gap-8 md:grid-cols-[minmax(0,1fr)_260px]">
           <div>
             <p className="text-lg text-ink/80">
@@ -410,76 +387,7 @@ export default function Home() {
       </ChapterSection>
 
       <ChapterSection chapter={CREDITS} rule={<GoDivider />}>
-        {/* One ruled row per tier, label over its logos. Logo sizes per tier
-            are unchanged. */}
-        <dl>
-          {[
-            {
-              label: "Gold",
-              sponsors: GOLD_SPONSORS,
-              logo: "h-28 md:h-40",
-              row: "flex flex-wrap gap-x-12 gap-y-6",
-            },
-            {
-              label: "Silver",
-              sponsors: SILVER_SPONSORS,
-              logo: "h-16 md:h-24",
-              row: "flex flex-wrap gap-x-12 gap-y-6",
-            },
-            {
-              label: "Patron",
-              sponsors: PATRON_SPONSORS,
-              logo: "h-14 md:h-[72px]",
-              // 2x2 on phones; logos shrink to fit their column.
-              row: "grid w-full grid-cols-2 justify-items-start gap-x-6 gap-y-8 md:flex md:flex-wrap md:gap-x-12 md:gap-y-6",
-            },
-          ].map(({ label, sponsors, logo, row }) => (
-            <div key={label} className="border-b border-line py-7 first:pt-0">
-              <dt className="font-space-mono text-sm font-bold tracking-[0.14em] text-meeple uppercase">
-                {label}
-              </dt>
-              <dd className={`mt-4 items-center ${row}`}>
-                {sponsors.map((s) => {
-                  const cls = `w-auto max-w-full object-contain ${s.logoClass ?? logo}`;
-                  const img = s.Logo ? (
-                    <s.Logo className={cls} />
-                  ) : (
-                    <Image
-                      src={s.logo}
-                      alt={`${s.name} logo`}
-                      className={cls}
-                    />
-                  );
-                  return s.url ? (
-                    <a
-                      key={s.name}
-                      href={s.url}
-                      {...EXT}
-                      className="transition-opacity hover:opacity-75"
-                    >
-                      {img}
-                    </a>
-                  ) : (
-                    <span key={s.name}>{img}</span>
-                  );
-                })}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <div className="mt-8 flex flex-col gap-4 rounded-xl border-2 border-dashed border-navy/40 bg-sky/40 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className={`${DISPLAY} text-[28px] leading-none text-navy`}>
-              Your name here?
-            </p>
-            <p className="mt-1 text-ink/70">
-              Interested in helping make Metagame 2026 happen?
-            </p>
-          </div>
-          <Button asChild variant="navy" size="lg" className="w-fit">
-            <Link href="/sponsor">Sponsor Metagame</Link>
-          </Button>
-        </div>
+        <SponsorDeck />
       </ChapterSection>
 
       {/* The back cover. */}
