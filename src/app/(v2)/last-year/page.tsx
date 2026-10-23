@@ -82,8 +82,7 @@ export default function LastYearPage() {
 
       <ChapterSection chapter={LAST_YEAR_CHAPTERS.log}>
         <p className="mb-6 max-w-[640px] text-base text-ink/70">
-          The complete program, by day and venue: talks, workshops, games and
-          the megagame. Tap any session for details.
+          The complete program, by day and venue. Tap any session for details.
         </p>
         <LastYearSchedule />
       </ChapterSection>
