@@ -46,16 +46,15 @@ const TIERS = [
   },
 ];
 
-// Every sponsor in set order, numbered; the open slot is the last number.
+// Every sponsor in set order, numbered.
 const CARDS = TIERS.flatMap((t) => t.sponsors.map((s) => ({ s, t }))).map(
   (c, i) => ({ ...c, n: i + 1 }),
 );
-const TOTAL = CARDS.length + 1;
+
 // The open slot sits right after Silver, filling that half row.
 const SLOT_AFTER =
   CARDS.findLastIndex((c) => c.t.tier === "Silver") + 1 || CARDS.length;
-const no = (n: number) =>
-  `No. ${String(n).padStart(2, "0")} / ${String(TOTAL).padStart(2, "0")}`;
+const no = (n: number) => `No. ${String(n).padStart(2, "0")}`;
 
 // A card that tilts toward the pointer and catches the light on its foil.
 function Holo({ children, foil }: { children: ReactNode; foil: string }) {
@@ -159,7 +158,7 @@ function SponsorCard({
 }
 
 // The credits as a card set: every sponsor is a collectible, rarer by tier,
-// and the set has one slot still open.
+// and the set still has slots open.
 export default function SponsorDeck() {
   const slot = (
     <li key="slot" className="lg:col-span-2">
@@ -177,11 +176,11 @@ export default function SponsorDeck() {
           Your card here?
         </span>
         <span className="max-w-[28em] text-sm text-ink/70">
-          One slot left in the 2026 set. Sponsor Metagame and complete the
+          A few slots left in the 2026 set. Sponsor Metagame and complete the
           collection.
         </span>
         <span className="mt-2 font-space-mono text-[11px] font-bold tracking-[0.12em] text-meeple uppercase">
-          {no(TOTAL)} · See sponsor tiers →
+          No. ?? · See sponsor tiers →
         </span>
       </Link>
     </li>

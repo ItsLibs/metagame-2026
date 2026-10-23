@@ -2,20 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CHAPTERS } from "@/v2/data/chapters";
+import type { Chapter } from "@/v2/data/chapters";
 import { LogoDie } from "./nav/LogoDice";
 import { useIsAdmin } from "./nav/useIsAdmin";
 import { Button } from "./ui/button";
 import { DISPLAY } from "./styles";
 
-const CHAPTER_LIST = Object.values(CHAPTERS);
-
-// The home page's sticky header, in place of the corner die nav: the brand,
-// the rulebook's chapters (scrolling sideways on phones, the one in view
-// lit), and tickets.
-export default function RulebookHeader() {
+// A rulebook page's sticky header, in place of the corner die nav: the brand,
+// the page's chapters (scrolling sideways on phones, the one in view lit),
+// and tickets.
+export default function RulebookHeader({ chapters }: { chapters: Chapter[] }) {
   const admin = useIsAdmin();
-  const current = useCurrentChapter();
+  const current = useCurrentChapter(chapters);
   return (
     <header className="sticky top-0 z-40 border-b-2 border-navy bg-background">
       {/* How far down the rulebook you are. */}
@@ -35,7 +33,7 @@ export default function RulebookHeader() {
           aria-label="Rulebook chapters"
           className="flex min-w-0 flex-1 [scrollbar-width:none] gap-0.5 overflow-x-auto"
         >
-          {CHAPTER_LIST.map((c) => (
+          {chapters.map((c) => (
             <a
               key={c.id}
               href={`#${c.id}`}
@@ -57,7 +55,7 @@ export default function RulebookHeader() {
           )}
         </nav>
         <Button asChild size="sm" className="max-[900px]:hidden">
-          <a href="#tickets">Get tickets</a>
+          <Link href="/#tickets">Get tickets</Link>
         </Button>
       </div>
     </header>
@@ -65,12 +63,12 @@ export default function RulebookHeader() {
 }
 
 // The chapter crossing the upper middle of the screen, for the nav highlight.
-function useCurrentChapter() {
+function useCurrentChapter(chapters: Chapter[]) {
   const [current, setCurrent] = useState<string | null>(null);
   useEffect(() => {
-    const els = CHAPTER_LIST.map((c) => document.getElementById(c.id)).filter(
-      (el): el is HTMLElement => !!el,
-    );
+    const els = chapters
+      .map((c) => document.getElementById(c.id))
+      .filter((el): el is HTMLElement => !!el);
     const io = new IntersectionObserver(
       (entries) => {
         const hit = entries.find((e) => e.isIntersecting);
@@ -80,6 +78,6 @@ function useCurrentChapter() {
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [chapters]);
   return current;
 }

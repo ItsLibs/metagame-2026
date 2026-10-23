@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import AnagramEmail from "@/v2/components/AnagramEmail";
 import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
 import ContactLink from "@/v2/components/contact/ContactLink";
-import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
 import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
 import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CastlingDivider from "@/v2/components/dividers/castling";
@@ -24,7 +22,7 @@ import RulebookExpansions from "@/v2/components/RulebookExpansions";
 import RulebookObject from "@/v2/components/RulebookObject";
 import RulebookSetup from "@/v2/components/RulebookSetup";
 import SignupForm from "@/v2/components/signup/SignupForm";
-import SpecialRules from "@/v2/components/SpecialRules";
+import SpecialRules, { type Rule } from "@/v2/components/SpecialRules";
 import SponsorDeck from "@/v2/components/SponsorDeck";
 import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
@@ -58,20 +56,17 @@ export const metadata: Metadata = {
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
 const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 
-const FAQS: {
-  id?: string;
-  open?: boolean;
-  question: string;
-  answer: React.ReactNode;
-}[] = [
+const FAQS: Rule[] = [
   {
     id: "first-faq",
+    topic: "when",
     question: "When is Metagame?",
     answer: (
       <>2:00pm Friday, November 6th through 9:00pm, November 8th, 2026.</>
     ),
   },
   {
+    topic: "where",
     question: "Where is Metagame happening?",
     answer: (
       <>
@@ -88,6 +83,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "lodging",
     question: "Is lodging available?",
     answer: (
       <>
@@ -114,6 +110,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "meals",
     question: "Are meals included?",
     answer: (
       <>
@@ -123,6 +120,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "refunds",
     question: "Are tickets refundable?",
     answer: (
       <>
@@ -132,6 +130,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "transfers",
     question: "Can I transfer my ticket?",
     answer: (
       <>
@@ -144,6 +143,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "kids",
     question: "Can I bring my kids?",
     answer: (
       <>
@@ -162,6 +162,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "parking",
     question: "Is parking available?",
     answer: (
       <>
@@ -172,6 +173,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "games",
     question: "May I bring or demonstrate my own game?",
     answer: (
       <>
@@ -189,6 +191,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "access",
     question: "Is the venue accessible?",
     answer: (
       <>
@@ -202,6 +205,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "help",
     question: "Who can I come to with problems?",
     answer: (
       <>
@@ -217,6 +221,7 @@ const FAQS: {
     ),
   },
   {
+    topic: "more",
     question: "Where can I learn more about Metagame?",
     answer: (
       <>
@@ -314,34 +319,6 @@ export default function Home() {
 
       <ChapterSection chapter={CHAPTERS.special} rule={<ScrabbleDivider />}>
         <SpecialRules rules={FAQS} />
-        <div className="mt-10 grid items-start gap-8 md:grid-cols-[minmax(0,1fr)_260px]">
-          <div>
-            <p className="text-lg text-ink/80">
-              Have more questions? Email <AnagramEmail className={BODY_LINK} />.
-            </p>
-            <div className="mt-6 rounded-xl border-2 border-dashed border-navy/40 bg-sky/40 p-5">
-              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
-                Bonus round
-              </p>
-              <p
-                className={`${DISPLAY} mt-1 text-[28px] leading-none text-navy`}
-              >
-                Write a clue for META
-              </p>
-              <p className="mt-2 text-ink/70">
-                Every clue on the 2025 whiteboard (Fig. 7) resolves to META.
-                Click the board to add yours.
-              </p>
-            </div>
-          </div>
-          <figure className="rounded-[4px] border-2 border-navy bg-white p-2">
-            <CrypticsLightbox className="block w-full" />
-            <figcaption className="mt-2 font-space-mono text-xs leading-[1.45] text-ink/60">
-              <b className="text-navy">Fig. 7</b> · The 2025 cryptic crossword
-              contest board.
-            </figcaption>
-          </figure>
-        </div>
       </ChapterSection>
 
       <ChapterSection

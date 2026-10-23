@@ -907,11 +907,11 @@ button:not(:disabled) {
   }
 }
 
-/* Home page rulebook motion. Chapter heads rise and the turn-order rail draws
-   as they scroll into view, and a bar under the header tracks how far down the
-   page you are: scroll-driven, so browsers without it just show everything.
-   The contents tiles deal in and one neon tile flickers. Reduced motion: none
-   of it. */
+/* Rulebook motion (home and /last-year). Chapter heads rise and the
+   turn-order rail draws as they scroll into view, and a bar under the header
+   tracks how far down the page you are: scroll-driven, so browsers without it
+   just show everything. The contents tiles deal in and one neon tile
+   flickers. Reduced motion: none of it. */
 @keyframes rulebook-rise {
   from {
     opacity: 0;
@@ -993,5 +993,54 @@ button:not(:disabled) {
   }
   .neon-flicker {
     animation: neon-flicker 7s linear 2s infinite;
+  }
+}
+
+/* A little hop: the rule card a d12 roll lands on (§7), and the trivia
+   streak on /last-year as it grows. */
+@keyframes rule-pop {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(-6px) rotate(-1.5deg) scale(1.03);
+  }
+  70% {
+    transform: translateY(0) rotate(0.5deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rule-pop {
+    animation: rule-pop 500ms ease-out;
+  }
+}
+
+/* /last-year box score: each number counts up from 0 as the page opens. The
+   number rides in --to; registering --count lets it animate as an integer and
+   a counter prints it. Without @property it flips from 0 to the number;
+   reduced motion shows the number straight away. */
+@property --count {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+@keyframes count-up {
+  from {
+    --count: 0;
+  }
+}
+.count-up {
+  --count: var(--to);
+  counter-reset: count var(--count);
+}
+.count-up::after {
+  content: counter(count);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .count-up {
+    animation: count-up 1.2s cubic-bezier(0.25, 0.7, 0.25, 1) both;
   }
 }

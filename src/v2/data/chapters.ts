@@ -80,3 +80,35 @@ export const CREDITS: Chapter = {
   short: "Credits",
   aka: "Our sponsors, with gratitude",
 };
+
+// /last-year as the rulebook's 2025 edition, in page order.
+export const LAST_YEAR_CHAPTERS = {
+  report: {
+    num: 1,
+    id: "match-report",
+    title: "Match report",
+    short: "Match report",
+    aka: "How the 2025 megagame played",
+  },
+  replay: {
+    num: 2,
+    id: "replay",
+    title: "Instant replay",
+    short: "Replay",
+    aka: "The weekend, fifteen minutes at a time",
+  },
+  trivia: {
+    num: 3,
+    id: "trivia",
+    title: "Trivia round",
+    short: "Trivia",
+    aka: "Talk, workshop or game?",
+  },
+  log: {
+    num: 4,
+    id: "schedule",
+    title: "Game log",
+    short: "Game log",
+    aka: "Every 2025 session",
+  },
+} satisfies Record<string, Chapter>;

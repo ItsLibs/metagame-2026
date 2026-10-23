@@ -1,18 +1,26 @@
 import { dayPasses } from "@/v2/lib/tickets";
 import BoxBack from "./BoxBack";
+import Dice from "./dice/Dice";
 import { PAGE } from "./ChapterHeading";
 import { DISPLAY, SECTION_ANCHOR } from "./styles";
 import { Button } from "./ui/button";
 
 const FROM_USD = Math.min(...dayPasses.map((p) => p.usd));
 
-// The home page's hero, as the front of the game box: the title, the dates,
-// a one-paragraph pitch and the CTAs, with the box back beside it.
+// The home page's hero, as the front of the game box: the METAGAME dice
+// rolling in as the logo, then the title, the dates, a one-paragraph pitch and
+// the CTAs, with the box back beside it.
 export default function RulebookCover() {
   return (
     <section id="home" className={SECTION_ANCHOR}>
+      <div className="pt-6 md:pt-8">
+        <Dice
+          size={0.8}
+          stage="h-[clamp(110px,15vh,150px)] md:h-[clamp(190px,24vh,240px)]"
+        />
+      </div>
       <div
-        className={`${PAGE} grid items-center gap-10 pt-12 pb-16 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-12 lg:pt-14`}
+        className={`${PAGE} grid items-center gap-10 pt-6 pb-16 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-12 lg:pt-8`}
       >
         <div>
           <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
