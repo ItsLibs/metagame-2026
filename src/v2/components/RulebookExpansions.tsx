@@ -38,7 +38,7 @@ export default function RulebookExpansions() {
     <div className="grid gap-4 lg:grid-cols-2">
       <div
         id="night-market"
-        className={`${SECTION_ANCHOR} flex flex-col rounded-[18px] bg-[radial-gradient(110%_90%_at_60%_40%,#1a2152_0%,#0f1430_72%)] p-6 text-[#fff5e6] sm:p-7`}
+        className={`${SECTION_ANCHOR} group flex flex-col rounded-[18px] bg-[radial-gradient(110%_90%_at_60%_40%,#1a2152_0%,#0f1430_72%)] p-6 text-[#fff5e6] sm:p-7`}
       >
         <p
           className={`${pixel.className} text-sm tracking-[0.1em] text-[#59e3b0] uppercase`}
@@ -55,7 +55,9 @@ export default function RulebookExpansions() {
             <span
               key={i}
               aria-hidden
-              className={`${nightDisplay.className} grid h-[52px] w-11 place-items-center rounded-[10px] border-[3px] bg-[#1b2350] text-[26px] leading-none sm:h-[68px] sm:w-[58px] sm:text-[34px]`}
+              // One letter of the sign flickers now and then; hovering the card
+              // turns the whole sign up.
+              className={`${nightDisplay.className} grid h-[52px] w-11 place-items-center rounded-[10px] border-[3px] bg-[#1b2350] text-[26px] leading-none transition-[filter] duration-300 group-hover:brightness-125 group-hover:saturate-150 sm:h-[68px] sm:w-[58px] sm:text-[34px] ${i === 2 ? "neon-flicker" : ""}`}
               style={{
                 borderColor: GLOW[i % GLOW.length],
                 boxShadow: `inset 0 -5px 0 #2a3470, 0 0 26px color-mix(in srgb, ${GLOW[i % GLOW.length]} 40%, transparent)`,

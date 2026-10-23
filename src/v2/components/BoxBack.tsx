@@ -52,20 +52,30 @@ export default function BoxBack() {
       <h3 className="mt-5 mb-2.5 font-space-mono text-xs font-bold tracking-[0.14em] text-sky uppercase">
         Contents
       </h3>
+      {/* The tiles deal in one by one on load; hovering one lifts it and
+          names it. */}
       <ul className="grid grid-cols-6 gap-1.5">
-        {CONTENTS.map(({ name, bg, fg }) => (
+        {CONTENTS.map(({ name, bg, fg }, i) => (
           <li
             key={name}
-            title={GLYPH_LABELS[name]}
-            className={`grid aspect-square place-items-center rounded-lg text-[28px] ${bg} ${fg} ${
+            className={`rulebook-deal group relative grid aspect-square place-items-center rounded-lg text-[28px] transition-transform duration-200 hover:z-10 hover:-translate-y-1 hover:-rotate-3 ${bg} ${fg} ${
               bg === "bg-navy" ? "ring-1 ring-cream/30" : ""
             }`}
             // The card-games glyph's front card matches its tile.
             style={
-              { "--glyph-bg": "var(--color-peach)" } as React.CSSProperties
+              {
+                "--glyph-bg": "var(--color-peach)",
+                animationDelay: `${300 + i * 60}ms`,
+              } as React.CSSProperties
             }
           >
             <Glyph name={name} label={GLYPH_LABELS[name]} />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-cream px-2 py-1 font-space-mono text-[10px] font-bold tracking-[0.1em] whitespace-nowrap text-navy uppercase opacity-0 shadow transition-opacity group-hover:opacity-100"
+            >
+              {GLYPH_LABELS[name]}
+            </span>
           </li>
         ))}
       </ul>

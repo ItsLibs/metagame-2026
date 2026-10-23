@@ -1,10 +1,10 @@
 import { HATS } from "@/v2/hat-trick/hats";
 import crossword from "../../../public/images/carousel/4_crossword.jpg";
+import DoesItCount from "./DoesItCount";
 import RulebookFigure from "./RulebookFigure";
-import RulebookRules from "./RulebookRules";
 
-// §1 of the rulebook: what counts as a game, as numbered rules, beside
-// Fig. 1 (which hides three Hat Trick hats).
+// §1 of the rulebook: rule one, then a hand of "does it count?" cards to play
+// it out, beside Fig. 1 (which hides three Hat Trick hats).
 export default function RulebookObject() {
   return (
     <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-11">
@@ -17,21 +17,9 @@ export default function RulebookObject() {
           , it counts. If building it means asking &ldquo;what would the player
           choose to do next?&rdquo;, it&apos;s a game.
         </p>
-        <RulebookRules
-          chapter={1}
-          className="mt-5"
-          rules={[
-            "Puzzles count.",
-            "Video games count.",
-            "LARPs and immersive theater count.",
-            "Crosswords, trivia and design jams count.",
-            "Card games and social deduction count.",
-            "Rock-climbing routes count.",
-            <strong key="twist" className="text-navy">
-              Board games count, too.
-            </strong>,
-          ]}
-        />
+        <div className="mt-6">
+          <DoesItCount />
+        </div>
       </div>
       <RulebookFigure
         fig="1"

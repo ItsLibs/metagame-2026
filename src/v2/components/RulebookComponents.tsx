@@ -53,11 +53,14 @@ export default function RulebookComponents() {
       {COMPONENTS.map(({ glyph, tile, title, body }) => (
         <li
           key={title}
-          className={`flex min-h-[170px] flex-col gap-2 rounded-[14px] p-5 ${tile}`}
+          className={`rulebook-rise group flex min-h-[170px] flex-col gap-2 rounded-[14px] p-5 transition-[translate,rotate,box-shadow] duration-300 hover:-translate-y-1.5 hover:-rotate-1 hover:shadow-[6px_6px_0_0_var(--color-navy)] ${tile}`}
           // The card-games glyph's front card matches its tile.
           style={{ "--glyph-bg": "var(--color-navy)" } as React.CSSProperties}
         >
-          <Glyph name={glyph} className="size-11" />
+          <Glyph
+            name={glyph}
+            className="size-11 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12"
+          />
           <h3
             className={`${DISPLAY} mt-auto text-[28px] leading-none tracking-[0.02em]`}
           >

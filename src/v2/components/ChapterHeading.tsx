@@ -17,7 +17,10 @@ export function ChapterHeading({
 }) {
   return (
     <div
-      className={cn("flex flex-wrap items-baseline gap-x-4 gap-y-1", className)}
+      className={cn(
+        "rulebook-rise flex flex-wrap items-baseline gap-x-4 gap-y-1",
+        className,
+      )}
     >
       {chapter.num !== undefined && (
         <span className="font-space-mono text-sm font-bold tracking-[0.1em] text-meeple">

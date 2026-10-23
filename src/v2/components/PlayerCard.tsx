@@ -16,7 +16,7 @@ export default function PlayerCard({
   session,
 }: Person) {
   return (
-    <div className="flex h-full gap-3 rounded-xl border-2 border-navy bg-white p-3">
+    <div className="flex h-full gap-3 rounded-xl border-2 border-navy bg-white p-3 transition-[translate,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[4px_4px_0_0_var(--color-navy)]">
       {photo && hats?.length ? (
         <HatImage
           src={photo}

@@ -29,9 +29,9 @@ export default function RulebookCover() {
             Nov 6–8, 2026 · Lighthaven, Berkeley
           </p>
           <p className="mt-3 max-w-[34em] text-lg leading-relaxed text-ink/80 sm:text-xl">
-            Metagame is a weekend-long game for people who love games of every
-            shape: puzzles, video games, LARPs, crosswords, talks, workshops,
-            and an all-weekend Megagame. Read the rules, then come play.
+            A weekend conference devoted to games, and to the people who make,
+            study and play them. Three days at Lighthaven, with a Megagame
+            running through all of it.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Button asChild>
@@ -42,7 +42,7 @@ export default function RulebookCover() {
               variant="ghost"
               className="border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
             >
-              <a href="#about">Read the rules ↓</a>
+              <a href="#about">How to play ↓</a>
             </Button>
           </div>
         </div>

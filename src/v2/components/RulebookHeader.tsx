@@ -18,12 +18,17 @@ export default function RulebookHeader() {
   const current = useCurrentChapter();
   return (
     <header className="sticky top-0 z-40 border-b-2 border-navy bg-background">
+      {/* How far down the rulebook you are. */}
+      <span
+        aria-hidden
+        className="rulebook-progress absolute inset-x-0 -bottom-[2px] h-[3px] bg-meeple"
+      />
       <div className="mx-auto flex max-w-[1192px] items-center gap-3 px-4 py-2.5 sm:gap-5 sm:px-8">
         <Link
           href="/#home"
-          className={`${DISPLAY} flex shrink-0 items-center gap-2 text-[28px] leading-none tracking-[0.05em] text-navy`}
+          className={`${DISPLAY} group flex shrink-0 items-center gap-2 text-[28px] leading-none tracking-[0.05em] text-navy`}
         >
-          <LogoDie className="size-9" />
+          <LogoDie className="size-9 transition-transform duration-500 group-hover:rotate-[360deg] motion-reduce:transition-none" />
           <span className="max-[420px]:sr-only">Metagame</span>
         </Link>
         <nav

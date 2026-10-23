@@ -279,13 +279,10 @@ export default function Home() {
             Examples of play
           </h3>
           <span className="font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase">
-            What happened last year
+            A hand dealt from 2025
           </span>
         </div>
         <Highlights2025 />
-        <Button asChild variant="navy" className="mt-10">
-          <Link href="/last-year">See the full 2025 schedule</Link>
-        </Button>
       </ChapterSection>
 
       <ChapterSection chapter={CHAPTERS.setup} rule={<SetCardDivider />}>
