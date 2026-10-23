@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
+import AtAGlance from "@/v2/components/AtAGlance";
 import Carousel from "@/v2/components/Carousel";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
@@ -274,20 +275,19 @@ export default function Home() {
           <div className="max-w-[600px]">
             <SectionHeading title="Metagame 2026" />
             <p className={PROSE}>
-              Metagame is a weekend conference devoted to games. We mean games
-              in the broadest sense of the word: any experience that is designed
-              to be played, as opposed to passively consumed. This includes
-              board games, card games, videogames, tabletop games, LARPs,
-              puzzles, rock climbing routes, and more. If building it involves
-              asking the question &ldquo;what would the consumer of this
-              experience choose to do next?&rdquo;, it&apos;s a game.
-            </p>
-            <p className={PROSE}>
-              <Link href="/last-year" className={NEWSLETTER_LINK}>
-                See what happened last year &rarr;
-              </Link>
+              A weekend conference devoted to games in the broadest sense:
+              anything designed to be played, from board games and LARPs to
+              puzzles and rock climbing routes.
             </p>
           </div>
+          <div className="mt-8">
+            <AtAGlance />
+          </div>
+          <p className={`${PROSE} text-center`}>
+            <Link href="/last-year" className={NEWSLETTER_LINK}>
+              See what happened last year &rarr;
+            </Link>
+          </p>
         </div>
       </section>
 
