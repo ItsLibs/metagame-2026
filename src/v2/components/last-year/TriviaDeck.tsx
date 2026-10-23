@@ -273,7 +273,7 @@ export default function TriviaDeck() {
               <dd
                 key={label === "Streak" ? score.streak : undefined}
                 className={`${DISPLAY} mt-1 text-[32px] leading-none ${
-                  label === "Streak" && score.streak > 0 ? "rule-pop" : ""
+                  label === "Streak" && score.streak > 0 ? "score-pop" : ""
                 }`}
               >
                 {value}

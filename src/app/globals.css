@@ -996,9 +996,8 @@ button:not(:disabled) {
   }
 }
 
-/* A little hop: the rule card a d12 roll lands on (§7), and the trivia
-   streak on /last-year as it grows. */
-@keyframes rule-pop {
+/* A little hop: the trivia streak on /last-year as it grows. */
+@keyframes score-pop {
   0% {
     transform: none;
   }
@@ -1013,8 +1012,8 @@ button:not(:disabled) {
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .rule-pop {
-    animation: rule-pop 500ms ease-out;
+  .score-pop {
+    animation: score-pop 500ms ease-out;
   }
 }
 
