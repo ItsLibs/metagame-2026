@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
-import AtAGlance from "@/v2/components/AtAGlance";
+import ChapterHeading from "@/v2/components/ChapterHeading";
 import Carousel from "@/v2/components/Carousel";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
@@ -19,19 +19,20 @@ import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
-import KeyDates from "@/v2/components/KeyDates";
 import PersonCard from "@/v2/components/PersonCard";
+import RulebookComponents from "@/v2/components/RulebookComponents";
+import RulebookObject from "@/v2/components/RulebookObject";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
 import SiteHero from "@/v2/components/SiteHero";
 import {
   EYEBROW,
   HEADING,
-  NEWSLETTER_LINK,
   SECTION,
   SECTION_ANCHOR,
 } from "@/v2/components/styles";
 import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
+import TurnOrder from "@/v2/components/TurnOrder";
 import { Button } from "@/v2/components/ui/button";
 import { CAROUSEL } from "@/v2/data/carousel";
 import {
@@ -272,22 +273,13 @@ export default function Home() {
       {/* about */}
       <section id="about" className={`${SECTION} md:pt-11 md:pb-12`}>
         <div className={CONTAINER}>
-          <div className="max-w-[600px]">
-            <SectionHeading title="Metagame 2026" />
-            <p className={PROSE}>
-              A weekend conference devoted to games in the broadest sense:
-              anything designed to be played, from board games and LARPs to
-              puzzles and rock climbing routes.
-            </p>
-          </div>
-          <div className="mt-8">
-            <AtAGlance />
-          </div>
-          <p className={`${PROSE} text-center`}>
-            <Link href="/last-year" className={NEWSLETTER_LINK}>
-              See what happened last year &rarr;
-            </Link>
-          </p>
+          <ChapterHeading
+            num={1}
+            title="Object of the game"
+            aka="What Metagame is"
+            className="mb-8"
+          />
+          <RulebookObject />
         </div>
       </section>
 
@@ -299,10 +291,138 @@ export default function Home() {
 
       <CastlingDivider />
 
+      {/* components, with last year's highlights as examples */}
+      <section id="highlights" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <ChapterHeading
+            num={2}
+            title="Components"
+            aka="What's in the box"
+            className="mb-8"
+          />
+          <RulebookComponents />
+          <h3
+            className={`${HEADING} mt-14 text-[clamp(24px,3vw,32px)] text-navy`}
+          >
+            Sample cards from the 2025 edition
+          </h3>
+          <Highlights2025 />
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Button asChild variant="default">
+              <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
+                Propose a session
+              </a>
+            </Button>
+            <Button asChild variant="navy">
+              <Link href="/last-year">See the full 2025 schedule</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <CardSuitsDivider />
+
+      {/* venue */}
+      <section id="venue" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <ChapterHeading
+            num={3}
+            title="Setup"
+            aka="Getting there and staying over"
+            className="mb-8"
+          />
+          {/* Single grid so the image top-aligns with the title on wide screens. */}
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+            <div className="max-w-[560px]">
+              <SectionHeading
+                eyebrow="The board"
+                title={
+                  <a
+                    href={LIGHTHAVEN_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-colors hover:text-meeple"
+                  >
+                    Lighthaven Campus
+                  </a>
+                }
+              />
+              <p className="mt-2 text-base text-ink/60">
+                2740 Telegraph Ave, Berkeley, CA 94705
+              </p>
+              {/* Below lg the map floats inside the copy so the paragraphs
+                  wrap it; at lg it moves to its own grid column instead. */}
+              <a
+                href={LIGHTHAVEN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="float-right -mt-2 -mr-6 -mb-2 ml-1 w-[52%] lg:hidden"
+              >
+                <Image
+                  src={lighthavenCutout}
+                  alt="Aerial view of the Lighthaven campus"
+                  className="h-auto w-full"
+                  sizes="45vw"
+                />
+              </a>
+              <p className="mt-6 text-base text-ink/70">
+                Lighthaven Campus is a puzzle-seeker&apos;s paradise, with
+                easter eggs wedged into every nook and cranny and games mid-play
+                concealed behind secret doors.
+              </p>
+              <p className={PROSE}>
+                Onsite housing is available for the weekend, so you can roll out
+                of bed and into a game at any moment. Rooms can be booked
+                directly with Lighthaven.
+              </p>
+              <Button asChild variant="navy" className="clear-both mt-5">
+                <a href={HOUSING_URL} target="_blank" rel="noopener noreferrer">
+                  Book your room
+                </a>
+              </Button>
+            </div>
+            <a
+              href={LIGHTHAVEN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden w-full max-w-[560px] transition-transform duration-300 hover:scale-[1.04] lg:block"
+            >
+              <Image
+                src={lighthavenCutout}
+                alt="Aerial view of the Lighthaven campus"
+                className="h-auto w-full"
+                sizes="(min-width: 1024px) 560px, 100vw"
+              />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <SpaceInvadersDivider />
+
+      {/* turn order: key dates, then the weekend */}
+      <section id="key-dates" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <ChapterHeading
+            num={4}
+            title="Turn order"
+            aka="Key dates and the weekend"
+            className="mb-8"
+          />
+          <TurnOrder />
+        </div>
+      </section>
+
+      <TetrisDivider />
+
       {/* speakers */}
       <section id="speakers" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
-          <SectionHeading eyebrow="Who will be there?" title="Speakers" />
+          <ChapterHeading
+            num={5}
+            title="Players"
+            aka="Speakers and session hosts"
+          />
           {/* Wrapping flex, not a grid, so a short last row centers. */}
           <div className="mt-10 flex flex-wrap justify-center gap-2 sm:gap-5">
             {SPEAKERS.map((speaker) => (
@@ -323,12 +443,188 @@ export default function Home() {
         </div>
       </section>
 
-      <CardSuitsDivider />
+      <BloodOnTheClocktowerDivider />
+
+      {/* the megagame */}
+      <section id="megagame" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <ChapterHeading
+            num={6}
+            title="Expansions"
+            aka="The Megagame and the Night Market"
+            className="mb-8"
+          />
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+            <div className="max-w-[600px]">
+              <SectionHeading
+                eyebrow="6.1 · Runs all weekend"
+                eyebrowClassName="text-lg"
+                title="The Megagame"
+              />
+              <div className="mt-3.5 space-y-3 text-base text-ink/70">
+                <p>
+                  The game begins when you step through the gate, and runs all
+                  weekend. One part puzzle hunt, one part game gauntlet, one
+                  part interlocking story.
+                </p>
+                <p>
+                  The Megagame is threaded through the rest of Metagame, with
+                  many puzzles and games making up larger games and larger
+                  puzzles. Anyone can play it, and anyone can help create it. We
+                  want puzzles! We want games! We want cryptic hints added to
+                  your session! More details in the proposal form.
+                </p>
+              </div>
+              <Button asChild variant="default" className="mt-6 w-fit">
+                <a
+                  href={MEGAGAME_PROPOSAL_FORM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Build part of the Megagame
+                </a>
+              </Button>
+            </div>
+            <figure className="w-full max-w-[560px]">
+              <HatImage
+                src={megagameChess}
+                alt="Giant orange and blue chess pieces, a knight in front"
+                hats={[HATS.bishop]}
+                className="aspect-[4/3] w-full lg:[--fade:linear-gradient(to_right,transparent,black_30%)]"
+                sizes="(min-width: 1024px) 560px, 100vw"
+              />
+              <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
+                A puzzle and game made of smaller puzzles and games. Made
+                by&hellip; you?
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <GoDivider />
+
+      {/* night market */}
+      <section id="night-market" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+            <div className="max-w-[600px]">
+              <SectionHeading
+                eyebrow="6.2 · Friday night"
+                title="Night Market"
+              />
+              <p className={PROSE}>
+                Show off your game, product, or latest creation at our open
+                market, or come discover what others have brought to share.
+                Explore booths offering things to play, experience, and savor.
+                This is open to the public on Friday evening (7:00–10:00pm).
+              </p>
+              <p className={PROSE}>
+                Have a game, product, or creation to share?
+              </p>
+              <Button asChild variant="default" className="mt-6 w-fit">
+                <a
+                  href={NIGHT_MARKET_FORM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Apply for a booth
+                </a>
+              </Button>
+            </div>
+            <figure className="w-full max-w-[560px]">
+              <Image
+                src={nightMarketCooks}
+                alt="“Too Many Cooks” at the Night Market"
+                className="h-auto w-full rounded-2xl"
+                sizes="(min-width: 1024px) 560px, 100vw"
+              />
+              <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
+                &ldquo;Too Many Cooks&rdquo; at the Night Market
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <ScrabbleDivider />
+
+      {/* faq */}
+      <section id="faq" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <ChapterHeading
+            num={7}
+            title="Special rules"
+            aka="FAQ"
+            className="mb-12"
+          />
+          {/* Photo rides alongside the list on wide screens, sized so its 3:4
+              height roughly matches the collapsed list; on phones it follows
+              the list. */}
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
+            {/* Contact line lives in the list column so it hugs the questions
+                rather than dropping below the (taller) photo. */}
+            <div>
+              <div className="divide-y divide-line border-y border-line">
+                {FAQS.map(({ id, open, question, answer }) => (
+                  <FaqItem
+                    key={question}
+                    id={id}
+                    defaultOpen={open}
+                    question={question}
+                  >
+                    {answer}
+                  </FaqItem>
+                ))}
+              </div>
+              <p className="mt-6 max-w-[620px] text-ink/70">
+                Have more questions? Email{" "}
+                <AnagramEmail className={BODY_LINK} />.
+              </p>
+            </div>
+            <CrypticsLightbox className="block" />
+          </div>
+        </div>
+      </section>
+
+      <SetCardDivider />
+
+      {/* tickets */}
+      <section id="tickets" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <ChapterHeading
+            num={8}
+            title="Join the game"
+            aka="Tickets"
+            className="mb-8"
+          />
+          {earlyBird && (
+            <p className={`${PROSE} mb-7 max-w-[600px]`}>
+              Early-bird pricing ends {EARLY_BIRD_DEADLINE}.
+            </p>
+          )}
+          {/* The panel renders bare toggle + tiles; the column/gap is ours. */}
+          <div className="flex max-w-[700px] flex-col items-start gap-6">
+            <TicketsPanel
+              showHeading={false}
+              surface="light"
+              align="start"
+              earlyBird={earlyBird}
+            />
+          </div>
+        </div>
+      </section>
+
+      <CatanDivider />
 
       {/* get involved */}
       <section id="get-involved" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
-          <SectionHeading eyebrow="Want to do more?" title="Get Involved" />
+          <ChapterHeading
+            num={9}
+            title="Make the game"
+            aka="Run something, volunteer, sponsor"
+          />
           <p className={`${PROSE} max-w-[600px]`}>
             Metagame is made by the people who show up. Here&apos;s how to be
             one of them.
@@ -424,228 +720,12 @@ export default function Home() {
         </div>
       </section>
 
-      <SpaceInvadersDivider />
-
-      {/* the megagame */}
-      <section id="megagame" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-            <div className="max-w-[600px]">
-              <SectionHeading
-                eyebrow="Want to be a part of something bigger?"
-                eyebrowClassName="text-lg"
-                title="The Megagame"
-              />
-              <div className="mt-3.5 space-y-3 text-base text-ink/70">
-                <p>
-                  The game begins when you step through the gate, and runs all
-                  weekend. One part puzzle hunt, one part game gauntlet, one
-                  part interlocking story.
-                </p>
-                <p>
-                  The Megagame is threaded through the rest of Metagame, with
-                  many puzzles and games making up larger games and larger
-                  puzzles. Anyone can play it, and anyone can help create it. We
-                  want puzzles! We want games! We want cryptic hints added to
-                  your session! More details in the proposal form.
-                </p>
-              </div>
-              <Button asChild variant="default" className="mt-6 w-fit">
-                <a
-                  href={MEGAGAME_PROPOSAL_FORM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Build part of the Megagame
-                </a>
-              </Button>
-            </div>
-            <figure className="w-full max-w-[560px]">
-              <HatImage
-                src={megagameChess}
-                alt="Giant orange and blue chess pieces, a knight in front"
-                hats={[HATS.bishop]}
-                className="aspect-[4/3] w-full lg:[--fade:linear-gradient(to_right,transparent,black_30%)]"
-                sizes="(min-width: 1024px) 560px, 100vw"
-              />
-              <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
-                A puzzle and game made of smaller puzzles and games. Made
-                by&hellip; you?
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      <TetrisDivider />
-
-      {/* venue */}
-      <section id="venue" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          {/* Single grid so the image top-aligns with the title on wide screens. */}
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-            <div className="max-w-[560px]">
-              <SectionHeading
-                eyebrow="Where is it?"
-                title={
-                  <a
-                    href={LIGHTHAVEN_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="transition-colors hover:text-meeple"
-                  >
-                    Lighthaven Campus
-                  </a>
-                }
-              />
-              <p className="mt-2 text-base text-ink/60">
-                2740 Telegraph Ave, Berkeley, CA 94705
-              </p>
-              {/* Below lg the map floats inside the copy so the paragraphs
-                  wrap it; at lg it moves to its own grid column instead. */}
-              <a
-                href={LIGHTHAVEN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="float-right -mt-2 -mr-6 -mb-2 ml-1 w-[52%] lg:hidden"
-              >
-                <Image
-                  src={lighthavenCutout}
-                  alt="Aerial view of the Lighthaven campus"
-                  className="h-auto w-full"
-                  sizes="45vw"
-                />
-              </a>
-              <p className="mt-6 text-base text-ink/70">
-                Lighthaven Campus is a puzzle-seeker&apos;s paradise, with
-                easter eggs wedged into every nook and cranny and games mid-play
-                concealed behind secret doors.
-              </p>
-              <p className={PROSE}>
-                Onsite housing is available for the weekend, so you can roll out
-                of bed and into a game at any moment. Rooms can be booked
-                directly with Lighthaven.
-              </p>
-              <Button asChild variant="navy" className="clear-both mt-5">
-                <a href={HOUSING_URL} target="_blank" rel="noopener noreferrer">
-                  Book your room
-                </a>
-              </Button>
-            </div>
-            <a
-              href={LIGHTHAVEN_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden w-full max-w-[560px] transition-transform duration-300 hover:scale-[1.04] lg:block"
-            >
-              <Image
-                src={lighthavenCutout}
-                alt="Aerial view of the Lighthaven campus"
-                className="h-auto w-full"
-                sizes="(min-width: 1024px) 560px, 100vw"
-              />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <BloodOnTheClocktowerDivider />
-
-      {/* night market */}
-      <section id="night-market" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-            <div className="max-w-[600px]">
-              <SectionHeading
-                eyebrow="Got something to trade?"
-                title="Night Market"
-              />
-              <p className={PROSE}>
-                Show off your game, product, or latest creation at our open
-                market, or come discover what others have brought to share.
-                Explore booths offering things to play, experience, and savor.
-                This is open to the public on Friday evening (7:00–10:00pm).
-              </p>
-              <p className={PROSE}>
-                Have a game, product, or creation to share?
-              </p>
-              <Button asChild variant="default" className="mt-6 w-fit">
-                <a
-                  href={NIGHT_MARKET_FORM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Apply for a booth
-                </a>
-              </Button>
-            </div>
-            <figure className="w-full max-w-[560px]">
-              <Image
-                src={nightMarketCooks}
-                alt="“Too Many Cooks” at the Night Market"
-                className="h-auto w-full rounded-2xl"
-                sizes="(min-width: 1024px) 560px, 100vw"
-              />
-              <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
-                &ldquo;Too Many Cooks&rdquo; at the Night Market
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      <GoDivider />
-
-      {/* highlights from 2025 */}
-      <section id="highlights" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading
-            eyebrow="What happened last year?"
-            title="Highlights from 2025"
-          />
-          <Highlights2025 />
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Button asChild variant="default">
-              <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
-                Propose a session
-              </a>
-            </Button>
-            <Button asChild variant="navy">
-              <Link href="/last-year">See the full 2025 schedule</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <ScrabbleDivider />
-
-      {/* tickets */}
-      <section id="tickets" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading eyebrow="Ready to play?" title="Tickets" />
-          {earlyBird && (
-            <p className={`${PROSE} mb-7 max-w-[600px]`}>
-              Early-bird pricing ends {EARLY_BIRD_DEADLINE}.
-            </p>
-          )}
-          {/* The panel renders bare toggle + tiles; the column/gap is ours. */}
-          <div className="flex max-w-[700px] flex-col items-start gap-6">
-            <TicketsPanel
-              showHeading={false}
-              surface="light"
-              align="start"
-              earlyBird={earlyBird}
-            />
-          </div>
-        </div>
-      </section>
-
-      <SetCardDivider />
+      <DiceDivider />
 
       {/* sponsors */}
       <section id="sponsors" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
-          <SectionHeading eyebrow="With gratitude" title="Our sponsors" />
+          <ChapterHeading title="Credits" aka="Our sponsors, with gratitude" />
           <div className="mt-10 flex flex-col items-center gap-10">
             {[
               {
@@ -707,57 +787,6 @@ export default function Home() {
             <Button asChild variant="navy" size="lg" className="mt-5 text-lg">
               <Link href="/sponsor">Sponsor Metagame</Link>
             </Button>
-          </div>
-        </div>
-      </section>
-
-      <CatanDivider />
-
-      {/* faq */}
-      <section id="faq" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading
-            eyebrow="But what about…"
-            title="FAQ"
-            className="mb-12"
-          />
-          {/* Photo rides alongside the list on wide screens, sized so its 3:4
-              height roughly matches the collapsed list; on phones it follows
-              the list. */}
-          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
-            {/* Contact line lives in the list column so it hugs the questions
-                rather than dropping below the (taller) photo. */}
-            <div>
-              <div className="divide-y divide-line border-y border-line">
-                {FAQS.map(({ id, open, question, answer }) => (
-                  <FaqItem
-                    key={question}
-                    id={id}
-                    defaultOpen={open}
-                    question={question}
-                  >
-                    {answer}
-                  </FaqItem>
-                ))}
-              </div>
-              <p className="mt-6 max-w-[620px] text-ink/70">
-                Have more questions? Email{" "}
-                <AnagramEmail className={BODY_LINK} />.
-              </p>
-            </div>
-            <CrypticsLightbox className="block" />
-          </div>
-        </div>
-      </section>
-
-      <DiceDivider />
-
-      {/* key dates */}
-      <section id="key-dates" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading eyebrow="When is what?" title="Key dates" />
-          <div className="mt-10">
-            <KeyDates />
           </div>
         </div>
       </section>
