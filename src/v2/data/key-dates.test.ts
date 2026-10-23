@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { NIGHT_NAME } from "./chapters";
 import { upcomingTurns } from "./key-dates";
 
 const titles = (now: number) => upcomingTurns(now).map((d) => d.title);
@@ -8,7 +9,7 @@ it("puts the con weekend between the deadlines and the nap", () => {
     "Volunteer applications due",
     "Ticket sales close",
     "The game begins",
-    "Expansion: the Night Market",
+    `Expansion: ${NIGHT_NAME}`,
     "Talks, workshops and games all day",
     "Final round",
     "The Metagame team takes a looong nap",

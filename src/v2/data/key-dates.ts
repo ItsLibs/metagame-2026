@@ -1,4 +1,5 @@
 import { EARLY_BIRD_ENDS_AT } from "@/lib/early-bird";
+import { NIGHT_NAME } from "@/v2/data/chapters";
 import {
   CHILD_REGISTRATION_FORM_URL,
   FINANCIAL_AID_FORM_URL,
@@ -111,7 +112,7 @@ export const KEY_DATES: KeyDate[] = [
 ];
 
 // The con itself, beat by beat, standing in for the single Nov 6–8 milestone
-// in the home page's turn order. Times match the FAQ and the Night Market copy.
+// in the home page's turn order. Times match the FAQ and the night event copy.
 const CON_WEEKEND: KeyDate[] = [
   {
     label: "Fri Nov 6 · 2 pm",
@@ -122,7 +123,7 @@ const CON_WEEKEND: KeyDate[] = [
   },
   {
     label: "Fri Nov 6 · 7–10 pm",
-    title: "Expansion: the Night Market",
+    title: `Expansion: ${NIGHT_NAME}`,
     body: "Booths of things to play, experience and savor. Open to the public. See §6.",
     endsAt: endOfDay(11, 6),
   },

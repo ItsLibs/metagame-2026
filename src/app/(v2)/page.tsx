@@ -2,66 +2,43 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
-import ChapterHeading from "@/v2/components/ChapterHeading";
-import Carousel from "@/v2/components/Carousel";
+import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
-import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
-import CardSuitsDivider from "@/v2/components/dividers/card-suits";
-import CastlingDivider from "@/v2/components/dividers/castling";
-import CatanDivider from "@/v2/components/dividers/catan";
-import DiceDivider from "@/v2/components/dividers/dice";
-import GoDivider from "@/v2/components/dividers/go";
-import MonopolyDivider from "@/v2/components/dividers/monopoly";
-import ScrabbleDivider from "@/v2/components/dividers/scrabble";
-import SetCardDivider from "@/v2/components/dividers/set-cards";
-import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
-import TetrisDivider from "@/v2/components/dividers/tetris";
-import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
 import PlayerCard from "@/v2/components/PlayerCard";
 import RulebookComponents from "@/v2/components/RulebookComponents";
+import RulebookCover from "@/v2/components/RulebookCover";
+import RulebookExpansions from "@/v2/components/RulebookExpansions";
 import RulebookObject from "@/v2/components/RulebookObject";
-import SectionHeading from "@/v2/components/SectionHeading";
+import RulebookSetup from "@/v2/components/RulebookSetup";
 import SignupForm from "@/v2/components/signup/SignupForm";
-import SiteHero from "@/v2/components/SiteHero";
-import {
-  DISPLAY,
-  HEADING,
-  SECTION,
-  SECTION_ANCHOR,
-} from "@/v2/components/styles";
+import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
+import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
 import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
 import TurnOrder from "@/v2/components/TurnOrder";
 import { Button } from "@/v2/components/ui/button";
-import { CAROUSEL } from "@/v2/data/carousel";
+import { CHAPTERS, CREDITS } from "@/v2/data/chapters";
+import { upcomingKeyDates } from "@/v2/data/key-dates";
 import {
   GOLD_SPONSORS,
   PATRON_SPONSORS,
   SILVER_SPONSORS,
 } from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
-import { VOLUNTEER_TEAMS, WHEN_LABEL } from "@/v2/data/volunteer-teams";
-import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import {
+  FINANCIAL_AID_FORM_URL,
   HOTELS_SEARCH_URL,
   HOUSING_URL,
   PODCAST_EPISODE_URL,
   LIGHTHAVEN_URL,
-  MEGAGAME_PROPOSAL_FORM_URL,
-  NIGHT_MARKET_FORM_URL,
   RFP_FORM_URL,
 } from "@/v2/lib/links";
-import HatImage from "@/v2/hat-trick/HatImage";
-import { HATS } from "@/v2/hat-trick/hats";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
-import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
-import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
-import megagameChess from "../../../public/images/megagame-chess.jpg";
-import nightMarketCooks from "../../../public/images/email/night_market_cooks.jpg";
+import { isEarlyBirdActive } from "@/lib/early-bird";
 
-// Re-render hourly so the early-bird gate flips at the deadline and the key
-// dates' "Today" stop advances without a deploy.
+// Re-render hourly so the early-bird gate flips at the deadline and the turn
+// order's "Today" row advances without a deploy.
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -71,8 +48,7 @@ export const metadata: Metadata = {
 };
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
-const CONTAINER = "mx-auto max-w-[1180px] px-8";
-const PROSE = "mt-3.5 text-base text-ink/70";
+const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 
 const FAQS: {
   id?: string;
@@ -95,12 +71,11 @@ const FAQS: {
           Lighthaven{" "}
         </a>
         <br />
-        2740 Telegraph Ave, Berkeley, CA 94705
-        <Image
-          src={lighthavenCutout}
-          alt="Map of the Lighthaven campus"
-          className="mt-4 h-auto w-full max-w-[560px]"
-        />
+        2740 Telegraph Ave, Berkeley, CA 94705. See{" "}
+        <a href="#venue" className={BODY_LINK}>
+          §3 Setup
+        </a>
+        .
       </>
     ),
   },
@@ -261,556 +236,237 @@ const FAQS: {
   },
 ];
 
+// The home page as the game's rulebook (the brand mock in
+// branding/website-rulebook): the box cover, then numbered chapters, the
+// credits and a back cover. Section ids are kept from the one-pager, since
+// the nav, tracking links and printed codes point at /#tickets, /#faq, …
 export default function Home() {
   const earlyBird = isEarlyBirdActive();
+  const salesClose = upcomingKeyDates().find(
+    (d) => d.title === "Ticket sales close",
+  );
   return (
     <>
-      {/* Section ids are deep-link anchors (/#faq); the nav links to pages. */}
-      <div id="home" className={SECTION_ANCHOR}>
-        <SiteHero />
-      </div>
+      <RulebookCover />
 
-      {/* about */}
-      <section id="about" className={`${SECTION} md:pt-11 md:pb-12`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={1}
-            title="Object of the game"
-            aka="What Metagame is"
-            className="mb-8"
-          />
-          <RulebookObject />
+      <ChapterSection chapter={CHAPTERS.object}>
+        <RulebookObject />
+      </ChapterSection>
+
+      <ChapterSection chapter={CHAPTERS.components}>
+        <RulebookComponents />
+        <div className="mt-16 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h3
+            className={`${DISPLAY} text-[clamp(34px,4.4vw,52px)] leading-[0.9] text-navy`}
+          >
+            Examples of play
+          </h3>
+          <span className="font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase">
+            What happened last year
+          </span>
         </div>
-      </section>
+        <Highlights2025 />
+        <Button asChild variant="navy" className="mt-10">
+          <Link href="/last-year">See the full 2025 schedule</Link>
+        </Button>
+      </ChapterSection>
 
-      {/* Bottom padding matches the next section's top, so the divider sits
-          midway between the photo and the heading. */}
-      <div className="pt-6 pb-8 md:pb-14">
-        <Carousel images={CAROUSEL} />
-      </div>
+      <ChapterSection chapter={CHAPTERS.setup}>
+        <RulebookSetup />
+      </ChapterSection>
 
-      <CastlingDivider />
+      <ChapterSection chapter={CHAPTERS.turns}>
+        <TurnOrder />
+      </ChapterSection>
 
-      {/* components, with last year's highlights as examples */}
-      <section id="highlights" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={2}
-            title="Components"
-            aka="What's in the box"
-            className="mb-8"
-          />
-          <RulebookComponents />
-          <div className="mt-16 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h3
-              className={`${DISPLAY} text-[clamp(34px,4.4vw,52px)] leading-[0.9] text-navy`}
+      <ChapterSection chapter={CHAPTERS.players}>
+        <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {SPEAKERS.map((speaker) => (
+            <li key={speaker.name}>
+              <PlayerCard {...speaker} />
+            </li>
+          ))}
+          <li>
+            <SpeakerCtaCard href={RFP_FORM_URL} compact />
+          </li>
+        </ul>
+        <p className="mt-6 text-base text-ink/70">
+          And many more coming soon&hellip;
+        </p>
+      </ChapterSection>
+
+      <ChapterSection chapter={CHAPTERS.expansions}>
+        <RulebookExpansions />
+      </ChapterSection>
+
+      <ChapterSection chapter={CHAPTERS.special}>
+        {/* Columns, not a grid, so the rules read down each column. */}
+        <ol className="md:columns-2 md:gap-11">
+          {FAQS.map(({ id, question, answer }, i) => (
+            <li
+              key={question}
+              id={id}
+              className="grid break-inside-avoid grid-cols-[52px_minmax(0,1fr)] border-b border-line py-3.5"
             >
-              Examples of play
-            </h3>
-            <span className="font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase">
-              What happened last year
-            </span>
+              <b className="font-space-mono text-[13px] leading-[1.9] text-meeple">
+                7.{i + 1}
+              </b>
+              <div>
+                <h3 className="text-[16.5px] leading-snug font-bold text-navy">
+                  {question}
+                </h3>
+                <div className="mt-1 text-[15px] text-ink/70">{answer}</div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-10 grid items-start gap-8 md:grid-cols-[minmax(0,1fr)_260px]">
+          <div>
+            <p className="text-lg text-ink/80">
+              Have more questions? Email <AnagramEmail className={BODY_LINK} />.
+            </p>
+            <div className="mt-6 rounded-xl border-2 border-dashed border-navy/40 bg-sky/40 p-5">
+              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
+                Bonus round
+              </p>
+              <p
+                className={`${DISPLAY} mt-1 text-[28px] leading-none text-navy`}
+              >
+                Write a clue for META
+              </p>
+              <p className="mt-2 text-ink/70">
+                Every clue on the 2025 whiteboard (Fig. 7) resolves to META.
+                Click the board to add yours.
+              </p>
+            </div>
           </div>
-          <Highlights2025 />
-          <div className="mt-10 flex flex-wrap gap-4">
-            <Button asChild variant="default">
-              <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
+          <figure className="rounded-[4px] border-2 border-navy bg-white p-2">
+            <CrypticsLightbox className="block w-full" />
+            <figcaption className="mt-2 font-space-mono text-xs leading-[1.45] text-ink/60">
+              <b className="text-navy">Fig. 7</b> · The 2025 cryptic crossword
+              contest board.
+            </figcaption>
+          </figure>
+        </div>
+      </ChapterSection>
+
+      <ChapterSection
+        chapter={{
+          ...CHAPTERS.join,
+          aka: salesClose
+            ? `Tickets · sales close ${salesClose.label}`
+            : CHAPTERS.join.aka,
+        }}
+      >
+        <div className="flex flex-col items-start gap-5 rounded-[22px] bg-navy p-5 text-cream sm:p-7">
+          <TicketsPanel
+            look="rulebook"
+            showHeading={false}
+            surface="dark"
+            align="start"
+            earlyBird={earlyBird}
+          />
+          {/* /#get-involved lands here (nav, tracking links). */}
+          <div
+            id="get-involved"
+            className={`${SECTION_ANCHOR} flex flex-wrap gap-3`}
+          >
+            <Button asChild variant="ghost">
+              <Link href="/volunteer">Apply to volunteer</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <a href={FINANCIAL_AID_FORM_URL} {...EXT}>
+                Apply for financial aid
+              </a>
+            </Button>
+            <Button asChild variant="ghost">
+              <a href={RFP_FORM_URL} {...EXT}>
                 Propose a session
               </a>
             </Button>
-            <Button asChild variant="navy">
-              <Link href="/last-year">See the full 2025 schedule</Link>
-            </Button>
           </div>
-        </div>
-      </section>
-
-      <CardSuitsDivider />
-
-      {/* venue */}
-      <section id="venue" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={3}
-            title="Setup"
-            aka="Getting there and staying over"
-            className="mb-8"
-          />
-          {/* Single grid so the image top-aligns with the title on wide screens. */}
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-            <div className="max-w-[560px]">
-              <SectionHeading
-                eyebrow="The board"
-                title={
-                  <a
-                    href={LIGHTHAVEN_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="transition-colors hover:text-meeple"
-                  >
-                    Lighthaven Campus
-                  </a>
-                }
-              />
-              <p className="mt-2 text-base text-ink/60">
-                2740 Telegraph Ave, Berkeley, CA 94705
-              </p>
-              {/* Below lg the map floats inside the copy so the paragraphs
-                  wrap it; at lg it moves to its own grid column instead. */}
-              <a
-                href={LIGHTHAVEN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="float-right -mt-2 -mr-6 -mb-2 ml-1 w-[52%] lg:hidden"
-              >
-                <Image
-                  src={lighthavenCutout}
-                  alt="Aerial view of the Lighthaven campus"
-                  className="h-auto w-full"
-                  sizes="45vw"
-                />
-              </a>
-              <p className="mt-6 text-base text-ink/70">
-                Lighthaven Campus is a puzzle-seeker&apos;s paradise, with
-                easter eggs wedged into every nook and cranny and games mid-play
-                concealed behind secret doors.
-              </p>
-              <p className={PROSE}>
-                Onsite housing is available for the weekend, so you can roll out
-                of bed and into a game at any moment. Rooms can be booked
-                directly with Lighthaven.
-              </p>
-              <Button asChild variant="navy" className="clear-both mt-5">
-                <a href={HOUSING_URL} target="_blank" rel="noopener noreferrer">
-                  Book your room
-                </a>
-              </Button>
-            </div>
-            <a
-              href={LIGHTHAVEN_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden w-full max-w-[560px] transition-transform duration-300 hover:scale-[1.04] lg:block"
-            >
-              <Image
-                src={lighthavenCutout}
-                alt="Aerial view of the Lighthaven campus"
-                className="h-auto w-full"
-                sizes="(min-width: 1024px) 560px, 100vw"
-              />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <SpaceInvadersDivider />
-
-      {/* turn order: key dates, then the weekend */}
-      <section id="key-dates" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={4}
-            title="Turn order"
-            aka="Key dates and the weekend"
-            className="mb-8"
-          />
-          <TurnOrder />
-        </div>
-      </section>
-
-      <TetrisDivider />
-
-      {/* speakers */}
-      <section id="speakers" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={5}
-            title="Players"
-            aka="Speakers and session hosts"
-          />
-          <ul className="mt-8 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {SPEAKERS.map((speaker) => (
-              <li key={speaker.name}>
-                <PlayerCard {...speaker} />
-              </li>
-            ))}
-            <li>
-              <SpeakerCtaCard href={RFP_FORM_URL} compact />
-            </li>
-          </ul>
-          <p className="mt-6 text-base text-ink/70">
-            And many more coming soon&hellip;
+          <p className="font-space-mono text-[12.5px] text-sky">
+            A limited supply of volunteer tickets is available.
           </p>
         </div>
-      </section>
+      </ChapterSection>
 
-      <BloodOnTheClocktowerDivider />
-
-      {/* the megagame */}
-      <section id="megagame" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={6}
-            title="Expansions"
-            aka="The Megagame and the Night Market"
-            className="mb-8"
-          />
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-            <div className="max-w-[600px]">
-              <SectionHeading
-                eyebrow="6.1 · Runs all weekend"
-                eyebrowClassName="text-lg"
-                title="The Megagame"
-              />
-              <div className="mt-3.5 space-y-3 text-base text-ink/70">
-                <p>
-                  The game begins when you step through the gate, and runs all
-                  weekend. One part puzzle hunt, one part game gauntlet, one
-                  part interlocking story.
-                </p>
-                <p>
-                  The Megagame is threaded through the rest of Metagame, with
-                  many puzzles and games making up larger games and larger
-                  puzzles. Anyone can play it, and anyone can help create it. We
-                  want puzzles! We want games! We want cryptic hints added to
-                  your session! More details in the proposal form.
-                </p>
-              </div>
-              <Button asChild variant="default" className="mt-6 w-fit">
-                <a
-                  href={MEGAGAME_PROPOSAL_FORM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Build part of the Megagame
-                </a>
-              </Button>
-            </div>
-            <figure className="w-full max-w-[560px]">
-              <HatImage
-                src={megagameChess}
-                alt="Giant orange and blue chess pieces, a knight in front"
-                hats={[HATS.bishop]}
-                className="aspect-[4/3] w-full lg:[--fade:linear-gradient(to_right,transparent,black_30%)]"
-                sizes="(min-width: 1024px) 560px, 100vw"
-              />
-              <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
-                A puzzle and game made of smaller puzzles and games. Made
-                by&hellip; you?
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      <GoDivider />
-
-      {/* night market */}
-      <section id="night-market" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-            <div className="max-w-[600px]">
-              <SectionHeading
-                eyebrow="6.2 · Friday night"
-                title="Night Market"
-              />
-              <p className={PROSE}>
-                Show off your game, product, or latest creation at our open
-                market, or come discover what others have brought to share.
-                Explore booths offering things to play, experience, and savor.
-                This is open to the public on Friday evening (7:00–10:00pm).
-              </p>
-              <p className={PROSE}>
-                Have a game, product, or creation to share?
-              </p>
-              <Button asChild variant="default" className="mt-6 w-fit">
-                <a
-                  href={NIGHT_MARKET_FORM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Apply for a booth
-                </a>
-              </Button>
-            </div>
-            <figure className="w-full max-w-[560px]">
-              <Image
-                src={nightMarketCooks}
-                alt="“Too Many Cooks” at the Night Market"
-                className="h-auto w-full rounded-2xl"
-                sizes="(min-width: 1024px) 560px, 100vw"
-              />
-              <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
-                &ldquo;Too Many Cooks&rdquo; at the Night Market
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      <ScrabbleDivider />
-
-      {/* faq */}
-      <section id="faq" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={7}
-            title="Special rules"
-            aka="FAQ"
-            className="mb-12"
-          />
-          {/* Photo rides alongside the list on wide screens, sized so its 3:4
-              height roughly matches the collapsed list; on phones it follows
-              the list. */}
-          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
-            {/* Contact line lives in the list column so it hugs the questions
-                rather than dropping below the (taller) photo. */}
-            <div>
-              <div className="divide-y divide-line border-y border-line">
-                {FAQS.map(({ id, open, question, answer }) => (
-                  <FaqItem
-                    key={question}
-                    id={id}
-                    defaultOpen={open}
-                    question={question}
-                  >
-                    {answer}
-                  </FaqItem>
-                ))}
-              </div>
-              <p className="mt-6 max-w-[620px] text-ink/70">
-                Have more questions? Email{" "}
-                <AnagramEmail className={BODY_LINK} />.
-              </p>
-            </div>
-            <CrypticsLightbox className="block" />
-          </div>
-        </div>
-      </section>
-
-      <SetCardDivider />
-
-      {/* tickets */}
-      <section id="tickets" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={8}
-            title="Join the game"
-            aka="Tickets"
-            className="mb-8"
-          />
-          {earlyBird && (
-            <p className={`${PROSE} mb-7 max-w-[600px]`}>
-              Early-bird pricing ends {EARLY_BIRD_DEADLINE}.
-            </p>
-          )}
-          {/* The panel renders bare toggle + tiles; the column/gap is ours. */}
-          <div className="flex max-w-[700px] flex-col items-start gap-6">
-            <TicketsPanel
-              showHeading={false}
-              surface="light"
-              align="start"
-              earlyBird={earlyBird}
-            />
-          </div>
-        </div>
-      </section>
-
-      <CatanDivider />
-
-      {/* get involved */}
-      <section id="get-involved" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading
-            num={9}
-            title="Make the game"
-            aka="Run something, volunteer, sponsor"
-          />
-          <p className={`${PROSE} max-w-[600px]`}>
-            Metagame is made by the people who show up. Here&apos;s how to be
-            one of them.
-          </p>
-          <div className="mt-10 grid gap-6 min-[900px]:grid-cols-3">
-            {[
-              {
-                title: "Run something",
-                body: (
-                  <>
-                    We want your games, puzzles, competitions, indie TTRPGs,
-                    immersive theater performances, tournaments, design jams,
-                    LARPs, trivia, crosswords, homemade meeples, chess variants,
-                    turtle doves, social deception experiments not yet ready for
-                    prime time, or things that defy all of these categories
-                  </>
-                ),
-                cta: "Propose a session",
-                href: RFP_FORM_URL,
-                external: true,
-              },
-              {
-                title: "Volunteer",
-                body: (
-                  <>
-                    Some teams need help now, before the con; others on the
-                    weekend.
-                    {(["now", "weekend"] as const).map((when) => (
-                      <div key={when} className="mt-3">
-                        <p className="font-space-mono text-xs tracking-[0.08em] text-ink/50 uppercase">
-                          {when === "now" ? "Start now" : WHEN_LABEL.weekend}
-                        </p>
-                        <ul className="mt-1 list-disc pl-5 font-medium">
-                          {VOLUNTEER_TEAMS.filter(
-                            (t) => t.when === when || t.when === "both",
-                          ).map((team) => (
-                            <li key={team.name} className={team.color}>
-                              {team.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </>
-                ),
-                cta: "See how to help",
-                href: "/volunteer",
-                external: false,
-              },
-              {
-                title: "Sponsor Metagame",
-                body: (
-                  <>
-                    Put your name on the weekend. Sponsor benefits include:
-                    <ul className="mt-2 list-disc pl-5">
-                      <li>Logo placement on the site, swag, and marketing</li>
-                      <li>A booth at the night market / career fair</li>
-                      <li>Tickets for your team</li>
-                      <li>Main-room talk and office-hours slots</li>
-                      <li>A custom-built branded event</li>
-                      <li>
-                        &hellip; and at the headline tier, let&apos;s dream big
-                      </li>
-                    </ul>
-                  </>
-                ),
-                cta: "Sponsor tiers",
-                href: "/sponsor",
-                external: false,
-              },
-            ].map(({ title, body, cta, href, external }) => (
-              <div
-                key={title}
-                className="flex flex-col rounded-2xl border border-navy/[0.16] bg-white p-7 shadow-[0_8px_24px_rgba(23,48,89,0.08)]"
-              >
-                <h3 className={`${HEADING} text-2xl text-navy`}>{title}</h3>
-                {/* div, not p: the volunteer body nests a <ul>. */}
-                <div className="mt-3 flex-1 text-[15px] text-ink/70">
-                  {body}
-                </div>
-                <Button asChild variant="default" className="mt-6 w-fit">
-                  {external ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer">
-                      {cta}
+      <ChapterSection chapter={CREDITS}>
+        {/* One ruled row per tier, label over its logos. Logo sizes per tier
+            are unchanged. */}
+        <dl>
+          {[
+            {
+              label: "Gold",
+              sponsors: GOLD_SPONSORS,
+              logo: "h-28 md:h-40",
+              row: "flex flex-wrap gap-x-12 gap-y-6",
+            },
+            {
+              label: "Silver",
+              sponsors: SILVER_SPONSORS,
+              logo: "h-16 md:h-24",
+              row: "flex flex-wrap gap-x-12 gap-y-6",
+            },
+            {
+              label: "Patron",
+              sponsors: PATRON_SPONSORS,
+              logo: "h-14 md:h-[72px]",
+              // 2x2 on phones; logos shrink to fit their column.
+              row: "grid w-full grid-cols-2 justify-items-start gap-x-6 gap-y-8 md:flex md:flex-wrap md:gap-x-12 md:gap-y-6",
+            },
+          ].map(({ label, sponsors, logo, row }) => (
+            <div key={label} className="border-b border-line py-7 first:pt-0">
+              <dt className="font-space-mono text-sm font-bold tracking-[0.14em] text-meeple uppercase">
+                {label}
+              </dt>
+              <dd className={`mt-4 items-center ${row}`}>
+                {sponsors.map((s) => {
+                  const cls = `w-auto max-w-full object-contain ${s.logoClass ?? logo}`;
+                  const img = s.Logo ? (
+                    <s.Logo className={cls} />
+                  ) : (
+                    <Image
+                      src={s.logo}
+                      alt={`${s.name} logo`}
+                      className={cls}
+                    />
+                  );
+                  return s.url ? (
+                    <a
+                      key={s.name}
+                      href={s.url}
+                      {...EXT}
+                      className="transition-opacity hover:opacity-75"
+                    >
+                      {img}
                     </a>
                   ) : (
-                    <Link href={href}>{cta}</Link>
-                  )}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <DiceDivider />
-
-      {/* sponsors */}
-      <section id="sponsors" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <ChapterHeading title="Credits" aka="Our sponsors, with gratitude" />
-          {/* Credits page: one ruled row per tier, label over its logos,
-              left-aligned like the rest of the rulebook. Logo sizes per tier
-              are unchanged. */}
-          <dl>
-            {[
-              {
-                label: "Gold",
-                sponsors: GOLD_SPONSORS,
-                logo: "h-28 md:h-40",
-                row: "flex flex-wrap gap-x-12 gap-y-6",
-              },
-              {
-                label: "Silver",
-                sponsors: SILVER_SPONSORS,
-                logo: "h-16 md:h-24",
-                row: "flex flex-wrap gap-x-12 gap-y-6",
-              },
-              {
-                label: "Patron",
-                sponsors: PATRON_SPONSORS,
-                logo: "h-14 md:h-[72px]",
-                // 2x2 on phones; logos shrink to fit their column.
-                row: "grid w-full grid-cols-2 justify-items-start gap-x-6 gap-y-8 md:flex md:flex-wrap md:gap-x-12 md:gap-y-6",
-              },
-            ].map(({ label, sponsors, logo, row }) => (
-              <div key={label} className="border-b border-line py-7">
-                <dt className="font-space-mono text-sm font-bold tracking-[0.14em] text-meeple uppercase">
-                  {label}
-                </dt>
-                <dd className={`mt-4 items-center ${row}`}>
-                  {sponsors.map((s) => {
-                    const cls = `w-auto max-w-full object-contain ${s.logoClass ?? logo}`;
-                    const img = s.Logo ? (
-                      <s.Logo className={cls} />
-                    ) : (
-                      <Image
-                        src={s.logo}
-                        alt={`${s.name} logo`}
-                        className={cls}
-                      />
-                    );
-                    return s.url ? (
-                      <a
-                        key={s.name}
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="transition-opacity hover:opacity-75"
-                      >
-                        {img}
-                      </a>
-                    ) : (
-                      <span key={s.name}>{img}</span>
-                    );
-                  })}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <div className="mt-8 flex flex-col gap-4 rounded-xl border-2 border-dashed border-navy/40 bg-sky/40 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className={`${DISPLAY} text-[28px] leading-none text-navy`}>
-                Your name here?
-              </p>
-              <p className="mt-1 text-ink/70">
-                Interested in helping make Metagame 2026 happen?
-              </p>
+                    <span key={s.name}>{img}</span>
+                  );
+                })}
+              </dd>
             </div>
-            <Button asChild variant="navy" size="lg" className="w-fit">
-              <Link href="/sponsor">Sponsor Metagame</Link>
-            </Button>
+          ))}
+        </dl>
+        <div className="mt-8 flex flex-col gap-4 rounded-xl border-2 border-dashed border-navy/40 bg-sky/40 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className={`${DISPLAY} text-[28px] leading-none text-navy`}>
+              Your name here?
+            </p>
+            <p className="mt-1 text-ink/70">
+              Interested in helping make Metagame 2026 happen?
+            </p>
           </div>
+          <Button asChild variant="navy" size="lg" className="w-fit">
+            <Link href="/sponsor">Sponsor Metagame</Link>
+          </Button>
         </div>
-      </section>
+      </ChapterSection>
 
-      <MonopolyDivider />
-
-      {/* stay in the loop */}
-      <section
-        id="stay-in-the-loop"
-        className={`${SECTION} md:pt-14 md:pb-[88px]`}
-      >
-        <div className={CONTAINER}>
-          {/* The rulebook's back cover. */}
+      {/* The back cover. */}
+      <section id="stay-in-the-loop" className={SECTION_ANCHOR}>
+        <div className={`${PAGE} pb-20`}>
           <div className="grid gap-8 rounded-[22px] bg-navy p-6 text-cream sm:p-8 md:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
             <div>
               <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-tan uppercase">
@@ -824,6 +480,9 @@ export default function Home() {
               <p className="mt-3 max-w-[460px] text-cream/80">
                 Get notified about ticket sales, updates, volunteer
                 opportunities, future events, and more.
+              </p>
+              <p className="mt-5 font-grotesk text-cream/70 italic">
+                I never met a game I didn&apos;t like.
               </p>
             </div>
             <SignupForm />

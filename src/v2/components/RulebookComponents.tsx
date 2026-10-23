@@ -1,3 +1,4 @@
+import { NIGHT_NAME } from "@/v2/data/chapters";
 import Glyph, { type GlyphName } from "./Glyph";
 import { DISPLAY } from "./styles";
 
@@ -34,7 +35,7 @@ const COMPONENTS: {
   {
     glyph: "card-games",
     tile: "bg-navy text-cream",
-    title: "Night Market",
+    title: NIGHT_NAME,
     body: "Friday night's booths: games to play, things to try, makers to meet. See §6.",
   },
   {
