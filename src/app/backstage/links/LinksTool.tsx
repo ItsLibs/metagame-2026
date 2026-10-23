@@ -11,6 +11,7 @@ import {
   useCopy,
 } from "../ui";
 import Combobox from "./Combobox";
+import QrDownload from "./QrDownload";
 import {
   defaultCampaign,
   GO_PREFIX,
@@ -385,35 +386,38 @@ function Result({ url, link }: { url: string; link: TrackingLink }) {
   }, []);
 
   return (
-    <div className="mt-6 rounded-lg border border-navy/30 bg-cream p-4">
-      <p className="text-sm text-ink/70">
-        {status === "copied" ? "Copied to clipboard" : "Link created"}
-        {status === "failed" && " — copying failed, select the URL below"}
-      </p>
-      <p className="my-2 font-mono text-lg break-all text-navy select-all">
-        {url}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => copy(url)}
-          className={smallButtonClass}
-        >
-          {status === "copied" ? "Copied" : "Copy"}
-        </button>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={smallButtonClass}
-        >
-          Open
-        </a>
+    <div className="mt-6 flex flex-wrap items-start gap-4 rounded-lg border border-navy/30 bg-cream p-4">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm text-ink/70">
+          {status === "copied" ? "Copied to clipboard" : "Link created"}
+          {status === "failed" && " — copying failed, select the URL below"}
+        </p>
+        <p className="my-2 font-mono text-lg break-all text-navy select-all">
+          {url}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => copy(url)}
+            className={smallButtonClass}
+          >
+            {status === "copied" ? "Copied" : "Copy"}
+          </button>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={smallButtonClass}
+          >
+            Open
+          </a>
+        </div>
+        <p className="mt-3 text-xs text-ink/60">
+          → {link.destination} · {link.source} / {link.medium} / {link.campaign}
+          {link.placement && ` / ${link.placement}`}
+        </p>
       </div>
-      <p className="mt-3 text-xs text-ink/60">
-        → {link.destination} · {link.source} / {link.medium} / {link.campaign}
-        {link.placement && ` / ${link.placement}`}
-      </p>
+      <QrDownload url={url} slug={link.slug} />
     </div>
   );
 }
@@ -519,6 +523,7 @@ function Row({
 }) {
   const url = shortUrl(origin, link.slug);
   const { status, copy } = useCopy();
+  const [showQr, setShowQr] = useState(false);
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
       <div className="min-w-0 flex-1 text-sm">
@@ -546,7 +551,7 @@ function Row({
           {new Date(link.createdAt).toLocaleDateString()}
         </p>
       </div>
-      <div className="flex gap-2">
+      <div className="flex basis-full flex-wrap gap-2 sm:basis-auto">
         <button
           type="button"
           onClick={() => copy(url)}
@@ -560,12 +565,25 @@ function Row({
         </button>
         <button
           type="button"
+          onClick={() => setShowQr((v) => !v)}
+          aria-expanded={showQr}
+          className={smallButtonClass}
+        >
+          {showQr ? "Hide QR" : "QR"}
+        </button>
+        <button
+          type="button"
           onClick={() => onUseTemplate(link)}
           className={smallButtonClass}
         >
           Use as template
         </button>
       </div>
+      {showQr && (
+        <div className="basis-full">
+          <QrDownload url={url} slug={link.slug} compact />
+        </div>
+      )}
     </li>
   );
 }
