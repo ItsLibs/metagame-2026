@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import AccessPanel, { type AccessView } from "./AccessPanel";
 import {
   PersonLink,
   shortDate,
@@ -11,13 +12,15 @@ import {
 } from "../../tickets/parts";
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
+import { teamAccess } from "@/lib/access";
 import {
   accountSessions,
   type AccountSessionRow,
 } from "@/lib/account-sessions";
 import { ticketPeople, ticketRoles } from "@/lib/admin-tickets";
 import { ticketAccounts } from "@/lib/admin-store";
-import { adminSession } from "@/lib/auth";
+import { listRoles, userAccess } from "@/lib/permission-store";
+import { explainPermissions, isPermission } from "@/lib/permissions";
 import {
   loadRsvpCounts,
   loadSchedule,
@@ -90,15 +93,18 @@ function SessionList({
   );
 }
 
-// Read-only; role and ban changes stay on the users table.
+// Admin role and ban changes stay on the users table; roles and per-user
+// grants are edited here.
 export default async function AdminUserProfilePage(
   props: PageProps<"/admin/users/[id]">,
 ) {
   await connection();
   const { id } = await props.params;
 
-  const session = await adminSession();
-  if (!session) return <ToolSignIn title="Users" next={`/admin/users/${id}`} />;
+  const viewer = await teamAccess();
+  if (!viewer?.permissions.has("users.view"))
+    return <ToolSignIn title="Users" next={`/admin/users/${id}`} />;
+  const { session } = viewer;
 
   const db = getDb();
   const [row] = await db
@@ -110,12 +116,32 @@ export default async function AdminUserProfilePage(
   if (!row) notFound();
   const { user, profile } = row;
 
-  const [tickets, schedule, plans, counts] = await Promise.all([
+  const admin = user.role === "admin";
+  const [tickets, schedule, plans, counts, roles, held] = await Promise.all([
     ticketsForUser(user.id, user.email),
     loadSchedule(),
     loadViewerPlans(user.id),
     loadRsvpCounts(),
+    listRoles(),
+    userAccess(user.id, admin),
   ]);
+  const access: AccessView = {
+    userId: user.id,
+    admin,
+    self: user.id === session.user.id,
+    editable:
+      viewer.permissions.has("users.edit") && user.id !== session.user.id,
+    roles: roles
+      .filter((r) => !r.auto)
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        assigned: held.roleIds.includes(r.id),
+      })),
+    auto: held.roles.filter((r) => r.auto).map((r) => `${r.name} (${r.auto})`),
+    grants: held.grants.filter(isPermission),
+    explanation: explainPermissions(held),
+  };
   const { accounts, byEmail } = await ticketAccounts(tickets);
   const sessions = accountSessions(
     user.id,
@@ -200,6 +226,10 @@ export default async function AdminUserProfilePage(
             </Field>
           </div>
         </dl>
+      </Section>
+
+      <Section title="Access">
+        <AccessPanel access={access} />
       </Section>
 
       <Section title="Tickets">

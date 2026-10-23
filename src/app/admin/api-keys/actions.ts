@@ -3,7 +3,8 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb, schema } from "@/db";
-import { adminSession, getAuth } from "@/lib/auth";
+import { can, teamAccess } from "@/lib/access";
+import { getAuth } from "@/lib/auth";
 import { ensureAccount } from "@/lib/schedule-store";
 
 const PATH = "/admin/api-keys";
@@ -19,16 +20,16 @@ const message = (err: unknown) =>
 
 /**
  * Mints a key for the account with this email, making the account if needed.
- * A key acts as its account, so it only reaches admin routes once the account
- * is an admin. The key is returned once and never stored.
+ * A key acts as its account, so it only reaches a route once the account
+ * holds that route's permission. The key is returned once and never stored.
  */
 export async function createKey(
   email: string,
   name: string,
   label: string,
 ): Promise<CreateResult> {
-  const session = await adminSession();
-  if (!session) return { error: "Sign in with an admin account to do that." };
+  if (!(await can("api_keys.manage")))
+    return { error: "Sign in with an account that manages API keys." };
   email = email.trim().toLowerCase();
   name = name.trim();
   label = label.trim();
@@ -38,11 +39,14 @@ export async function createKey(
 
   try {
     const [existing] = await getDb()
-      .select({ id: user.id, banned: user.banned })
+      .select({ id: user.id, banned: user.banned, role: user.role })
       .from(user)
       .where(eq(user.email, email))
       .limit(1);
     if (existing?.banned) return { error: "That account is banned." };
+    // A key acts as its account, so minting one for an admin is admin-only.
+    if (existing?.role === "admin" && !(await teamAccess())?.admin)
+      return { error: "Only an admin can make a key for an admin account." };
     if (!existing && !name) return { error: "A new account needs a name." };
     const userId = existing?.id ?? (await ensureAccount(name, email)).userId;
     // No headers: the server-only path, which takes a userId instead of
@@ -57,11 +61,23 @@ export async function createKey(
   }
 }
 
-/** Deletes the row; the plugin's own delete only reaches the caller's keys. */
+/**
+ * Deletes the row; the plugin's own delete only reaches the caller's keys.
+ * As with minting, an admin's key is admin-only.
+ */
 export async function revokeKey(id: string): Promise<Result> {
-  const session = await adminSession();
-  if (!session) return { error: "Sign in with an admin account to do that." };
+  const viewer = await teamAccess();
+  if (!viewer?.permissions.has("api_keys.manage"))
+    return { error: "Sign in with an account that manages API keys." };
   try {
+    const [owner] = await getDb()
+      .select({ role: user.role })
+      .from(apikey)
+      .innerJoin(user, eq(user.id, apikey.referenceId))
+      .where(eq(apikey.id, id))
+      .limit(1);
+    if (owner?.role === "admin" && !viewer.admin)
+      return { error: "Only an admin can revoke an admin's key." };
     await getDb().delete(apikey).where(eq(apikey.id, id));
   } catch (err) {
     return { error: message(err) };
