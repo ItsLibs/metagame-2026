@@ -2,7 +2,7 @@ import Link from "next/link";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import { todayLabel, upcomingTurns } from "@/v2/data/key-dates";
 import { VOLUNTEER_FORM_PATH } from "@/v2/lib/links";
-import { DISPLAY } from "./ChapterHeading";
+import { DISPLAY } from "./styles";
 
 // §4 of the rulebook: a single rail down the left, one turn per row with its
 // date beside it (stacked on phones). It starts at today; passed turns drop

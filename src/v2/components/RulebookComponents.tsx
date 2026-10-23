@@ -1,5 +1,5 @@
 import Glyph, { type GlyphName } from "./Glyph";
-import { DISPLAY } from "./ChapterHeading";
+import { DISPLAY } from "./styles";
 
 const COMPONENTS: {
   glyph: GlyphName;

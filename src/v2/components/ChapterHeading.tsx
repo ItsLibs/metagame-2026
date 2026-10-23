@@ -1,6 +1,5 @@
 import { cn } from "@/v2/lib/utils";
-
-export const DISPLAY = "font-[family-name:var(--font-bebas)] font-normal";
+import { DISPLAY } from "./styles";
 
 // The home page reads as the game's rulebook: each section opens on a
 // numbered chapter head over a navy rule, with a plain-words gloss at the right.

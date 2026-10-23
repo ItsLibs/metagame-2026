@@ -1,5 +1,5 @@
 import Glyph, { GLYPH_LABELS, type GlyphName } from "./Glyph";
-import { DISPLAY } from "./ChapterHeading";
+import { DISPLAY } from "./styles";
 
 const RULES = [
   "Puzzles count.",

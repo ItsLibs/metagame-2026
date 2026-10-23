@@ -1,59 +1,69 @@
 import Image from "next/image";
 import { HIGHLIGHTS_2025 } from "@/v2/data/highlights-2025";
 import HatImage from "@/v2/hat-trick/HatImage";
-import { HEADING } from "./styles";
+import { DISPLAY } from "./styles";
 
-// A checkerboard: each session type is one row, photo in one column and the
-// picked sessions with hosts in the other, sides alternating. Rows stack
-// (photo first) on phones.
-export default function Highlights2025() {
+// Last year's sessions as the rulebook's "examples of play": each session type
+// is a numbered figure (framed photo, mono caption) beside its ruled list of
+// sessions, sides alternating. Rows stack (figure first) on phones. Photos
+// keep their full column width: the Games one hides a Hat Trick faction hat.
+export default function Highlights2025({ chapter = 2 }: { chapter?: number }) {
   return (
-    <div className="mt-10 flex flex-col gap-6 md:gap-8">
+    <div className="flex flex-col gap-10 md:gap-12">
       {HIGHLIGHTS_2025.map((g, i) => (
-        <div key={g.label} className="grid md:grid-cols-2">
-          {/* h-full: the row is as tall as the photo's natural height at column
-              width or the list, whichever is taller; object-cover fills the rest. */}
-          {g.hats?.length ? (
-            <HatImage
-              src={g.photo}
-              alt={g.alt}
-              hats={g.hats}
-              // The photo's own ratio sizes the row when the list is shorter;
-              // in the two-column grid the frame stretches to the row instead.
-              style={{ aspectRatio: `${g.photo.width} / ${g.photo.height}` }}
-              className={`w-full ${
-                i % 2
-                  ? "md:order-2 md:[--fade:linear-gradient(to_right,transparent,black_30%)]"
-                  : "md:[--fade:linear-gradient(to_left,transparent,black_30%)]"
-              }`}
-              sizes="(min-width: 768px) 560px, 100vw"
-            />
-          ) : (
-            <Image
-              src={g.photo}
-              alt={g.alt}
-              className={`h-full w-full object-cover ${
-                i % 2
-                  ? "md:order-2 md:[mask-image:linear-gradient(to_right,transparent,black_30%)]"
-                  : "md:[mask-image:linear-gradient(to_left,transparent,black_30%)]"
-              }`}
-              sizes="(min-width: 768px) 560px, 100vw"
-            />
-          )}
-          <div className="self-center px-0 py-8 md:px-10 md:py-10">
-            <h3 className={`${HEADING} text-[clamp(24px,3vw,32px)] text-navy`}>
+        <div
+          key={g.label}
+          className="grid items-start gap-6 md:grid-cols-2 md:gap-10"
+        >
+          <figure
+            className={`rounded-[4px] border-2 border-navy bg-white p-2 ${
+              i % 2 ? "md:order-2" : ""
+            }`}
+          >
+            {g.hats?.length ? (
+              <HatImage
+                src={g.photo}
+                alt={g.alt}
+                hats={g.hats}
+                style={{ aspectRatio: `${g.photo.width} / ${g.photo.height}` }}
+                className="w-full"
+                sizes="(min-width: 768px) 560px, 100vw"
+              />
+            ) : (
+              <Image
+                src={g.photo}
+                alt={g.alt}
+                // Cropped to the Games photo's 4:3 so the figures match.
+                className="aspect-[4/3] w-full object-cover"
+                sizes="(min-width: 768px) 560px, 100vw"
+              />
+            )}
+            <figcaption className="mt-2 font-space-mono text-xs leading-[1.45] text-ink/60">
+              <b className="text-navy">
+                Fig. {chapter}.{i + 1}
+              </b>{" "}
+              · {g.label} at Metagame 2025
+            </figcaption>
+          </figure>
+          <div>
+            <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
+              Example {chapter}.{i + 1}
+            </p>
+            <h4
+              className={`${DISPLAY} mt-1 text-[clamp(30px,3.4vw,40px)] leading-none tracking-[0.01em] text-navy`}
+            >
               {g.label}
-            </h3>
-            <ul className="mt-5 flex flex-col gap-2.5">
+            </h4>
+            <ul className="mt-4 border-t-2 border-navy">
               {g.sessions.map((s) => (
-                <li key={s.title} className="leading-snug">
-                  <span className={`${HEADING} text-[17px] text-navy`}>
-                    {s.title}
-                  </span>
+                <li
+                  key={s.title}
+                  className="border-b border-line py-2 leading-snug"
+                >
+                  <span className="font-semibold text-navy">{s.title}</span>
                   {s.hosts && (
-                    <span className="text-[15px] text-ink/60">
-                      {" "}
-                      &middot; {s.hosts}
+                    <span className="block font-space-mono text-[11px] tracking-[0.06em] text-ink/60 uppercase">
+                      {s.hosts}
                     </span>
                   )}
                 </li>

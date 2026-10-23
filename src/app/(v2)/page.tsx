@@ -19,14 +19,14 @@ import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
-import PersonCard from "@/v2/components/PersonCard";
+import PlayerCard from "@/v2/components/PlayerCard";
 import RulebookComponents from "@/v2/components/RulebookComponents";
 import RulebookObject from "@/v2/components/RulebookObject";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
 import SiteHero from "@/v2/components/SiteHero";
 import {
-  EYEBROW,
+  DISPLAY,
   HEADING,
   SECTION,
   SECTION_ANCHOR,
@@ -301,13 +301,18 @@ export default function Home() {
             className="mb-8"
           />
           <RulebookComponents />
-          <h3
-            className={`${HEADING} mt-14 text-[clamp(24px,3vw,32px)] text-navy`}
-          >
-            Sample cards from the 2025 edition
-          </h3>
+          <div className="mt-16 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <h3
+              className={`${DISPLAY} text-[clamp(34px,4.4vw,52px)] leading-[0.9] text-navy`}
+            >
+              Examples of play
+            </h3>
+            <span className="font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase">
+              What happened last year
+            </span>
+          </div>
           <Highlights2025 />
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <div className="mt-10 flex flex-wrap gap-4">
             <Button asChild variant="default">
               <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
                 Propose a session
@@ -423,21 +428,17 @@ export default function Home() {
             title="Players"
             aka="Speakers and session hosts"
           />
-          {/* Wrapping flex, not a grid, so a short last row centers. */}
-          <div className="mt-10 flex flex-wrap justify-center gap-2 sm:gap-5">
+          <ul className="mt-8 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {SPEAKERS.map((speaker) => (
-              <div
-                key={speaker.name}
-                className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]"
-              >
-                <PersonCard {...speaker} compact />
-              </div>
+              <li key={speaker.name}>
+                <PlayerCard {...speaker} />
+              </li>
             ))}
-            <div className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]">
-              <SpeakerCtaCard href={RFP_FORM_URL} />
-            </div>
-          </div>
-          <p className="mt-8 text-center text-base text-ink/70">
+            <li>
+              <SpeakerCtaCard href={RFP_FORM_URL} compact />
+            </li>
+          </ul>
+          <p className="mt-6 text-base text-ink/70">
             And many more coming soon&hellip;
           </p>
         </div>
@@ -726,31 +727,36 @@ export default function Home() {
       <section id="sponsors" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <ChapterHeading title="Credits" aka="Our sponsors, with gratitude" />
-          <div className="mt-10 flex flex-col items-center gap-10">
+          {/* Credits page: one ruled row per tier, label over its logos,
+              left-aligned like the rest of the rulebook. Logo sizes per tier
+              are unchanged. */}
+          <dl>
             {[
               {
                 label: "Gold",
                 sponsors: GOLD_SPONSORS,
                 logo: "h-28 md:h-40",
-                row: "flex flex-wrap justify-center gap-x-12 gap-y-6",
+                row: "flex flex-wrap gap-x-12 gap-y-6",
               },
               {
                 label: "Silver",
                 sponsors: SILVER_SPONSORS,
                 logo: "h-16 md:h-24",
-                row: "flex flex-wrap justify-center gap-x-12 gap-y-6",
+                row: "flex flex-wrap gap-x-12 gap-y-6",
               },
               {
                 label: "Patron",
                 sponsors: PATRON_SPONSORS,
                 logo: "h-14 md:h-[72px]",
                 // 2x2 on phones; logos shrink to fit their column.
-                row: "grid w-full grid-cols-2 justify-items-center gap-x-6 gap-y-8 md:flex md:flex-wrap md:justify-center md:gap-x-12 md:gap-y-6",
+                row: "grid w-full grid-cols-2 justify-items-start gap-x-6 gap-y-8 md:flex md:flex-wrap md:gap-x-12 md:gap-y-6",
               },
             ].map(({ label, sponsors, logo, row }) => (
-              <div key={label} className="flex flex-col items-center gap-4">
-                <p className={`${EYEBROW} text-sm text-ink/50`}>{label}</p>
-                <div className={`items-center ${row}`}>
+              <div key={label} className="border-b border-line py-7">
+                <dt className="font-space-mono text-sm font-bold tracking-[0.14em] text-meeple uppercase">
+                  {label}
+                </dt>
+                <dd className={`mt-4 items-center ${row}`}>
                   {sponsors.map((s) => {
                     const cls = `w-auto max-w-full object-contain ${s.logoClass ?? logo}`;
                     const img = s.Logo ? (
@@ -776,15 +782,20 @@ export default function Home() {
                       <span key={s.name}>{img}</span>
                     );
                   })}
-                </div>
+                </dd>
               </div>
             ))}
-          </div>
-          <div className="mt-14 text-center">
-            <h3 className="font-grotesk text-xl font-semibold text-navy">
-              Interested in helping make Metagame 2026 happen?
-            </h3>
-            <Button asChild variant="navy" size="lg" className="mt-5 text-lg">
+          </dl>
+          <div className="mt-8 flex flex-col gap-4 rounded-xl border-2 border-dashed border-navy/40 bg-sky/40 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className={`${DISPLAY} text-[28px] leading-none text-navy`}>
+                Your name here?
+              </p>
+              <p className="mt-1 text-ink/70">
+                Interested in helping make Metagame 2026 happen?
+              </p>
+            </div>
+            <Button asChild variant="navy" size="lg" className="w-fit">
               <Link href="/sponsor">Sponsor Metagame</Link>
             </Button>
           </div>
@@ -799,13 +810,23 @@ export default function Home() {
         className={`${SECTION} md:pt-14 md:pb-[88px]`}
       >
         <div className={CONTAINER}>
-          <SectionHeading eyebrow="Want to keep up?" title="Stay in the loop" />
-          <p className="mt-3 mb-7 max-w-[520px] text-base text-ink/70">
-            Get notified about ticket sales, updates, volunteer opportunities,
-            future events, and more.
-          </p>
-          <div className="max-w-[600px]">
-            <SignupForm light />
+          {/* The rulebook's back cover. */}
+          <div className="grid gap-8 rounded-[22px] bg-navy p-6 text-cream sm:p-8 md:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
+            <div>
+              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-tan uppercase">
+                To be continued&hellip;
+              </p>
+              <h2
+                className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em]`}
+              >
+                Stay in the loop
+              </h2>
+              <p className="mt-3 max-w-[460px] text-cream/80">
+                Get notified about ticket sales, updates, volunteer
+                opportunities, future events, and more.
+              </p>
+            </div>
+            <SignupForm />
           </div>
         </div>
       </section>
