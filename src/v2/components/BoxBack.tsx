@@ -1,4 +1,5 @@
 import Glyph, { GLYPH_LABELS, type GlyphName } from "./Glyph";
+import ShelfFigure from "./ShelfFigure";
 import { DISPLAY } from "./styles";
 
 // The box back's stats, as printed on a game box. Same facts as the FAQ.
@@ -33,7 +34,8 @@ export default function BoxBack() {
       aria-label="At a glance"
       className="rounded-[18px] bg-navy p-5 text-cream sm:p-6"
     >
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] bg-white/20">
+      <ShelfFigure />
+      <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-[10px] bg-white/20">
         {STATS.map(({ label, value }) => (
           <div key={label} className="bg-navy px-3.5 py-3">
             <dt className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-tan uppercase">

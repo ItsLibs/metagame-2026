@@ -1,5 +1,6 @@
 import { cn } from "@/v2/lib/utils";
 import type { Chapter } from "@/v2/data/chapters";
+import { ChapterRule } from "./dividers/DividerRow";
 import { DISPLAY, SECTION_ANCHOR } from "./styles";
 
 // The rulebook's page width: the brand mock's 1160px column.
@@ -36,18 +37,24 @@ export function ChapterHeading({
 }
 
 // One chapter of the home page: a navy rule across the column, then the head
-// and the chapter's content.
+// and the chapter's content. With `rule`, a game divider is that rule (its
+// minigame and the cover puzzle both play on it).
 export default function ChapterSection({
   chapter,
+  rule,
   children,
 }: {
   chapter: Chapter;
+  rule?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section id={chapter.id} className={SECTION_ANCHOR}>
       <div className={PAGE}>
-        <div className="border-t-2 border-navy pt-11 pb-14">
+        {rule && <ChapterRule>{rule}</ChapterRule>}
+        <div
+          className={rule ? "pt-4 pb-14" : "border-t-2 border-navy pt-11 pb-14"}
+        >
           <ChapterHeading chapter={chapter} />
           <div className="mt-7">{children}</div>
         </div>

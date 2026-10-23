@@ -5,6 +5,18 @@ import AnagramEmail from "@/v2/components/AnagramEmail";
 import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
+import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
+import CardSuitsDivider from "@/v2/components/dividers/card-suits";
+import CastlingDivider from "@/v2/components/dividers/castling";
+import CatanDivider from "@/v2/components/dividers/catan";
+import DiceDivider from "@/v2/components/dividers/dice";
+import { ChapterRule } from "@/v2/components/dividers/DividerRow";
+import GoDivider from "@/v2/components/dividers/go";
+import MonopolyDivider from "@/v2/components/dividers/monopoly";
+import ScrabbleDivider from "@/v2/components/dividers/scrabble";
+import SetCardDivider from "@/v2/components/dividers/set-cards";
+import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
+import TetrisDivider from "@/v2/components/dividers/tetris";
 import Highlights2025 from "@/v2/components/Highlights2025";
 import PlayerCard from "@/v2/components/PlayerCard";
 import RulebookComponents from "@/v2/components/RulebookComponents";
@@ -249,13 +261,18 @@ export default function Home() {
     <>
       <RulebookCover />
 
-      <ChapterSection chapter={CHAPTERS.object}>
+      <ChapterSection chapter={CHAPTERS.object} rule={<CastlingDivider />}>
         <RulebookObject />
       </ChapterSection>
 
-      <ChapterSection chapter={CHAPTERS.components}>
+      <ChapterSection chapter={CHAPTERS.components} rule={<CardSuitsDivider />}>
         <RulebookComponents />
-        <div className="mt-16 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <div className="mt-12">
+          <ChapterRule>
+            <TetrisDivider />
+          </ChapterRule>
+        </div>
+        <div className="mt-4 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h3
             className={`${DISPLAY} text-[clamp(34px,4.4vw,52px)] leading-[0.9] text-navy`}
           >
@@ -271,15 +288,18 @@ export default function Home() {
         </Button>
       </ChapterSection>
 
-      <ChapterSection chapter={CHAPTERS.setup}>
+      <ChapterSection chapter={CHAPTERS.setup} rule={<SetCardDivider />}>
         <RulebookSetup />
       </ChapterSection>
 
-      <ChapterSection chapter={CHAPTERS.turns}>
+      <ChapterSection chapter={CHAPTERS.turns} rule={<DiceDivider />}>
         <TurnOrder />
       </ChapterSection>
 
-      <ChapterSection chapter={CHAPTERS.players}>
+      <ChapterSection
+        chapter={CHAPTERS.players}
+        rule={<BloodOnTheClocktowerDivider />}
+      >
         <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SPEAKERS.map((speaker) => (
             <li key={speaker.name}>
@@ -295,11 +315,11 @@ export default function Home() {
         </p>
       </ChapterSection>
 
-      <ChapterSection chapter={CHAPTERS.expansions}>
+      <ChapterSection chapter={CHAPTERS.expansions} rule={<CatanDivider />}>
         <RulebookExpansions />
       </ChapterSection>
 
-      <ChapterSection chapter={CHAPTERS.special}>
+      <ChapterSection chapter={CHAPTERS.special} rule={<ScrabbleDivider />}>
         {/* Columns, not a grid, so the rules read down each column. */}
         <ol className="md:columns-2 md:gap-11">
           {FAQS.map(({ id, question, answer }, i) => (
@@ -351,6 +371,7 @@ export default function Home() {
       </ChapterSection>
 
       <ChapterSection
+        rule={<MonopolyDivider />}
         chapter={{
           ...CHAPTERS.join,
           aka: salesClose
@@ -391,7 +412,7 @@ export default function Home() {
         </div>
       </ChapterSection>
 
-      <ChapterSection chapter={CREDITS}>
+      <ChapterSection chapter={CREDITS} rule={<GoDivider />}>
         {/* One ruled row per tier, label over its logos. Logo sizes per tier
             are unchanged. */}
         <dl>
@@ -467,7 +488,10 @@ export default function Home() {
       {/* The back cover. */}
       <section id="stay-in-the-loop" className={SECTION_ANCHOR}>
         <div className={`${PAGE} pb-20`}>
-          <div className="grid gap-8 rounded-[22px] bg-navy p-6 text-cream sm:p-8 md:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
+          <ChapterRule>
+            <SpaceInvadersDivider />
+          </ChapterRule>
+          <div className="mt-4 grid gap-8 rounded-[22px] bg-navy p-6 text-cream sm:p-8 md:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
             <div>
               <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-tan uppercase">
                 To be continued&hellip;
