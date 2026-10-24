@@ -16,8 +16,6 @@ import ScheduleGrid, {
 import { smallButtonClass } from "@/app/backstage/ui";
 import {
   buildDays,
-  DEFAULT_DRAFT_MINUTES,
-  END_GAP_MINUTES,
   formatPacificDay,
   formatPacificTime,
   hostNames,
@@ -46,8 +44,9 @@ import {
   type TableMeta,
 } from "./SubmissionTable";
 
-/** A proposal waiting for a slot, with what the grid needs to book it. */
+/** A listed proposal, with what the grid needs to book it. */
 export type QueueRow = Row & { minutes: number; category: Category | null };
+export type Group = { title: string; rows: QueueRow[] };
 
 /** Queue rows ride the grid as stand-in sessions under this id. */
 const queueId = (sessionId: string) => `rfp:${sessionId}`;
@@ -86,33 +85,41 @@ type Change =
     }
   | { kind: "unplace"; session: ScheduleSession };
 
-type Board = { sessions: ScheduleSession[]; queue: QueueRow[] };
+type Board = { sessions: ScheduleSession[]; groups: Group[] };
+
+const markPlaced = (groups: Group[], sessionId: string, placed: boolean) =>
+  groups.map((g) => ({
+    ...g,
+    rows: g.rows.map((r) => (r.id === sessionId ? { ...r, placed } : r)),
+  }));
 
 export default function ScheduleBoard({
   sessions: savedSessions,
-  queue: savedQueue,
+  groups: savedGroups,
   locations,
   going,
   proposals,
   mutedIds,
-  showInQueue,
-  title,
   state,
   meta,
+  split,
+  children,
 }: {
   sessions: ScheduleSession[];
-  queue: QueueRow[];
+  /** The tab's rows, each with a grip for the grid. */
+  groups: Group[];
   locations: ScheduleLocation[];
   going: Record<string, number>;
   /** Every proposal by session id, for the details of what's on the grid. */
   proposals: Record<string, Row>;
   /** Sessions shown greyed: someone else's, in "assigned to me". */
   mutedIds: string[];
-  /** Session ids an unscheduled session would show under in this view. */
-  showInQueue: string[];
-  title: string;
   state: SortState;
   meta: TableMeta;
+  /** Grid in its own column beside the list, on screens with the room. */
+  split?: boolean;
+  /** Above the groups: the search box, or the empty-tab note. */
+  children?: React.ReactNode;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -122,7 +129,7 @@ export default function ScheduleBoard({
 
   // Drops show at once; a failed save snaps back when the transition ends.
   const [board, apply] = useOptimistic<Board, Change>(
-    { sessions: savedSessions, queue: savedQueue },
+    { sessions: savedSessions, groups: savedGroups },
     (b, change) => {
       const sessionId = sessionIdOf(change.session);
       if (change.kind === "place") {
@@ -133,36 +140,34 @@ export default function ScheduleBoard({
           sessions: known
             ? b.sessions.map((s) => (s.id === placed.id ? placed : s))
             : [...b.sessions, placed],
-          queue: b.queue.filter((r) => r.id !== sessionId),
+          groups: markPlaced(b.groups, sessionId, true),
         };
       }
-      const row = proposals[sessionId];
       const s = change.session;
       return {
         sessions: b.sessions.map((x) =>
           x.id === s.id ? { ...x, startsAt: null, endsAt: null } : x,
         ),
-        queue:
-          row && showInQueue.includes(row.id)
-            ? [
-                ...b.queue,
-                {
-                  ...row,
-                  category: s.category,
-                  minutes: isPlaced(s)
-                    ? (Date.parse(s.endsAt) - Date.parse(s.startsAt)) / 60_000
-                    : DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES,
-                },
-              ]
-            : b.queue,
+        groups: markPlaced(b.groups, sessionId, false),
       };
     },
   );
 
-  const queueSessions = useMemo(
-    () => new Map(board.queue.map((r) => [queueId(r.id), asSession(r)])),
-    [board.queue],
+  const rows = useMemo(
+    () => board.groups.flatMap((g) => g.rows),
+    [board.groups],
   );
+  // Unplaced rows ride the grid as stand-ins; placed ones are their grid session.
+  const queueSessions = useMemo(
+    () =>
+      new Map(
+        rows.filter((r) => !r.placed).map((r) => [queueId(r.id), asSession(r)]),
+      ),
+    [rows],
+  );
+  const handleSession = (r: { id: string }) =>
+    board.sessions.find((s) => sessionIdOf(s) === r.id && isPlaced(s)) ??
+    queueSessions.get(queueId(r.id))!;
   const days = useMemo(() => buildDays(board.sessions), [board.sessions]);
   const muted = useMemo(() => new Set(mutedIds), [mutedIds]);
 
@@ -172,19 +177,24 @@ export default function ScheduleBoard({
       null)
     : null;
   const carriedRow = heldId?.startsWith("rfp:")
-    ? board.queue.find((r) => queueId(r.id) === heldId)
+    ? rows.find((r) => queueId(r.id) === heldId)
     : undefined;
   // Only proposals go back to the list; hand-made sessions stay in /backstage/schedule.
   const canUnschedule =
     carrying !== null && !carriedRow && carrying.id in proposals;
 
+  // Holding something: the cursor says so everywhere, and Esc lets go.
   useEffect(() => {
     if (!heldId) return;
+    document.body.classList.add("cursor-grabbing");
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setHeldId(null);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("cursor-grabbing");
+      window.removeEventListener("keydown", onKey);
+    };
   }, [heldId]);
 
   const run = (change: Change, action: () => Promise<Result>) =>
@@ -232,95 +242,88 @@ export default function ScheduleBoard({
 
   return (
     <div className="space-y-6">
-      {carrying && (
-        <div
-          role="status"
-          className="sticky top-16 z-40 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy/30 bg-navy px-3 py-2 text-sm text-white shadow-md"
-        >
-          <span>
-            {carriedRow ? "Scheduling" : "Moving"}{" "}
-            <span className="font-semibold">{carrying.title}</span>
-            <span className="text-white/70">
-              {" "}
-              — drop it on a slot
-              {canUnschedule && ", or on the list to take it off the schedule"}.
-              Esc cancels.
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setHeldId(null)}
-            className="rounded border border-white/40 px-2 py-0.5 text-xs font-semibold hover:bg-white/10"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
       {error && <p className="text-sm text-meeple">{error}</p>}
 
-      <div
-        onDragOver={(e) => {
-          if (canUnschedule) e.preventDefault();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          if (canUnschedule && carrying) takeOff(carrying);
-        }}
-        className={`rounded-xl transition-colors ${
-          canUnschedule
-            ? "outline-2 outline-offset-4 outline-navy/40 outline-dashed"
-            : ""
-        }`}
-      >
-        {canUnschedule && carrying && (
-          <button
-            type="button"
-            onClick={() => takeOff(carrying)}
-            className="mb-3 w-full rounded-lg border border-dashed border-navy/40 bg-navy/[0.04] px-4 py-3 text-sm text-navy hover:bg-navy/[0.08]"
-          >
-            Drop here to take <strong>{carrying.title}</strong> off the schedule
-          </button>
-        )}
-        {board.queue.length === 0 ? (
-          <p className="rounded-xl border border-line bg-white px-4 py-6 text-center text-sm text-ink/55">
-            Nothing waiting to be scheduled.
-          </p>
-        ) : (
-          <SubmissionGroup
-            title={title}
-            rows={board.queue}
-            state={state}
-            meta={meta}
-            rowClass={(r) => (heldId === queueId(r.id) ? "bg-navy/[0.06]" : "")}
-            lead={(r) => (
-              <GrabHandle
-                session={queueSessions.get(queueId(r.id))!}
-                carrying={heldId === queueId(r.id)}
-                onGrab={grab}
-                className="h-7 w-6"
-              />
-            )}
-          />
-        )}
-      </div>
+      <div className={split ? "md:flex md:items-start md:gap-6" : "space-y-6"}>
+        <div className={`space-y-6 ${split ? "min-w-0 md:flex-1" : ""}`}>
+          {children}
+          {rows.length > 0 && (
+            <div
+              onDragOver={(e) => {
+                if (canUnschedule) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (canUnschedule && carrying) takeOff(carrying);
+              }}
+              className={`rounded-xl transition-colors ${
+                canUnschedule
+                  ? "outline-2 outline-offset-4 outline-navy/40 outline-dashed"
+                  : ""
+              }`}
+            >
+              {canUnschedule && carrying && (
+                <button
+                  type="button"
+                  onClick={() => takeOff(carrying)}
+                  className="mb-3 w-full rounded-lg border border-dashed border-navy/40 bg-navy/[0.04] px-4 py-3 text-sm text-navy hover:bg-navy/[0.08]"
+                >
+                  Drop here to take <strong>{carrying.title}</strong> off the
+                  schedule
+                </button>
+              )}
+              <div className="space-y-6">
+                {board.groups.map((g) => (
+                  <SubmissionGroup
+                    key={g.title}
+                    title={g.title}
+                    rows={g.rows}
+                    state={state}
+                    meta={meta}
+                    rowClass={(r) =>
+                      heldId === handleSession(r).id ? "bg-navy/[0.06]" : ""
+                    }
+                    lead={(r) => {
+                      const session = handleSession(r);
+                      return (
+                        <GrabHandle
+                          session={session}
+                          carrying={heldId === session.id}
+                          onGrab={grab}
+                          className={`h-7 w-6 ${r.placed ? "text-navy" : ""}`}
+                        />
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
-      <section className="space-y-3">
-        <h2 className="font-bebas text-lg tracking-wide text-navy">
-          On the schedule
-        </h2>
-        <ScheduleGrid
-          days={days}
-          locations={locations}
-          going={going}
-          carrying={carrying}
-          carryMinutes={carriedRow?.minutes}
-          muted={(s) => muted.has(s.id)}
-          onOpen={(s) => setOpenId(s.id)}
-          onGrab={grab}
-          onDrop={drop}
-        />
-      </section>
+        <section
+          className={`space-y-3 ${
+            split
+              ? `mt-6 md:sticky md:top-20 md:mt-0 md:w-1/2 md:shrink-0 ${children ? "hidden md:block" : ""}`
+              : ""
+          }`}
+        >
+          <h2 className="font-bebas text-lg tracking-wide text-navy">
+            On the schedule
+          </h2>
+          <ScheduleGrid
+            days={days}
+            locations={locations}
+            going={going}
+            carrying={carrying}
+            carryMinutes={carriedRow?.minutes}
+            muted={(s) => muted.has(s.id)}
+            onOpen={(s) => setOpenId(s.id)}
+            onGrab={grab}
+            onDrop={drop}
+          />
+        </section>
+      </div>
 
       {open && (
         <Dialog open onOpenChange={(o) => !o && setOpenId(null)}>

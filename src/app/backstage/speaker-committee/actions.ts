@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { can } from "@/lib/access";
 import { durationMinutes } from "@/lib/rfp-fields";
 import {
@@ -10,16 +11,28 @@ import {
 } from "@/lib/rfp-sessions";
 import { DEFAULT_DRAFT_MINUTES, END_GAP_MINUTES } from "@/lib/schedule";
 import { explainDbError, moveSessionTo } from "@/lib/schedule-store";
+import { PANE_COOKIE } from "./pane";
 
 export type Result = { error?: string };
 
 const PATH = "/backstage/speaker-committee";
 const EXPIRED = "Your session expired. Reload.";
 
-/**
- * Drops a proposal on the grid: places its session for the length the host
- * asked for and moves it to ready.
- */
+export async function setSchedulePane(on: boolean): Promise<void> {
+  const store = await cookies();
+  if (on) {
+    store.set(PANE_COOKIE, "1", {
+      path: PATH,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  } else {
+    store.delete({ name: PANE_COOKIE, path: PATH });
+  }
+  revalidatePath(PATH, "layout");
+}
+
+/** Drops a proposal on the grid for the length the host asked for; the step is untouched. */
 export async function scheduleProposal(
   sessionId: string,
   startsAt: string,
@@ -67,7 +80,7 @@ export async function moveScheduled(
   return {};
 }
 
-/** Takes a session off the grid; a ready proposal goes back to "Add to schedule". */
+/** Takes a session off the grid; the step is untouched. */
 export async function unschedule(sessionId: string): Promise<Result> {
   if (!(await can("schedule.manage"))) return { error: EXPIRED };
   try {

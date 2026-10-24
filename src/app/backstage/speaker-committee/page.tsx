@@ -1,6 +1,9 @@
+import { PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
-import ScheduleBoard, { type QueueRow } from "./ScheduleBoard";
+import { setSchedulePane } from "./actions";
+import { schedulePaneOn } from "./pane";
+import ScheduleBoard, { type Group, type QueueRow } from "./ScheduleBoard";
 import {
   compare,
   groupLabel,
@@ -15,10 +18,12 @@ import {
   PATH,
   SORTS,
   SubmissionGroup,
+  type Row,
   type SortKey,
   type SortState,
   type TableMeta,
 } from "./SubmissionTable";
+import { smallButtonClass } from "@/app/backstage/ui";
 import ToolSignIn from "@/components/ToolSignIn";
 import { can } from "@/lib/access";
 import { durationMinutes } from "@/lib/rfp-fields";
@@ -106,9 +111,10 @@ export default async function SpeakerCommitteePage(
   }
   const me = account.user.id;
 
-  const [rfpSessions, committee] = await Promise.all([
+  const [rfpSessions, committee, pane] = await Promise.all([
     listRfpSessions(),
     committeeAccounts(),
+    schedulePaneOn(),
   ]);
   const rows = rfpSessions.map(toRow);
 
@@ -164,61 +170,53 @@ export default async function SpeakerCommitteePage(
             {m.label}
           </Link>
         ))}
+        {/* Desktop only: the side-by-side view has no room on a phone. */}
+        <form
+          action={setSchedulePane.bind(null, !pane)}
+          className="ml-auto hidden md:block"
+        >
+          <button
+            type="submit"
+            className={`${smallButtonClass} inline-flex items-center gap-1.5`}
+          >
+            {pane ? (
+              <PanelRightCloseIcon className="size-4" aria-hidden="true" />
+            ) : (
+              <PanelRightOpenIcon className="size-4" aria-hidden="true" />
+            )}
+            {pane ? "Hide schedule" : "Show schedule"}
+          </button>
+        </form>
       </nav>
       <PipelineTabs active={tab.key} mode={mode} counts={myCounts(rows, me)} />
+      <p className="text-sm text-ink/60">{tab.blurb}</p>
     </div>
   );
 
-  if (tab.key === "schedule") {
-    const [schedule, rsvps] = await Promise.all([
-      loadSchedule(),
-      loadRsvpCounts(),
-    ]);
-    const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
-    // Accepted and not on the grid yet; placed ones show on the grid instead.
-    const queue: QueueRow[] = visible.map((r) => {
-      const row = byId.get(r.id)?.row;
-      return {
-        ...r,
-        minutes:
-          durationMinutes(row?.requestedDuration) ??
-          DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES,
-        category: row?.category ?? null,
-      };
-    });
-    return (
-      <div className="space-y-6">
-        {header}
-        <ScheduleBoard
-          sessions={schedule.sessions}
-          queue={queue}
-          locations={schedule.locations}
-          going={Object.fromEntries(
-            Object.entries(rsvps).map(([id, c]) => [id, c.going]),
-          )}
-          proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
-          mutedIds={
-            mineOnly
-              ? schedule.sessions
-                  .filter((s) => s.shepherd?.userId !== me)
-                  .map((s) => s.id)
-              : []
-          }
-          showInQueue={rows
-            .filter((r) => !mineOnly || r.shepherdId === me)
-            .map((r) => r.id)}
-          title="Needs to be scheduled"
-          state={state}
-          meta={meta}
-        />
-      </div>
-    );
-  }
+  // The grid shows on the schedule tab, or beside every tab with the pane on.
+  const withGrid = tab.key === "schedule" || pane;
+  const [schedule, rsvps] = withGrid
+    ? await Promise.all([loadSchedule(), loadRsvpCounts()])
+    : [null, null];
 
-  return (
-    <div className="space-y-6">
-      {header}
+  const groups: { title: string; rows: Row[] }[] =
+    tab.key === "all"
+      ? stepsOf(visible).map((step) => ({
+          title: groupLabel(step),
+          rows: visible.filter((s) => s.nextSteps === step),
+        }))
+      : tab.key === "schedule"
+        ? [
+            {
+              title: "Needs a slot",
+              rows: visible.filter((r) => !r.placed),
+            },
+            { title: "Placed", rows: visible.filter((r) => r.placed) },
+          ]
+        : [{ title: tab.label, rows: visible }];
 
+  const list = (
+    <>
       {/* Plain GET form: filtering needs no client JS. */}
       <form action={PATH} className="flex gap-2">
         <input type="hidden" name="who" value={mode} />
@@ -239,8 +237,7 @@ export default async function SpeakerCommitteePage(
           Search
         </button>
       </form>
-
-      {visible.length === 0 ? (
+      {visible.length === 0 && (
         <p className="py-8 text-center text-sm text-ink/55">
           {query
             ? "No proposals match. Try clearing the search."
@@ -248,26 +245,67 @@ export default async function SpeakerCommitteePage(
               ? "Nothing here is assigned to you."
               : "Nothing at this step."}
         </p>
-      ) : tab.key === "all" ? (
-        <div className="space-y-6">
-          {stepsOf(visible).map((step) => (
-            <SubmissionGroup
-              key={step ?? "untriaged"}
-              title={groupLabel(step)}
-              rows={visible.filter((s) => s.nextSteps === step)}
-              state={state}
-              meta={meta}
-            />
-          ))}
-        </div>
-      ) : (
+      )}
+    </>
+  );
+
+  if (schedule && rsvps) {
+    const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
+    const forGrid = (r: Row): QueueRow => {
+      const row = byId.get(r.id)?.row;
+      return {
+        ...r,
+        minutes:
+          durationMinutes(row?.requestedDuration) ??
+          DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES,
+        category: row?.category ?? null,
+      };
+    };
+    const gridGroups: Group[] = groups.map((g) => ({
+      ...g,
+      rows: g.rows.map(forGrid),
+    }));
+    return (
+      <div className="space-y-6">
+        {header}
+        <ScheduleBoard
+          sessions={schedule.sessions}
+          groups={gridGroups}
+          locations={schedule.locations}
+          going={Object.fromEntries(
+            Object.entries(rsvps).map(([id, c]) => [id, c.going]),
+          )}
+          proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
+          mutedIds={
+            mineOnly
+              ? schedule.sessions
+                  .filter((s) => s.shepherd?.userId !== me)
+                  .map((s) => s.id)
+              : []
+          }
+          state={state}
+          meta={meta}
+          split={pane}
+        >
+          {list}
+        </ScheduleBoard>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {header}
+      {list}
+      {groups.map((g) => (
         <SubmissionGroup
-          title={tab.label}
-          rows={visible}
+          key={g.title}
+          title={g.title}
+          rows={g.rows}
           state={state}
           meta={meta}
         />
-      )}
+      ))}
     </div>
   );
 }

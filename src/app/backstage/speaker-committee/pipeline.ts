@@ -19,54 +19,76 @@ const graded = (r: Row) => r.graderIds.length > 0;
 const shepherded = (r: Row) => r.shepherdId !== null;
 
 export const TABS = [
-  { key: "all", label: "All", in: () => true, role: "either" },
+  {
+    key: "all",
+    label: "All",
+    blurb: "Every proposal, grouped by where it is in the pipeline.",
+    in: () => true,
+    role: "either",
+  },
   {
     key: "unprocessed",
     label: "Unprocessed",
+    blurb: "Nothing has been done yet.",
     in: (r) => r.phase === null,
     role: "either",
   },
   {
     key: "assign-grader",
-    label: "Assign grader",
+    label: "Grader",
+    blurb: "Choose who should grade this proposal.",
     in: (r) => r.phase === "grading" && !graded(r),
     role: "grader",
   },
   {
     key: "grade",
     label: "Grade",
+    blurb: "Fill out the grading rubric.",
     in: (r) => r.phase === "grading" && graded(r),
     role: "grader",
   },
   {
     key: "email-verdict",
-    label: "Email verdict",
+    label: "Notify",
+    blurb: "Email the speaker with the verdict.",
     in: (r) => r.phase === "notifying",
     role: "either",
   },
   {
     key: "assign-shepherd",
-    label: "Assign shepherd",
+    label: "Shepherd",
+    blurb: "Pick who will shepherd this session.",
     in: (r) => r.phase === "shepherding" && !shepherded(r),
     role: "shepherd",
   },
   {
     key: "shepherd-meeting",
-    label: "Shepherd meeting",
+    label: "Meeting",
+    blurb: "The shepherd meets with the session host to discuss it.",
     in: (r) => r.phase === "shepherding" && shepherded(r),
     role: "shepherd",
   },
   {
     key: "schedule",
     label: "Schedule",
-    // Accepted but not on the grid, whichever of the two phases it's in;
-    // placed sessions show on the grid instead.
-    in: (r) => (r.phase === "scheduling" || r.phase === "ready") && !r.placed,
+    blurb: "Place the session on the grid, then move it along to Done.",
+    // Placed or not: a slot can be picked from any step, and this one ends
+    // when someone says it's done.
+    in: (r) => r.phase === "scheduling",
+    role: "shepherd",
+  },
+  {
+    key: "done",
+    label: "Done",
+    blurb: "No action needed, on the schedule or not.",
+    in: (r) => r.phase === "ready",
     role: "shepherd",
   },
 ] as const satisfies readonly {
   key: string;
   label: string;
+  /** One line under the tabs saying what the step is. */
+  blurb: string;
   in: (row: Row) => boolean;
   role: Role;
 }[];
