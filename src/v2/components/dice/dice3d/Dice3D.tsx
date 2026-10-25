@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   ContactShadows,
@@ -12,6 +12,7 @@ import Die, { DICE, QUAT, type Phase, type StaticLetters } from "./Die";
 import { INTRO_CAP_MS, type IntroDriver, type RollInTake } from "./introDriver";
 import { createPlayback } from "./rollInPlayback";
 import { IntroController, type TakeMeta } from "./physicsRollIn";
+import { MIN_FRAME_MS, RenderBudget } from "./renderBudget";
 
 // STATIC-mode letters: the two edge-on faces of each die read left→right as
 // ME · TA · GA · ME, so the whole row spells METAGAME (META blue, GAME orange)
@@ -81,16 +82,71 @@ function publishTake(take: RollInTake, meta: TakeMeta) {
   console.info("[roll-in take]", JSON.stringify(meta));
 }
 
+// Replaces R3F's own loop: draws while `budget` wants frames, at most ~60/s.
+const RESUME_GAP_MS = 250; // longer than any frame; shorter than any idle hold
+function FrameDriver({ budget }: { budget: RenderBudget }) {
+  const advance = useThree((s) => s.advance);
+  const clock = useThree((s) => s.clock);
+  const gl = useThree((s) => s.gl);
+  const size = useThree((s) => s.size);
+
+  // Mount and every resize need one frame: nothing else repaints an idle scene.
+  useEffect(() => budget.wake(0), [budget, size]);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = -Infinity;
+    const frame = (t: number) => {
+      raf = 0;
+      if (!budget.wants(t)) return; // sleep; the next wake/hold kicks us
+      // 1.5 ms slack: coarsened rAF timestamps make 60 Hz intervals read as
+      // 16.6, and a strict test would drop a frame every ~12.
+      if (t - last >= MIN_FRAME_MS - 1.5) {
+        if (t - last >= RESUME_GAP_MS) {
+          // Resumed after a sleep. R3F's never-mode dt is the gap between the
+          // timestamps we pass, so hand it one frame's worth, not the idle time.
+          // (A slow machine's long frames stay below this, so they still get
+          // their real dt and the animation drops frames instead of crawling.)
+          last = t;
+          clock.elapsedTime = (t - MIN_FRAME_MS) / 1000;
+        } else {
+          // carry the remainder (bounded to one frame) so 144 Hz averages 60
+          last = Math.max(last + MIN_FRAME_MS, t - MIN_FRAME_MS);
+        }
+        advance(t / 1000);
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    const kick = () => {
+      if (!raf) raf = requestAnimationFrame(frame);
+    };
+    const detach = budget.attach(kick);
+    const restored = () => budget.wake(0);
+    gl.domElement.addEventListener("webglcontextrestored", restored);
+    return () => {
+      detach();
+      cancelAnimationFrame(raf);
+      gl.domElement.removeEventListener("webglcontextrestored", restored);
+    };
+  }, [budget, advance, clock, gl]);
+
+  return null;
+}
+
 function Scene({
   phase,
   intro,
+  introOver,
   record,
   onIntroDone,
+  budget,
 }: {
   phase: Phase;
   intro: boolean;
+  introOver: boolean;
   record: boolean;
   onIntroDone: () => void;
+  budget: RenderBudget;
 }) {
   const [gap] = useState(readGap);
   const rowWidth = rowWidthFor(gap);
@@ -162,7 +218,22 @@ function Scene({
   useEffect(() => () => introDriver?.dispose(), [introDriver]);
   // Single owner ticks the driver each frame, at an earlier priority than the
   // dice's default-priority useFrames so every die reads the same instant.
-  useFrame((_, dt) => introDriver?.tick(dt), -1);
+  // The done backstop counts animation time, not wall time: frames (and so
+  // the roll-in) pause while the hero is hidden, and the cap must pause too.
+  const introElapsed = useRef(0);
+  useFrame((_, dt) => {
+    if (!introDriver) return;
+    introDriver.tick(dt);
+    introElapsed.current += dt;
+    if (!introOver && introElapsed.current * 1000 > INTRO_CAP_MS) onIntroDone();
+  }, -1);
+
+  // Frames are drawn only while the roll-in is in flight (each die holds its
+  // own turns, see Die); between turns nothing is drawn.
+  useEffect(() => {
+    if (!intro || introOver) return;
+    return budget.hold();
+  }, [intro, introOver, budget]);
 
   return (
     <>
@@ -200,7 +271,7 @@ function Scene({
         position={[3.5, 6, 5]}
         intensity={1.25}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
       >
         <orthographicCamera
@@ -224,6 +295,7 @@ function Scene({
             x={positions[i]}
             intro={introDriver ?? undefined}
             staticLetters={STATIC_LETTERS[i]}
+            budget={budget}
           />
         ))}
       </group>
@@ -282,14 +354,22 @@ export default function Dice3D() {
   );
 
   // The intro's actual length varies per take/sim, so the phase cycle waits for
-  // the driver's done signal rather than a fixed constant, with a generous
-  // hard cap as a backstop in case the signal never arrives.
+  // the driver's done signal (Scene also caps it in animation time).
   const [introOver, setIntroOver] = useState(!intro);
+
+  // Nothing draws while the hero is scrolled out of view; the phase cycle
+  // holds too (below).
+  const [budget] = useState(() => new RenderBudget());
+  const stageRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!intro || introOver) return;
-    const cap = setTimeout(() => setIntroOver(true), INTRO_CAP_MS);
-    return () => clearTimeout(cap);
-  }, [intro, introOver]);
+    const el = stageRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) =>
+      budget.setVisible(entries[entries.length - 1].isIntersecting),
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [budget]);
 
   useEffect(() => {
     // A pinned ?phase= or reduced-motion start holds still; only the default
@@ -305,8 +385,8 @@ export default function Dice3D() {
     const advance = (delay: number) => {
       id = setTimeout(() => {
         // hidden tabs keep running timers but not frames — hold the cycle here
-        // rather than turning phases nobody is watching
-        if (document.hidden) return advance(500);
+        // (and while scrolled away) rather than turning phases nobody is watching
+        if (document.hidden || !budget.visible) return advance(500);
         step = (step + 1) % SEQ.length;
         setPhase(SEQ[step]);
         advance(PHASE_MS);
@@ -317,23 +397,31 @@ export default function Dice3D() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [introOver]);
 
+  // frameloop="never": FrameDriver draws instead. The canvas is full-bleed, so
+  // dpr sets the cost of every frame drawn.
   return (
-    <Canvas
-      shadows="percentage"
-      dpr={[1, 2]}
-      gl={{
-        antialias: true,
-        alpha: true,
-        toneMapping: THREE.NeutralToneMapping,
-      }}
-      style={{ width: "100%", height: "100%", background: "transparent" }}
-    >
-      <Scene
-        phase={phase}
-        intro={intro}
-        record={record}
-        onIntroDone={() => setIntroOver(true)}
-      />
-    </Canvas>
+    <div ref={stageRef} style={{ width: "100%", height: "100%" }}>
+      <Canvas
+        frameloop="never"
+        shadows="percentage"
+        dpr={[1, 1.5]}
+        gl={{
+          antialias: true,
+          alpha: true,
+          toneMapping: THREE.NeutralToneMapping,
+        }}
+        style={{ width: "100%", height: "100%", background: "transparent" }}
+      >
+        <Scene
+          phase={phase}
+          intro={intro}
+          introOver={introOver}
+          record={record}
+          onIntroDone={() => setIntroOver(true)}
+          budget={budget}
+        />
+        <FrameDriver budget={budget} />
+      </Canvas>
+    </div>
   );
 }
