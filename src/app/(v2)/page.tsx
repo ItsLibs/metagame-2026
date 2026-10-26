@@ -629,7 +629,6 @@ export default function Home() {
           <div className="flex max-w-[700px] flex-col items-start gap-6">
             <TicketsPanel
               showHeading={false}
-              surface="light"
               align="start"
               earlyBird={earlyBird}
             />
