@@ -24,7 +24,9 @@ import { xeroGet } from "./xero";
 
 const EVENT_TAG = "Metagame 2026";
 // Stripe ticket revenue and merchant fees come in through the Tickets tab.
-const SKIP_ACCOUNTS = new Set(["4100", "6040"]);
+// 4100/6040: Stripe ticket revenue and fees (the Tickets tab covers them).
+// 2131 Payroll Clearing: Gusto bank debits; the tagged record is the journal.
+const SKIP_ACCOUNTS = new Set(["4100", "6040", "2131"]);
 const DEFAULT_MODEL = "claude-opus-5-5";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
@@ -474,6 +476,13 @@ export type RequestedRow = {
 
 export type RequestResult = { rows: RequestedRow[]; summary: string };
 
+type Block = { type: string; text?: string; name?: string; input?: unknown };
+
+/**
+ * One tool-use round trip. The model is asked, not forced, to call the tool
+ * (forced tool_choice isn't supported on every model); if it answers in prose
+ * instead, one nudge asks again.
+ */
 async function callClaude<T>(
   system: string,
   user: string,
@@ -481,32 +490,47 @@ async function callClaude<T>(
 ): Promise<T> {
   const key = env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY is not set.");
-  const res = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: env.BUDGET_MODEL ?? DEFAULT_MODEL,
-      max_tokens: 8192,
-      system,
-      tools: [tool],
-      tool_choice: { type: "tool", name: tool.name },
-      messages: [{ role: "user", content: user }],
-    }),
-  });
-  if (!res.ok)
-    throw new Error(`Anthropic API: ${res.status} ${await res.text()}`);
-  const data = (await res.json()) as {
-    content: { type: string; name?: string; input?: unknown }[];
-  };
-  const call = data.content.find(
-    (c) => c.type === "tool_use" && c.name === tool.name,
-  );
-  if (!call?.input) throw new Error("The model returned nothing.");
-  return call.input as T;
+  const messages: { role: "user" | "assistant"; content: unknown }[] = [
+    { role: "user", content: user },
+  ];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: env.BUDGET_MODEL ?? DEFAULT_MODEL,
+        max_tokens: 8192,
+        system: `${system}\n\nAlways answer by calling the ${tool.name} tool, never in prose.`,
+        tools: [tool],
+        messages,
+      }),
+    });
+    if (!res.ok)
+      throw new Error(`Anthropic API: ${res.status} ${await res.text()}`);
+    const data = (await res.json()) as { content: Block[] };
+    const call = data.content.find(
+      (c) => c.type === "tool_use" && c.name === tool.name,
+    );
+    if (call?.input) return call.input as T;
+    if (attempt === 0) {
+      messages.push(
+        { role: "assistant", content: data.content },
+        { role: "user", content: `Call the ${tool.name} tool with that.` },
+      );
+      continue;
+    }
+    const text = data.content
+      .filter((c) => c.type === "text")
+      .map((c) => c.text)
+      .join(" ")
+      .slice(0, 300);
+    throw new Error(`The model didn't call ${tool.name}. ${text}`.trim());
+  }
+  throw new Error("unreachable");
 }
 
 function ledgerContext(rows: LedgerRow[], categories: Category[]): string {
