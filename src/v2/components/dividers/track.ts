@@ -23,7 +23,8 @@ export type EggEvent =
   | { egg: "clocktower"; event: "kill" }
   | { egg: "invaders"; event: "win" }
   | { egg: "monopoly"; event: "win" }
-  | { egg: "catan"; event: "win" };
+  | { egg: "catan"; event: "win" }
+  | { egg: "set"; event: "win" };
 
 // Groups one browser's eggs together and nothing more: a random code kept in
 // localStorage, so it survives reloads (how you get a finished rack back) and
