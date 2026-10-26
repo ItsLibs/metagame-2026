@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import BtcModal from "@/v2/components/tickets/BtcModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
+import DiscountRateModal from "@/v2/components/tickets/DiscountRateModal";
 import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
@@ -16,7 +17,6 @@ import {
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { withPromo, withUtm } from "@/lib/utm";
-import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
   subscribeCurrency,
@@ -54,7 +54,6 @@ const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
 
 export default function TicketsPanel({
   showHeading = true,
-  surface = "dark",
   align = "center",
   earlyBird,
 }: {
@@ -66,11 +65,7 @@ export default function TicketsPanel({
   // The modal shows its own "Tickets" heading; the one-pager section supplies a
   // SectionHeading above the (now background-less) panel, so it hides this one.
   showHeading?: boolean;
-  // The tiles carry their own navy face, but bare text has to match what's behind
-  // the panel: navy in the modal, the cream page background in the section.
-  surface?: "dark" | "light";
 }) {
-  const onDark = surface === "dark";
   const start = align === "start";
   const earlyBirdActive = useSyncExternalStore(
     subscribeNever,
@@ -81,6 +76,7 @@ export default function TicketsPanel({
   const [supporterOpen, setSupporterOpen] = useState(false);
   const [dayPassOpen, setDayPassOpen] = useState(false);
   const [familyPackOpen, setFamilyPackOpen] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
   // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
   // gives the browser its scroll target. Closing drops the hash so a repeat
   // click on the same link changes the URL again and reopens it.
@@ -272,7 +268,8 @@ export default function TicketsPanel({
           type="button"
           variant="raised"
           onClick={() => setFamilyPackOpen(true)}
-          className={TILE}
+          // Narrower padding so the long label fits the shared 210px tile.
+          className={TILE.replace("px-7", "px-4")}
         >
           <span className={TILE_LABEL}>Family &amp; Friends</span>
           <span className="flex items-baseline gap-2.5 leading-none">
@@ -284,37 +281,34 @@ export default function TicketsPanel({
             </span>
           </span>
           <span className={TILE_NOTE}>
-            each · {FAMILY_PACK.min}–{FAMILY_PACK.max} ticket bundle
+            each · {FAMILY_PACK.min}–{FAMILY_PACK.max} tickets
           </span>
         </Button>
-        {/* Volunteer + financial aid: plain application links, deliberately not
-            styled like the purchase tiles. */}
-        <div
-          className={`w-full text-sm ${start ? "text-left" : "text-center"} ${onDark ? "text-cream/70" : "text-ink/70"} flex flex-col gap-1.5`}
+        <Button
+          type="button"
+          variant="raised"
+          onClick={() => setDiscountOpen(true)}
+          className={TILE}
         >
-          <span>
-            A limited supply of volunteer tickets are available.{" "}
-            <VolunteerFormLink
-              className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
-            >
-              Apply to volunteer
-            </VolunteerFormLink>
+          <span className={TILE_LABEL}>Student / Aid</span>
+          <span className={`${HEADING} text-[30px] leading-none text-tan`}>
+            50% off
           </span>
-          <span>
-            Ticket price out of reach?{" "}
-            <a
-              href={FINANCIAL_AID_FORM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
-            >
-              Apply for financial aid
-            </a>
-          </span>
-        </div>
+        </Button>
+        <Button asChild variant="raised" className={TILE}>
+          <VolunteerFormLink>
+            <span className={TILE_LABEL}>Volunteer</span>
+            <span className={`${HEADING} text-[30px] leading-none text-tan`}>
+              $0
+            </span>
+          </VolunteerFormLink>
+        </Button>
       </div>
       {supporterOpen && <SupporterModal onClose={closeSupporter} />}
       {dayPassOpen && <DayPassModal onClose={() => setDayPassOpen(false)} />}
+      {discountOpen && (
+        <DiscountRateModal onClose={() => setDiscountOpen(false)} />
+      )}
       {familyPackOpen && (
         <FamilyPackModal onClose={() => setFamilyPackOpen(false)} />
       )}
