@@ -27,7 +27,8 @@ export default function DiscountRateModal({
           </DialogTitle>
           <DialogDescription className="text-base text-cream/80">
             50% off a Standard ticket. This rate is for students, people who are
-            unemployed, and anyone otherwise in need of financial aid.
+            unemployed, nonprofit employees, and anyone otherwise in need of
+            financial aid.
           </DialogDescription>
         </div>
         <Button asChild className="h-12 w-full text-base">
