@@ -62,6 +62,18 @@ which takes accounts only. `gradeAccess()` (`src/lib/grader-auth.ts`) still
 layers a shared-password fallback (`GRADER_PASSWORD` + secret) on `can()`
 until the speaker committee has accounts, then that goes too.
 
+## Looking at UI changes
+
+For any substantive UI change, run `node scripts/preview-shot.mjs <preview-url>
+/path [/path…]` against the PR's Vercel preview (URL in the bot comment) and
+inspect the screenshots to see that things appear correct on mobile and
+desktop. It needs `node_modules/playwright` plus a Chromium: the per-machine
+one from `npx playwright install chromium-headless-shell`, or any Chromium on
+the box via `SHOT_BROWSER=<path>`. If either is missing, ask before installing
+and say it's for the screenshots. If anything is off,
+surface the screenshots to the user for review rather than iterating on your
+own. Delete the screenshots afterwards so they don't pile up.
+
 ## Issue tracking (Linear)
 
 Work is tracked in Linear (Metagame team): attach PRs by putting `[META-###]` in the PR title or using the Linear-provided branch name, and file issues generously — including to record work already done. In the PR body only `Fixes META-###` attaches; avoid `Ref`, which blocks the on-merge status transitions. A linked PR moves the issue to In Progress on open and In Review on merge — In Review means "merged, pending human review", and nothing moves an issue to Done automatically, so never mark issues Done yourself. No Linear access? Skip all this — a clear PR description is enough.
