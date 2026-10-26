@@ -1,5 +1,6 @@
 "use client";
 
+import { Undo2 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import DividerRow from "../DividerRow";
 import { CARD_SET as CARD_SIZE, LAYER, SHADOW } from "../sizing";
@@ -14,7 +15,7 @@ import { trackEgg } from "../track";
 // first of six levels, each a fixed hand of the 27 cards laid out as a small
 // table. Tap three cards (they glow); a set fades out, anything else shakes.
 // Clear the table to move up a level; clear the last and it spells a
-// discount code.
+// discount code. Undo puts back the sets found on the current table.
 const CHARCOAL = "#4d4d4d";
 const EXIT_MS = 500; // a found set fading out
 const DEAL_MS = 600; // a dealt card fading in
@@ -367,6 +368,8 @@ export default function SetCardDivider() {
   const [picked, setPicked] = useState<number[]>([]);
   const [leaving, setLeaving] = useState<number[]>([]);
   const [shaking, setShaking] = useState(false);
+  // Boards from before each set found on this level, most recent last.
+  const [history, setHistory] = useState<(Slot | null)[][]>([]);
   // The resting four's box, held once play starts so the row around it (the
   // hairlines) never relays out; the table hangs from it, centred.
   const [frame, setFrame] = useState<{ width: number; height: number }>();
@@ -431,24 +434,41 @@ export default function SetCardDivider() {
       }, SHAKE_MS);
       return;
     }
-    // A found set leaves a gap. A table with no set left on it is a dead end;
-    // a reload starts over.
+    // A found set leaves a gap. A table with no set left on it is a dead end
+    // until it's undone.
     setLeaving(next);
     setTimeout(() => {
       const board = play.board.map((s, j) => (next.includes(j) ? null : s));
       const level = play.level + 1;
       if (board.some(Boolean)) {
         setPlay({ ...play, board });
+        setHistory((h) => [...h, play.board]);
       } else if (level < LEVELS.length) {
         setPlay({ level, board: dealLevel(level, mint) });
+        setHistory([]);
       } else {
         setPlay({ ...play, board });
+        setHistory([]);
         setWon(true);
         trackEgg({ egg: "set", event: "win" });
       }
       setPicked([]);
       setLeaving([]);
     }, EXIT_MS);
+  };
+
+  const undo = () => {
+    if (!play || leaving.length || shaking || !history.length) return;
+    const prev = history[history.length - 1];
+    setHistory(history.slice(0, -1));
+    setPicked([]);
+    // The returning cards get fresh keys so they fade back in.
+    setPlay({
+      ...play,
+      board: prev.map((s, j) =>
+        s && !play.board[j] ? { ...s, seq: mint(), delay: 0 } : s,
+      ),
+    });
   };
 
   const glyph = (slot: Slot, i: number) => (
@@ -529,10 +549,7 @@ export default function SetCardDivider() {
         {/* Levels cleared, one pip each, hung under the table so nothing
             shifts. */}
         {play && !won && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 gap-2"
-          >
+          <div className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 gap-2">
             {LEVELS.map((_, i) => (
               <span
                 key={i}
@@ -543,6 +560,17 @@ export default function SetCardDivider() {
                 }}
               />
             ))}
+            {/* Off to the pips' side, so they stay centred under the table. */}
+            <button
+              type="button"
+              aria-label="Undo last set"
+              disabled={!history.length}
+              onClick={undo}
+              className="pointer-events-auto absolute top-1/2 left-full ml-3 flex size-7 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full transition-opacity duration-300 hover:bg-ink/5 disabled:pointer-events-none disabled:opacity-0"
+              style={{ color: CHARCOAL }}
+            >
+              <Undo2 className="size-4" />
+            </button>
           </div>
         )}
       </div>
