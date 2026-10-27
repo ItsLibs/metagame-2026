@@ -1,7 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { CHAPTERS, LAST_YEAR_CHAPTERS, type Chapter } from "@/v2/data/chapters";
+import {
+  CHAPTERS,
+  LAST_YEAR_CHAPTERS,
+  SESSIONS_CHAPTERS,
+  type Chapter,
+} from "@/v2/data/chapters";
 import ExpandingNav from "./nav/ExpandingNav";
 import RulebookHeader from "./RulebookHeader";
 
@@ -9,6 +14,7 @@ import RulebookHeader from "./RulebookHeader";
 // its own chapters.
 const RULEBOOKS: Record<string, Chapter[]> = {
   "/": Object.values(CHAPTERS),
+  "/sessions": Object.values(SESSIONS_CHAPTERS),
   "/last-year": Object.values(LAST_YEAR_CHAPTERS),
 };
 

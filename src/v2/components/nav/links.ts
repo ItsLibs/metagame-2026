@@ -8,6 +8,7 @@ import {
   MapPin,
   MessageCircleQuestion,
   Puzzle,
+  Shapes,
   ShieldCheck,
   Ticket,
   UserRound,
@@ -31,6 +32,7 @@ export type NavLink = {
 export const NAV_LINKS: readonly NavLink[] = [
   { id: "home", label: "Home", href: "/", icon: Mg2Die },
   { id: "tickets", label: "Tickets", href: "/#tickets", icon: Ticket },
+  { id: "sessions", label: "Sessions", href: "/sessions", icon: Shapes },
   {
     id: "key-dates",
     label: "Key Dates",

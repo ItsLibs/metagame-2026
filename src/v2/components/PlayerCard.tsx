@@ -1,20 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Session2026 } from "@/v2/data/sessions-2026";
 import type { Person } from "@/v2/data/team";
 import HatImage from "@/v2/hat-trick/HatImage";
+import { KINDS } from "./sessions/kinds";
 import { DISPLAY, PLAYER_PHOTO } from "./styles";
 
+// Sessions shown on a card before "+n more".
+const SHOWN = 2;
+
 // One speaker in the rulebook's §5 Players: the brand mock's compact card
-// (name, affiliation, session) with the photo as a square beside the text,
-// so the card stays the mock's height.
+// (name, affiliation, their 2026 sessions) with the photo as a square beside
+// the text. Sessions not confirmed yet say so.
 export default function PlayerCard({
   name,
   title,
   titleUrl,
   photo,
   hats,
-  session,
-}: Person) {
+  sessions = [],
+}: Person & { sessions?: Session2026[] }) {
   return (
     <div className="flex h-full gap-3 rounded-xl border-2 border-navy bg-white p-3 transition-[translate,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[4px_4px_0_0_var(--color-navy)]">
       {photo && hats?.length ? (
@@ -66,19 +71,34 @@ export default function PlayerCard({
             title
           )}
         </p>
-        {session && (
-          <p className="mt-0.5 text-sm leading-snug text-ink/80 italic">
-            {session.slug ? (
-              <Link
-                href={`/schedule/${session.slug}`}
-                className="underline-offset-2 hover:text-navy hover:underline"
-              >
-                {session.title}
-              </Link>
-            ) : (
-              session.title
+        {sessions.length > 0 && (
+          <ul className="mt-0.5 flex flex-col gap-0.5 text-sm leading-snug">
+            {sessions.slice(0, SHOWN).map((s) => (
+              <li key={s.slug}>
+                <Link
+                  href={`/sessions#${s.slug}`}
+                  className="text-ink/80 italic underline-offset-2 hover:text-navy hover:underline"
+                >
+                  {s.title ?? `${KINDS[s.kinds[0]].label}, title to come`}
+                </Link>
+                {s.status !== "confirmed" && (
+                  <span className="ml-1.5 font-space-mono text-[10px] tracking-[0.08em] whitespace-nowrap text-ink/50 uppercase">
+                    {s.status === "review" ? "In review" : "Unconference"}
+                  </span>
+                )}
+              </li>
+            ))}
+            {sessions.length > SHOWN && (
+              <li>
+                <Link
+                  href={`/sessions?q=${encodeURIComponent(name)}`}
+                  className="font-space-mono text-[10.5px] tracking-[0.08em] text-meeple uppercase hover:underline"
+                >
+                  +{sessions.length - SHOWN} more
+                </Link>
+              </li>
             )}
-          </p>
+          </ul>
         )}
       </div>
     </div>

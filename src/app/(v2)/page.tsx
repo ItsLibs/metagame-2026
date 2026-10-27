@@ -31,6 +31,7 @@ import TurnOrder from "@/v2/components/TurnOrder";
 import { Button } from "@/v2/components/ui/button";
 import { CHAPTERS, CREDITS } from "@/v2/data/chapters";
 import { upcomingKeyDates } from "@/v2/data/key-dates";
+import { SESSIONS_2026, sessionsFor } from "@/v2/data/sessions-2026";
 import { SPEAKERS } from "@/v2/data/speakers";
 import {
   HOTELS_SEARCH_URL,
@@ -53,6 +54,9 @@ export const metadata: Metadata = {
 };
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
+const CONFIRMED_SESSIONS = SESSIONS_2026.filter(
+  (s) => s.status === "confirmed",
+).length;
 const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 
 const FAQS: Rule[] = [
@@ -300,7 +304,7 @@ export default function Home() {
         <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SPEAKERS.map((speaker) => (
             <li key={speaker.name}>
-              <PlayerCard {...speaker} />
+              <PlayerCard {...speaker} sessions={sessionsFor(speaker.name)} />
             </li>
           ))}
           <li>
@@ -308,7 +312,14 @@ export default function Home() {
           </li>
         </ul>
         <p className="mt-6 text-base text-ink/70">
-          And many more coming soon&hellip;
+          And many more: {CONFIRMED_SESSIONS} sessions confirmed so far, with
+          more in review.{" "}
+          <Link
+            href="/sessions"
+            className="font-bold text-navy underline underline-offset-4 hover:text-meeple"
+          >
+            See every session →
+          </Link>
         </p>
       </ChapterSection>
 

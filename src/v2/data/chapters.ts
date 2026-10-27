@@ -81,6 +81,31 @@ export const CREDITS: Chapter = {
   aka: "Our sponsors, with gratitude",
 };
 
+// /sessions: every 2026 session so far, one chapter per status.
+export const SESSIONS_CHAPTERS = {
+  confirmed: {
+    num: 1,
+    id: "confirmed",
+    title: "Confirmed",
+    short: "Confirmed",
+    aka: "On the program",
+  },
+  review: {
+    num: 2,
+    id: "in-review",
+    title: "In review",
+    short: "In review",
+    aka: "Submitted, not confirmed yet",
+  },
+  unconference: {
+    num: 3,
+    id: "unconference",
+    title: "Unconference",
+    short: "Unconference",
+    aka: "On the unconference schedule",
+  },
+} satisfies Record<string, Chapter>;
+
 // /last-year as the rulebook's 2025 edition, in page order.
 export const LAST_YEAR_CHAPTERS = {
   report: {
