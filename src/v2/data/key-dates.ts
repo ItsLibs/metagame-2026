@@ -81,9 +81,9 @@ export const KEY_DATES: KeyDate[] = [
     cta: "Apply for aid",
   },
   {
-    label: "Oct 26",
+    label: "Oct 29",
     title: "Volunteer applications due",
-    endsAt: endOfDay(10, 26),
+    endsAt: endOfDay(10, 29),
     href: VOLUNTEER_FORM_PATH,
     cta: "Apply to volunteer",
   },
