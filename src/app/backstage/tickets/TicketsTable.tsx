@@ -1,0 +1,436 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown } from "lucide-react";
+import Link from "next/link";
+import {
+  PersonLink,
+  profileHref,
+  shortDate,
+  StatusTag,
+  TestTag,
+} from "./parts";
+import { fieldClass, selectStyle, smallButtonClass } from "../ui";
+import {
+  pageOf,
+  PAGE_SIZES,
+  personLabel,
+  sortTicketRows,
+  ticketMatch,
+  type SortDir,
+  type TicketPeople,
+  type TicketPerson,
+  type TicketSort,
+} from "@/lib/admin-tickets";
+import type { TicketRow } from "@/lib/ticket-store";
+import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
+
+export type AdminTicket = {
+  t: {
+    id: string;
+    createdAt: Date;
+    claimedAt: Date | null;
+    tier: string;
+    status: TicketRow["status"];
+    test: boolean;
+    code: string;
+    source: string;
+    amountCents: number | null;
+    couponCode: string | null;
+  };
+  people: TicketPeople;
+};
+
+export type TableState = {
+  q: string;
+  sort: TicketSort;
+  dir: SortDir;
+  size: number;
+  page: number;
+};
+
+// "10/21" — the year is always this one.
+const monthDay = new Intl.DateTimeFormat("en-US", {
+  month: "numeric",
+  day: "numeric",
+  timeZone: "America/Los_Angeles",
+});
+
+const usd = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+const amount = (cents: number | null) =>
+  cents === null ? "—" : usd.format(cents / 100);
+
+// Newest purchases and highest prices first; names A→Z.
+const defaultDir = (sort: TicketSort): SortDir =>
+  sort === "purchased" || sort === "pay" ? "desc" : "asc";
+
+/** Sorting, search and paging all happen here; the URL just mirrors them. */
+export default function TicketsTable({
+  tickets,
+  initial,
+}: {
+  tickets: AdminTicket[];
+  initial: TableState;
+}) {
+  const [state, setState] = useState(initial);
+  const [open, setOpen] = useState<AdminTicket | null>(null);
+  const { q, sort, dir, size } = state;
+
+  const matching = useMemo(
+    () =>
+      sortTicketRows(
+        tickets.filter((r) => ticketMatch(r, q)),
+        sort,
+        dir,
+      ),
+    [tickets, q, sort, dir],
+  );
+  const page = pageOf(matching, state.page, size);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const set = (k: string, v: string, fallback: string) =>
+      v === fallback ? url.searchParams.delete(k) : url.searchParams.set(k, v);
+    set("q", q, "");
+    set("sort", sort, "purchased");
+    set("dir", dir, defaultDir(sort));
+    set("size", String(size), String(PAGE_SIZES[0]));
+    set("page", String(page.page), "1");
+    window.history.replaceState(null, "", url);
+  }, [q, sort, dir, size, page.page]);
+
+  const update = (next: Partial<TableState>) =>
+    setState((s) => ({ ...s, page: 1, ...next }));
+  const sortBy = (col: TicketSort) =>
+    update(
+      sort === col
+        ? { dir: dir === "asc" ? "desc" : "asc" }
+        : { sort: col, dir: defaultDir(col) },
+    );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => update({ q: e.target.value })}
+          placeholder="Search by name, email or coupon code"
+          className={`${fieldClass} max-w-sm`}
+        />
+        <span className="text-sm text-ink/60">
+          {matching.length} {matching.length === 1 ? "ticket" : "tickets"}
+        </span>
+      </div>
+
+      <div className="hidden rounded-xl border border-line bg-white shadow-sm md:block">
+        <table className="w-full table-fixed text-left text-sm">
+          <colgroup>
+            <col className="w-[5.5rem]" />
+            <col className="w-[22%]" />
+            <col className="w-[6rem]" />
+            <col />
+            <col />
+          </colgroup>
+          <thead className="text-xs tracking-wide text-ink/50 uppercase">
+            <tr>
+              <SortHeader
+                col="purchased"
+                label="Date"
+                {...{ sort, dir, sortBy }}
+              />
+              <th className="px-4 py-2 font-medium">Ticket</th>
+              <SortHeader col="pay" label="Amt" {...{ sort, dir, sortBy }} />
+              <SortHeader
+                col="buyer"
+                label="Buyer"
+                {...{ sort, dir, sortBy }}
+              />
+              <SortHeader
+                col="claimer"
+                label="Claimer"
+                {...{ sort, dir, sortBy }}
+              />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line align-top">
+            {page.rows.map(({ t, people }) => (
+              <tr key={t.id}>
+                <td className="px-4 py-2 whitespace-nowrap">
+                  {monthDay.format(t.createdAt)}
+                </td>
+                <td className="px-4 py-2">
+                  <div className="break-words">{t.tier}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {t.status !== "paid" && <StatusTag status={t.status} />}
+                    {t.test && <TestTag />}
+                    <span className="text-xs text-ink/60">
+                      Code <span className="font-mono">{t.code}</span>
+                    </span>
+                  </div>
+                </td>
+                <td className="px-4 py-2 tabular-nums">
+                  <div className="whitespace-nowrap">
+                    {amount(t.amountCents)}
+                  </div>
+                  {t.couponCode && (
+                    <div className="mt-1 text-xs break-all text-ink/60">
+                      Coupon <span className="font-mono">{t.couponCode}</span>
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-2 break-words">
+                  <PersonLink person={people.buyer} />
+                  {!people.holderIsBuyer && people.holder && (
+                    <div className="mt-1 text-xs text-ink/60">
+                      Held by {personLabel(people.holder)}
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-2 break-words">
+                  <PersonLink person={people.claimer} />
+                  {t.claimedAt && (
+                    <div className="mt-1 text-xs text-ink/60">
+                      Claimed {monthDay.format(t.claimedAt)}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {page.rows.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-ink/50">
+                  No tickets{q && " match"}.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <ul className="divide-y divide-line rounded-xl border border-line bg-white text-sm shadow-sm md:hidden">
+        {page.rows.map((row) => (
+          <li key={row.t.id}>
+            <button
+              type="button"
+              onClick={() => setOpen(row)}
+              className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+            >
+              <span className="w-10 shrink-0 text-ink/60 tabular-nums">
+                {monthDay.format(row.t.createdAt)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">
+                  {row.people.buyer ? (
+                    personLabel(row.people.buyer)
+                  ) : (
+                    <span className="text-ink/40">—</span>
+                  )}
+                </span>
+                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink/60">
+                  {row.t.status !== "paid" && (
+                    <StatusTag status={row.t.status} />
+                  )}
+                  {row.t.test && <TestTag />}
+                  <span className="truncate">{row.t.tier}</span>
+                </span>
+              </span>
+              <span className="shrink-0 tabular-nums">
+                {amount(row.t.amountCents)}
+              </span>
+              <ChevronRight
+                className="size-4 shrink-0 text-ink/40"
+                aria-hidden
+              />
+            </button>
+          </li>
+        ))}
+        {page.rows.length === 0 && (
+          <li className="px-4 py-6 text-center text-ink/50">
+            No tickets{q && " match"}.
+          </li>
+        )}
+      </ul>
+
+      <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
+        <DialogContent
+          aria-describedby={undefined}
+          className="flex max-w-[480px] flex-col gap-4 px-6 py-6"
+        >
+          {open && <TicketDetail ticket={open} />}
+        </DialogContent>
+      </Dialog>
+
+      <nav className="flex flex-wrap items-center gap-3 text-sm">
+        <button
+          type="button"
+          disabled={page.page <= 1}
+          onClick={() => setState((s) => ({ ...s, page: page.page - 1 }))}
+          className={`${smallButtonClass} disabled:opacity-40`}
+        >
+          ← Prev
+        </button>
+        <span className="text-ink/60">
+          Page {page.page} of {page.pages}
+        </span>
+        <button
+          type="button"
+          disabled={page.page >= page.pages}
+          onClick={() => setState((s) => ({ ...s, page: page.page + 1 }))}
+          className={`${smallButtonClass} disabled:opacity-40`}
+        >
+          Next →
+        </button>
+        <label className="ml-auto flex items-center gap-2 text-ink/60">
+          Per page
+          <select
+            value={size}
+            onChange={(e) => update({ size: Number(e.target.value) })}
+            className="appearance-none rounded-md border border-line bg-white bg-no-repeat py-1 pr-8 pl-2 text-ink"
+            style={selectStyle}
+          >
+            {PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+      </nav>
+    </div>
+  );
+}
+
+/** A sortable header: a faint ↕ when idle, ↑/↓ when active. */
+function SortHeader({
+  col,
+  label,
+  sort,
+  dir,
+  sortBy,
+}: {
+  col: TicketSort;
+  label: string;
+  sort: TicketSort;
+  dir: SortDir;
+  sortBy: (col: TicketSort) => void;
+}) {
+  const active = sort === col;
+  const Icon = !active ? ChevronsUpDown : dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <th
+      className="px-4 py-2 font-medium"
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => sortBy(col)}
+        className={`inline-flex items-center gap-1 uppercase hover:text-navy ${active ? "text-navy" : ""}`}
+      >
+        {label}
+        <Icon
+          className={`size-3.5 ${active ? "" : "opacity-40"}`}
+          aria-hidden
+        />
+      </button>
+    </th>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <dt className="text-xs tracking-wide text-cream/50 uppercase">{label}</dt>
+      <dd className="mt-0.5 break-words">{children}</dd>
+    </div>
+  );
+}
+
+function Person({ person }: { person: TicketPerson | null }) {
+  if (!person) return <span className="text-cream/40">—</span>;
+  const label = personLabel(person);
+  return (
+    <>
+      {person.userId ? (
+        <Link
+          href={profileHref(person.userId)}
+          className="underline underline-offset-2 hover:text-salmon"
+        >
+          {label}
+        </Link>
+      ) : (
+        label
+      )}
+      {person.email && person.email !== label && (
+        <div className="font-mono text-xs break-all text-cream/60">
+          {person.email}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Everything the desktop table shows for one ticket, for the phone modal. */
+function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
+  return (
+    <>
+      <DialogTitle className="font-bebas pr-8 text-2xl tracking-wide text-cream">
+        {t.tier}
+      </DialogTitle>
+      {(t.status !== "paid" || t.test) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {t.status !== "paid" && <StatusTag status={t.status} />}
+          {t.test && <TestTag />}
+        </div>
+      )}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <Field label="Code">
+          <span className="font-mono">{t.code}</span>
+        </Field>
+        <Field label="Purchased">{shortDate.format(t.createdAt)}</Field>
+        <Field label="Amount">
+          <span className="tabular-nums">{amount(t.amountCents)}</span>
+        </Field>
+        <Field label="Coupon">
+          {t.couponCode ? (
+            <span className="font-mono break-all">{t.couponCode}</span>
+          ) : (
+            <span className="text-cream/40">—</span>
+          )}
+        </Field>
+        <Field label="Buyer">
+          <Person person={people.buyer} />
+        </Field>
+        <Field label="Claimer">
+          <Person person={people.claimer} />
+          {t.claimedAt && (
+            <div className="text-xs text-cream/60">
+              Claimed {monthDay.format(t.claimedAt)}
+            </div>
+          )}
+        </Field>
+        <Field label="Holder">
+          {people.holderIsBuyer ? (
+            <span className="text-cream/60">The buyer</span>
+          ) : (
+            <Person person={people.holder} />
+          )}
+        </Field>
+        <Field label="Source">
+          <span className="capitalize">{t.source}</span>
+        </Field>
+      </dl>
+    </>
+  );
+}

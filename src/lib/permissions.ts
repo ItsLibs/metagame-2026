@@ -1,0 +1,287 @@
+// The permission catalog and the pure resolution over it. One entry per gate
+// the code enforces; the roles and per-user grants that hold them live in
+// Postgres (src/db/schema/permissions.ts) and are read by src/lib/access.ts.
+// Adding a gate means adding its key here, nothing else. Keys with no gate
+// yet wait for their page: checkin.manage lands with the check-in page.
+
+/** Display only: how much a permission lets its holder change. */
+export type PermissionLevel = "view" | "edit" | "delete";
+
+/**
+ * `team`: a team tool, so holding it opens /backstage and the nav's admin link.
+ * `attendee`: a site-facing gate ticket holders may get through the built-in
+ * Attendee role; on its own it opens nothing under /backstage.
+ */
+export type PermissionAudience = "team" | "attendee";
+
+// Grouped by area, and within an area in the order view, edit, delete; the
+// roles grid renders a heading per group, so labels name the action.
+export const PERMISSIONS = {
+  "users.view": {
+    audience: "team",
+    group: "Users",
+    level: "view",
+    label: "View users",
+    description:
+      "The account list and each one's roles, permissions and tickets.",
+  },
+  "users.create": {
+    audience: "team",
+    group: "Users",
+    level: "edit",
+    label: "Create users",
+    description:
+      "Make an account from a name and email, optionally sending an invite.",
+    implies: ["users.view"],
+  },
+  "users.edit": {
+    audience: "team",
+    group: "Users",
+    level: "edit",
+    label: "Edit users",
+    description: "Change other accounts' roles and per-user permissions.",
+    implies: ["users.view"],
+  },
+  "tickets.view": {
+    audience: "team",
+    group: "Tickets",
+    level: "view",
+    label: "View tickets",
+    description: "Each ticket with its buyer, holder and attendee.",
+  },
+  "schedule.preview": {
+    audience: "attendee",
+    group: "Schedule",
+    level: "view",
+    label: "Preview schedule",
+    description: "See the public schedule before it opens.",
+  },
+  "schedule.rsvps": {
+    audience: "attendee",
+    group: "Schedule",
+    level: "view",
+    label: "RSVP names",
+    description: "RSVP names on a session page, not just the counts.",
+  },
+  "schedule.manage": {
+    audience: "team",
+    group: "Schedule",
+    level: "edit",
+    label: "Edit schedule",
+    description: "On the admin grid and over the API.",
+    implies: ["schedule.preview"],
+  },
+  "promo.manage": {
+    audience: "team",
+    group: "Promo codes",
+    level: "edit",
+    label: "Promo codes",
+    description: "Comp and discount codes on Stripe or BTC.",
+  },
+  "links.manage": {
+    audience: "team",
+    group: "Tracking links",
+    level: "edit",
+    label: "Tracking links",
+    description: "Short /go/ links with UTM attribution.",
+  },
+  "budget.view": {
+    audience: "team",
+    group: "Budget",
+    level: "view",
+    label: "View budget",
+    description:
+      "The review queue, plans and import history at /backstage/budget, read-only.",
+  },
+  "budget.manage": {
+    audience: "team",
+    group: "Budget",
+    level: "edit",
+    label: "Manage budget",
+    description:
+      "Approve or reject proposals, add plans, run imports and connect Xero.",
+    implies: ["budget.view"],
+  },
+  "api_keys.self": {
+    audience: "team",
+    group: "API keys",
+    level: "edit",
+    label: "Own API keys",
+    description: "Mint and revoke your own API keys from /backstage/api-keys.",
+  },
+  "schema.view": {
+    audience: "team",
+    group: "Database",
+    level: "view",
+    label: "Schema",
+    description: "Read-only, under /backstage/schema.",
+  },
+  "submissions.grade": {
+    audience: "team",
+    group: "Grading",
+    level: "edit",
+    label: "Grade submissions",
+    description: "The speaker committee's rubric at /grade.",
+  },
+  "roles.manage": {
+    audience: "team",
+    group: "Sensitive",
+    level: "edit",
+    label: "Manage roles",
+    description: "Make roles and change which permissions each carries.",
+  },
+  "api_keys.manage": {
+    audience: "team",
+    group: "Sensitive",
+    level: "edit",
+    label: "All API keys",
+    description:
+      "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
+  },
+  "users.delete": {
+    audience: "team",
+    group: "Sensitive",
+    level: "delete",
+    label: "Delete users",
+    description:
+      "Permanently delete non-admin accounts. Admin, bans and deleting an admin stay admin-only.",
+    implies: ["users.view"],
+  },
+} as const satisfies Record<
+  string,
+  {
+    audience: PermissionAudience;
+    group: string;
+    level: PermissionLevel;
+    label: string;
+    description: string;
+    implies?: readonly string[];
+  }
+>;
+
+export type Permission = keyof typeof PERMISSIONS;
+
+export const PERMISSION_KEYS = Object.keys(PERMISSIONS) as Permission[];
+
+/** A caption under an area heading on the roles grid. */
+export const GROUP_NOTES: Record<string, string> = {
+  Sensitive: "Normally admin-only; grant in a pinch.",
+};
+
+/** The catalog in display order, one entry per area. */
+export function permissionGroups(): { group: string; keys: Permission[] }[] {
+  const out: { group: string; keys: Permission[] }[] = [];
+  for (const key of PERMISSION_KEYS) {
+    const { group } = PERMISSIONS[key];
+    const last = out.at(-1);
+    if (last?.group === group) last.keys.push(key);
+    else out.push({ group, keys: [key] });
+  }
+  return out;
+}
+
+export const isPermission = (value: unknown): value is Permission =>
+  typeof value === "string" && Object.hasOwn(PERMISSIONS, value);
+
+/** Whether holding any of these counts as team access (see PermissionAudience). */
+export const hasTeamPermission = (held: Iterable<Permission>): boolean => {
+  for (const p of held) if (PERMISSIONS[p].audience === "team") return true;
+  return false;
+};
+
+export type AccessInput = {
+  /** Better Auth `user.role = 'admin'`: holds everything. */
+  admin: boolean;
+  roles: readonly {
+    name: string;
+    permissions: readonly string[];
+    /** Set on a built-in role that attaches itself, e.g. "has a ticket". */
+    auto?: string;
+  }[];
+  /** Per-user grants on top of the roles. */
+  grants: readonly string[];
+};
+
+/** Why an account holds a permission, in precedence order. */
+export type Source =
+  | { kind: "admin" }
+  | { kind: "grant" }
+  | { kind: "role"; role: string; auto?: string }
+  | { kind: "implied"; by: Permission };
+
+export type Explanation = {
+  effective: boolean;
+  /** The first source is the deciding one; the rest would also apply. */
+  sources: Source[];
+};
+
+/** Closes a set over `implies`. Unknown keys (a removed permission) drop out. */
+export function expand(permissions: Iterable<string>): Set<Permission> {
+  const out = new Set<Permission>();
+  const visit = (p: string) => {
+    if (!isPermission(p) || out.has(p)) return;
+    out.add(p);
+    for (const q of implied(p)) visit(q);
+  };
+  for (const p of permissions) visit(p);
+  return out;
+}
+
+const implied = (p: Permission): readonly Permission[] =>
+  ((PERMISSIONS[p] as { implies?: readonly Permission[] }).implies ??
+    []) as readonly Permission[];
+
+/** Effective = expand(role permissions ∪ grants). */
+export function effectivePermissions(input: AccessInput): Set<Permission> {
+  if (input.admin) return new Set(PERMISSION_KEYS);
+  return expand([
+    ...input.roles.flatMap((r) => r.permissions),
+    ...input.grants,
+  ]);
+}
+
+/** `effectivePermissions` plus where each one comes from, for the admin UI. */
+export function explainPermissions(
+  input: AccessInput,
+): Record<Permission, Explanation> {
+  const effective = effectivePermissions(input);
+  const out = {} as Record<Permission, Explanation>;
+  for (const p of PERMISSION_KEYS) {
+    const sources: Source[] = [];
+    if (input.admin) sources.push({ kind: "admin" });
+    if (input.grants.includes(p)) sources.push({ kind: "grant" });
+    for (const r of input.roles) {
+      if (r.permissions.includes(p))
+        sources.push(
+          r.auto
+            ? { kind: "role", role: r.name, auto: r.auto }
+            : { kind: "role", role: r.name },
+        );
+    }
+    // Admins hold everything outright, so implications are only noise.
+    if (!input.admin) {
+      for (const q of PERMISSION_KEYS) {
+        if (q !== p && expand([q]).has(p) && effective.has(q)) {
+          sources.push({ kind: "implied", by: q });
+        }
+      }
+    }
+    out[p] = { effective: effective.has(p), sources };
+  }
+  return out;
+}
+
+export function describeSource(source: Source): string {
+  switch (source.kind) {
+    case "admin":
+      return "Admin";
+    case "grant":
+      return "Granted";
+    case "role":
+      return source.auto
+        ? `Role: ${source.role} (${source.auto})`
+        : `Role: ${source.role}`;
+    case "implied":
+      return `Implied by ${PERMISSIONS[source.by].group}: ${PERMISSIONS[source.by].label}`;
+  }
+}

@@ -25,7 +25,11 @@ import {
   verdictField,
   type MirrorGroup,
 } from "./rfp-mirror";
-import { accountName, assertSlotFree } from "./schedule-store";
+import {
+  accountName,
+  assertSlotFree,
+  searchAccounts as searchAccountRows,
+} from "./schedule-store";
 
 // The RFP pipeline in Postgres: sessions that came through the RFP or were
 // given a phase, their grades, and the committee's edits. Every write is copied onto
@@ -414,6 +418,11 @@ export async function committeeAccounts(): Promise<
     .sort((a, b) => a.committeeName.localeCompare(b.committeeName));
 }
 
+/** Accounts whose name or email contains the query, a few at most. */
+export async function searchAccounts(query: string): Promise<Account[]> {
+  return (await searchAccountRows(query)).map(withCommittee);
+}
+
 /**
  * The account behind a committee name, matched by email the way the Airtable
  * import did. For the shared-password sign-in, which identifies by name.
@@ -800,10 +809,7 @@ export async function clearGraders(
   return { submitted: await submittedGraders(sessionId) };
 }
 
-/**
- * Put a proposal on the grid and mark it ready, in one statement. Refuses a
- * clash like moveSessionTo.
- */
+/** Put a proposal on the grid; its phase is its own. Refuses a clash like moveSessionTo. */
 export async function placeRfpSession(
   sessionId: string,
   startsAt: Date,
@@ -813,37 +819,21 @@ export async function placeRfpSession(
   await assertSlotFree(sessionId, startsAt, endsAt, locationId);
   const [row] = await getDb()
     .update(sessions)
-    .set({ startsAt, endsAt, locationId, phase: "ready" })
+    .set({ startsAt, endsAt, locationId })
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
   if (!row) throw new Error("That session no longer exists.");
-  await mirrorSession(
-    sessionId,
-    { kind: "update", update: { phase: "ready" }, phase: null },
-    () => [],
-  );
 }
 
 /**
  * Take a session off the grid, keeping the row and its edits. Unplaced
- * sessions can't be published, so it drops to draft; a ready proposal goes
- * back to scheduling, any other phase is left alone.
+ * sessions can't be published, so it drops to draft; the phase is left alone.
  */
 export async function unplaceRfpSession(sessionId: string): Promise<void> {
   const [row] = await getDb()
     .update(sessions)
-    .set({
-      startsAt: null,
-      endsAt: null,
-      status: "draft",
-      phase: sql`case when ${sessions.phase} = 'ready' then 'scheduling'::session_phase else ${sessions.phase} end`,
-    })
+    .set({ startsAt: null, endsAt: null, status: "draft" })
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
   if (!row) throw new Error("That session no longer exists.");
-  await mirrorSession(
-    sessionId,
-    { kind: "update", update: { phase: "scheduling" }, phase: null },
-    () => [],
-  );
 }

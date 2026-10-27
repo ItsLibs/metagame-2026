@@ -1,23 +1,27 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { Undo2 } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import DividerRow from "../DividerRow";
 import { CARD_SET as CARD_SIZE, LAYER, SHADOW } from "../sizing";
+import { trackEgg } from "../track";
 
 // SET cards rendered in the weirdchess/dice language: a solid charcoal card with
 // the symbols punched out as negative space. Colour is the one SET attribute we
 // drop in b/w — shape (diamond/oval/squiggle), count (1–3) and shading
 // (solid = cut, open = cut outline, striped = cut stripes) carry it.
 //
-// The cards are a game. Four is too few to be one, so the first tap spreads
-// more cards out along the row (they fade in around the centre four, which
-// never move; the hairlines draw back to make room). Tap three cards (they glow); a set fades out and is
-// redealt in place, anything else shakes. Every deal holds at least one set.
+// The cards are a game. The first tap clears the four away and deals the
+// first of six levels, each a fixed hand of the 27 cards laid out as a small
+// table. Tap three cards (they glow); a set fades out, anything else shakes.
+// Clear the table to move up a level; clear the last and it spells a
+// discount code. Undo puts back the sets found on the current table.
 const CHARCOAL = "#4d4d4d";
 const EXIT_MS = 500; // a found set fading out
 const DEAL_MS = 600; // a dealt card fading in
 const SHAKE_MS = 400;
-const STAGGER_MS = 90;
+const STAGGER_MS = 60;
+const LEVEL_PAUSE_MS = 250; // before a new table deals in
 
 // portrait card, rounded corners, centred in the viewBox
 const CARD =
@@ -110,53 +114,69 @@ const third = (a: Card, b: Card): Card => ({
 
 const isSet = (a: Card, b: Card, c: Card) => key(third(a, b)) === key(c);
 
-const pick = <T,>(xs: readonly T[]) =>
-  xs[Math.floor(Math.random() * xs.length)];
-// A card in a slot. `seq` keys the art (a redeal can put the same card back in
-// the same slot, and it should still fade in as new); `delay` is its fade-in,
-// or null for the four the page loads with.
+const shuffle = <T,>(xs: readonly T[]): T[] => {
+  const out = [...xs];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+// A card in a slot. `seq` keys it, so every deal mounts fresh art; `delay` is
+// its fade-in, or null for the four the page loads with.
 type Slot = { card: Card; seq: number; delay: number | null };
 
-const DECK: Card[] = SHAPE_NAMES.flatMap((shape) =>
-  COUNT_NAMES.flatMap((count) =>
-    SHADING_NAMES.map((shading) => ({ shape, count, shading })),
-  ),
-);
+// Cards are numbered 1–27 by their base-3 digits (n − 1): 1–9 share the first
+// attribute, 1–3/10–12/19–21 the second, n mod 3 the third. Every level is
+// designed to clear exactly, though a careless set can strand it.
+const LEVEL_2 = [1, 2, 3, 5, 7, 9, 12, 15, 18, 21, 25, 26];
+const ALL = Array.from({ length: 27 }, (_, i) => i + 1);
+const LEVELS = [
+  { cols: 9, cards: [1, 7, 14, 16, 20, 23, 25, 26, 27] },
+  { cols: 6, cards: LEVEL_2 },
+  { cols: 6, cards: [...LEVEL_2, 11, 14, 17, 22, 23, 24] },
+  {
+    cols: 7,
+    cards: [
+      1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 14, 16, 17, 18, 19, 21, 23, 24, 25, 26,
+      27,
+    ],
+  },
+  { cols: 8, cards: ALL.filter((n) => ![1, 5, 9].includes(n)) },
+  { cols: 9, cards: ALL },
+];
 
-// Fills the empty slots so the row holds at least one set: one triple with at
-// least one blank in it is picked to be the guaranteed set, so the fresh cards
-// aren't always the answer. Cards are drawn from the rest of the deck, so the
-// row never repeats one.
-function deal(
-  slots: (Slot | null)[],
-  mint: (card: Card, i: number) => Slot,
-): Slot[] {
-  const blanks = slots.flatMap((s, i) => (s ? [] : [i]));
-  for (;;) {
-    const cards: (Card | null)[] = slots.map((s) => s?.card ?? null);
-    const used = new Set(cards.map((c) => c && key(c)));
-    const deck = DECK.filter((c) => !used.has(key(c)));
-    const draw = () =>
-      deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
-    const last = pick(blanks);
-    const others = new Set<number>();
-    while (others.size < 2) {
-      const i = Math.floor(Math.random() * slots.length);
-      if (i !== last) others.add(i);
-    }
-    for (const i of others) cards[i] ??= draw();
-    const [x, y] = [...others].map((i) => cards[i]!);
-    const z = third(x, y);
-    const at = deck.findIndex((c) => key(c) === key(z));
-    if (at < 0) continue; // already on the row: pick again
-    deck.splice(at, 1);
-    cards[last] = z;
-    for (const i of blanks) cards[i] ??= draw();
-    return cards.map((card, i) => slots[i] ?? mint(card!, i));
-  }
+// Which digit drives which attribute, and which value each digit means, are
+// shuffled per level (any such relabelling keeps every set a set), and so is
+// the order on the table. Cards fade in corner to corner.
+function dealLevel(level: number, mint: () => number): Slot[] {
+  const { cols, cards } = LEVELS[level];
+  const attrs = shuffle(["shape", "count", "shading"] as const);
+  const values = {
+    shape: shuffle(SHAPE_NAMES),
+    count: shuffle(COUNT_NAMES),
+    shading: shuffle(SHADING_NAMES),
+  };
+  return shuffle(cards).map((n, i) => {
+    const digits = [
+      Math.floor((n - 1) / 9),
+      Math.floor((n - 1) / 3) % 3,
+      (n - 1) % 3,
+    ];
+    const card = Object.fromEntries(
+      attrs.map((a, d) => [a, values[a][digits[d]]]),
+    ) as Card;
+    const diagonal = Math.floor(i / cols) + (i % cols);
+    return {
+      card,
+      seq: mint(),
+      delay: LEVEL_PAUSE_MS + diagonal * STAGGER_MS,
+    };
+  });
 }
 
-// The deal the page loads with (the first three are a set).
+// The deal the page loads with.
 const FIRST: Slot[] = (
   [
     { shape: "diamond", count: 1, shading: "solid" },
@@ -300,77 +320,104 @@ function CardGlyph({
   );
 }
 
-// Eight cards on the row: with three attributes a triple is a set 1 time in
-// 25, so eight hold about as many sets (~2) as the real game's twelve of 81.
-const MAX_CARDS = 8;
-
-// How many cards fit either side of the centre four: `pitch` apart, out to
-// the edge of the row (the hairlines' full span).
-const fit = (rowWidth: number, cardWidth: number, pitch: number) =>
-  Math.min(
-    (MAX_CARDS - 4) / 2,
-    Math.max(0, Math.floor((rowWidth / 2 - cardWidth / 2) / pitch - 1.5)),
+// The prize: a card with a letter punched out where the symbols would be.
+function LetterGlyph({ letter, delay }: { letter: string; delay: number }) {
+  const maskId = `set-${useId()}`;
+  return (
+    <svg
+      viewBox="22 6 56 88"
+      aria-hidden
+      className={`${CARD_SIZE} ${SHADOW} ${LAYER} shrink-0`}
+      style={{ animation: `set-deal ${DEAL_MS}ms ease-out ${delay}ms both` }}
+    >
+      <mask
+        id={maskId}
+        maskUnits="userSpaceOnUse"
+        x="0"
+        y="0"
+        width="100"
+        height="100"
+      >
+        <path d={CARD} fill="#fff" />
+        <text
+          x="50"
+          y="50"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontFamily="var(--font-space-grotesk), system-ui, sans-serif"
+          fontWeight="700"
+          fontSize="40"
+          fill="#000"
+        >
+          {letter}
+        </text>
+      </mask>
+      <path d={CARD} fill={CHARCOAL} mask={`url(#${maskId})`} />
+    </svg>
   );
+}
+
+const CODE = "PERFECTSET";
+
+type Play = { level: number; board: (Slot | null)[] };
 
 export default function SetCardDivider() {
-  const [board, setBoard] = useState(FIRST);
+  // null until the first tap: the row rests on FIRST's four like any other.
+  const [play, setPlay] = useState<Play | null>(null);
+  const [won, setWon] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
-  const [leaving, setLeaving] = useState(false);
+  const [leaving, setLeaving] = useState<number[]>([]);
   const [shaking, setShaking] = useState(false);
-  // Set once the row has spread: the card width the spread cards are placed
-  // by, how far apart, and how far they run over each hairline.
-  const [spread, setSpread] = useState<{
-    cardWidth: number;
-    pitch: number;
-    overhang: number;
-  } | null>(null);
-  const [found, setFound] = useState(0);
+  // Boards from before each set found on this level, most recent last.
+  const [history, setHistory] = useState<(Slot | null)[][]>([]);
+  // The resting four's box, held once play starts so the row around it (the
+  // hairlines) never relays out; the table hangs from it, centred.
+  const [frame, setFrame] = useState<{ width: number; height: number }>();
+  // The table's height, and how far it runs over each hairline.
+  const [table, setTable] = useState<{ height: number; overhang: number }>();
   // Counts up from FIRST's keys. Kept here, not at module level, so a hot
   // reload can't restart it under a board that's still holding old keys.
   const seq = useRef(FIRST.length);
+  const mint = () => seq.current++;
   const centre = useRef<HTMLDivElement>(null);
-  const first = useRef<SVGSVGElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
 
-  // The spread cards sit over the hairlines, so they're placed by hand rather
-  // than laid out: offsets from the row's centre in card pitches. The centre
-  // four stay in flow, so they never move.
-  const spreadOut = () => {
-    const cardWidth = first.current!.getBoundingClientRect().width;
-    // The spread cards keep the centre four's spacing.
-    const pitch =
-      cardWidth + parseFloat(getComputedStyle(centre.current!).columnGap);
-    const icons = centre.current!.closest("[data-puzzle-game]")!;
-    const row = icons.parentElement!;
-    const side = fit(row.clientWidth, cardWidth, pitch);
-    // The spread runs out over the hairline, which gives way (and keeps the
-    // gap it had to the icons).
-    const hairline = row.firstElementChild!.getBoundingClientRect().right;
-    const reach = centre.current!.getBoundingClientRect().left - hairline;
-    const keep = icons.getBoundingClientRect().left - hairline;
-    const overhang = Math.max(0, side * pitch - reach + keep);
-    const slots: (Slot | null)[] = [
-      ...Array<null>(side).fill(null),
-      ...board,
-      ...Array<null>(side).fill(null),
-    ];
-    // Fades in from the centre outward.
-    const away = (i: number) => Math.abs(i - (slots.length - 1) / 2) - 1.5;
-    setSpread({ cardWidth, pitch, overhang });
-    return deal(slots, (card, i) => ({
-      card,
-      seq: seq.current++,
-      delay: away(i) * STAGGER_MS,
-    }));
-  };
+  const playing = play !== null;
+  useEffect(() => {
+    const el = stage.current;
+    if (!el) return;
+    // The table sits over the hairlines, which give way (and keep the gap
+    // they had to the icons).
+    const ro = new ResizeObserver(() => {
+      const box = centre.current!.getBoundingClientRect();
+      const icons = centre.current!.closest("[data-puzzle-game]")!;
+      const row = icons.parentElement!;
+      const hairline = row.firstElementChild!.getBoundingClientRect().right;
+      const reach = box.left - hairline;
+      const keep = icons.getBoundingClientRect().left - hairline;
+      const excess = (el.offsetWidth - box.width) / 2;
+      setTable({
+        height: el.offsetHeight,
+        overhang: Math.max(0, excess - reach + keep),
+      });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [playing]);
 
   const onClick = (i: number) => {
-    if (leaving || shaking) return;
-    if (!spread) {
-      const wide = spreadOut();
-      setBoard(wide);
-      setPicked([i + (wide.length - board.length) / 2]);
+    if (leaving.length || shaking || won) return;
+    if (!play) {
+      const { width, height } = centre.current!.getBoundingClientRect();
+      setFrame({ width, height });
+      setLeaving(FIRST.map((_, j) => j));
+      setTimeout(() => {
+        setPlay({ level: 0, board: dealLevel(0, mint) });
+        setLeaving([]);
+      }, EXIT_MS);
       return;
     }
+    if (!play.board[i]) return;
     if (picked.includes(i)) {
       setPicked(picked.filter((p) => p !== i));
       return;
@@ -378,7 +425,7 @@ export default function SetCardDivider() {
     const next = [...picked, i];
     setPicked(next);
     if (next.length < 3) return;
-    const [a, b, c] = next.map((p) => board[p].card);
+    const [a, b, c] = next.map((p) => play.board[p]!.card);
     if (!isSet(a, b, c)) {
       setShaking(true);
       setTimeout(() => {
@@ -387,69 +434,143 @@ export default function SetCardDivider() {
       }, SHAKE_MS);
       return;
     }
-    setLeaving(true);
+    // A found set leaves a gap. A table with no set left on it is a dead end
+    // until it's undone.
+    setLeaving(next);
     setTimeout(() => {
-      setBoard(
-        deal(
-          board.map((slot, j) => (next.includes(j) ? null : slot)),
-          (card) => ({ card, seq: seq.current++, delay: 0 }),
-        ),
-      );
-      setFound((f) => f + 1);
+      const board = play.board.map((s, j) => (next.includes(j) ? null : s));
+      const level = play.level + 1;
+      if (board.some(Boolean)) {
+        setPlay({ ...play, board });
+        setHistory((h) => [...h, play.board]);
+      } else if (level < LEVELS.length) {
+        setPlay({ level, board: dealLevel(level, mint) });
+        setHistory([]);
+      } else {
+        setPlay({ ...play, board });
+        setHistory([]);
+        setWon(true);
+        trackEgg({ egg: "set", event: "win" });
+      }
       setPicked([]);
-      setLeaving(false);
+      setLeaving([]);
     }, EXIT_MS);
   };
 
-  const n = board.length;
-  const inner = (n - 4) / 2;
-  const glyph = (i: number, style?: React.CSSProperties) => (
+  const undo = () => {
+    if (!play || leaving.length || shaking || !history.length) return;
+    const prev = history[history.length - 1];
+    setHistory(history.slice(0, -1));
+    setPicked([]);
+    // The returning cards get fresh keys so they fade back in.
+    setPlay({
+      ...play,
+      board: prev.map((s, j) =>
+        s && !play.board[j] ? { ...s, seq: mint(), delay: 0 } : s,
+      ),
+    });
+  };
+
+  const glyph = (slot: Slot, i: number) => (
     <CardGlyph
-      key={i}
-      ref={i === inner ? first : undefined}
-      card={board[i].card}
-      seq={board[i].seq}
-      delay={board[i].delay}
+      key={slot.seq}
+      card={slot.card}
+      seq={slot.seq}
+      delay={slot.delay}
       selected={picked.includes(i)}
-      leaving={leaving && picked.includes(i)}
+      leaving={leaving.includes(i)}
       shaking={shaking && picked.includes(i)}
-      style={style}
       onClick={() => onClick(i)}
     />
   );
-  const place = (i: number): React.CSSProperties => {
-    const { cardWidth, pitch } = spread!;
-    const off = i - (n - 1) / 2;
-    return {
-      position: "absolute",
-      top: 0,
-      left: `calc(50% + ${(off * pitch - cardWidth / 2).toFixed(2)}px)`,
-    };
-  };
 
   return (
-    <DividerRow game="set" overhang={spread?.overhang}>
-      {/* Tighter on a phone than the other rows, so all eight cards fit. */}
+    <DividerRow game="set" overhang={playing ? table?.overhang : undefined}>
       <div
         ref={centre}
         className="relative flex items-center gap-[22px] md:gap-[34px]"
+        style={
+          play && frame
+            ? {
+                width: frame.width,
+                height: table?.height ?? frame.height,
+                transition: "height 400ms ease-out",
+              }
+            : undefined
+        }
       >
-        {board.map((_, i) =>
-          i >= inner && i < inner + 4 ? glyph(i) : glyph(i, place(i)),
-        )}
-        {/* Sets found, one pip each, hung under the row so nothing shifts. */}
-        {found > 0 && (
+        {!play && FIRST.map(glyph)}
+        {play && (
           <div
-            aria-hidden
-            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 gap-2"
+            ref={stage}
+            className="absolute top-0 left-1/2 w-max -translate-x-1/2"
           >
-            {Array.from({ length: found }, (_, i) => (
+            {won ? (
+              <div className="flex flex-col items-center gap-3">
+                <span className="sr-only">{`${CODE} for $27 off`}</span>
+                <div className="flex gap-1.5 md:gap-2">
+                  {[...CODE].map((ch, i) => (
+                    <LetterGlyph
+                      key={i}
+                      letter={ch}
+                      delay={LEVEL_PAUSE_MS + i * STAGGER_MS}
+                    />
+                  ))}
+                </div>
+                <p
+                  aria-hidden
+                  className="text-xs leading-4 font-semibold whitespace-nowrap text-ink/70 md:text-sm"
+                  style={{
+                    animation: `set-deal ${DEAL_MS}ms ease-out ${LEVEL_PAUSE_MS + CODE.length * STAGGER_MS}ms both`,
+                  }}
+                >
+                  3<sup>3</sup> = $27 off your ticket at checkout
+                </p>
+              </div>
+            ) : (
+              // Tighter on a phone, so nine across fit.
+              <div
+                className="grid gap-3 md:gap-x-[34px] md:gap-y-4"
+                style={{
+                  gridTemplateColumns: `repeat(${LEVELS[play.level].cols}, auto)`,
+                }}
+              >
+                {play.board.map((slot, i) =>
+                  slot ? (
+                    glyph(slot, i)
+                  ) : (
+                    <span key={`gap-${i}`} className={CARD_SIZE} />
+                  ),
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {/* Levels cleared, one pip each, hung under the table so nothing
+            shifts. */}
+        {play && !won && (
+          <div className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 gap-2">
+            {LEVELS.map((_, i) => (
               <span
                 key={i}
-                className="size-1 animate-[set-deal_600ms_ease-out] rounded-full"
-                style={{ background: CHARCOAL }}
+                className="size-1 rounded-full transition-opacity duration-500"
+                style={{
+                  background: CHARCOAL,
+                  opacity: i < play.level ? 1 : 0.2,
+                }}
               />
             ))}
+            {/* Off to the pips' side, so they stay centred under the table. */}
+            <button
+              type="button"
+              aria-label="Undo last set"
+              disabled={!history.length}
+              onClick={undo}
+              className="pointer-events-auto absolute top-1/2 left-full ml-3 flex size-7 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full transition-opacity duration-300 hover:bg-ink/5 disabled:pointer-events-none disabled:opacity-0"
+              style={{ color: CHARCOAL }}
+            >
+              <Undo2 className="size-4" />
+            </button>
           </div>
         )}
       </div>

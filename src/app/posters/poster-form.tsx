@@ -1,8 +1,18 @@
 "use client";
 
-import { useId, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { ChevronDown } from "lucide-react";
 import type { PosterOption, PosterTracking } from "@/lib/poster-options";
+import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
+
+export type PromoChoice = { code: string; label: string };
 
 const inputClass =
   "mt-2 w-full rounded-lg border border-[#19345b]/30 bg-white p-3 text-base";
@@ -10,19 +20,29 @@ const inputClass =
 export default function PosterForm({
   options,
   initialArea,
+  promos,
 }: {
   options: PosterOption[];
   initialArea: string;
+  /** Suggested codes for staff with promo.manage; empty for everyone else. */
+  promos: PromoChoice[];
 }) {
   const [area, setArea] = useState(
     options.some((option) => option.value === initialArea) ? initialArea : "",
   );
   const [design, setDesign] = useState("d20");
   const [size, setSize] = useState("letter");
+  const [promo, setPromo] = useState("");
+  const promoBad = promo !== "" && promoCode(promo) !== promo;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const selected = options.find((option) => option.value === area);
-  const query = new URLSearchParams({ area, design, size }).toString();
+  const query = new URLSearchParams({
+    area,
+    design,
+    size,
+    ...(promo ? { [PROMO_PARAM]: promo } : {}),
+  }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -38,7 +58,7 @@ export default function PosterForm({
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `metagame-${design}-${size}.pdf`;
+      anchor.download = `metagame-${design}${promo ? `-${promo}` : ""}-${size}.pdf`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
@@ -48,6 +68,7 @@ export default function PosterForm({
     }
   }
   const landscape = design === "chess";
+  const promoListId = useId();
   return (
     <form
       onSubmit={download}
@@ -82,17 +103,48 @@ export default function PosterForm({
         )}
       </div>
       <div className="space-y-6">
-        <LocationCombobox options={options} value={area} onChange={setArea} />
+        <LocationCombobox
+          options={options}
+          value={area}
+          fallback={initialArea}
+          onChange={setArea}
+          promo={promo}
+        />
+        <label className="block font-semibold">
+          Promo code <span className="font-normal">(optional)</span>
+          <input
+            aria-label="Promo code"
+            className={inputClass}
+            list={promos.length ? promoListId : undefined}
+            value={promo}
+            onChange={(event) => setPromo(event.target.value.trim())}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {promos.length > 0 && (
+            <datalist id={promoListId}>
+              {promos.map((choice) => (
+                <option key={choice.code} value={choice.code}>
+                  {choice.label}
+                </option>
+              ))}
+            </datalist>
+          )}
+          <p
+            className={`mt-2 text-xs font-normal ${promoBad ? "text-red-700" : "text-[#19345b]/60"}`}
+          >
+            {promoBad
+              ? "Codes use letters, numbers, dashes, and underscores only."
+              : "Auto-applies to checkouts after scanning the QR code."}
+          </p>
+        </label>
         <label className="block font-semibold">
           Design
           <select
             aria-label="Design"
             className={inputClass}
             value={design}
-            onChange={(event) => {
-              setDesign(event.target.value);
-              if (event.target.value === "chess") setSize("letter");
-            }}
+            onChange={(event) => setDesign(event.target.value)}
           >
             <option value="d20">Portrait · Dice puzzle</option>
             <option value="chess">Landscape · Chess</option>
@@ -107,9 +159,7 @@ export default function PosterForm({
             onChange={(event) => setSize(event.target.value)}
           >
             <option value="letter">US Letter · 8.5 × 11 in</option>
-            {design === "d20" && (
-              <option value="13x19">Super B / A3+ (13 × 19 in)</option>
-            )}
+            <option value="13x19">Super B / A3+ (13 × 19 in)</option>
           </select>
           {size === "13x19" && (
             <p className="mt-2 text-xs font-normal text-[#19345b]/60">
@@ -123,10 +173,10 @@ export default function PosterForm({
           </p>
         )}
         <button
-          disabled={!selected?.available || busy}
+          disabled={!selected?.available || busy || promoBad}
           className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {busy ? "Preparing your PDF…" : "Download print-ready PDF"}
+          {busy ? "Preparing your PDF…" : "Download PDF"}
         </button>
         <p className="text-sm" aria-live="polite">
           {selected?.available
@@ -141,23 +191,38 @@ export default function PosterForm({
 function LocationCombobox({
   options,
   value,
+  fallback,
   onChange,
+  promo,
 }: {
   options: PosterOption[];
   value: string;
+  /** Selected while the typed text matches nothing, so a poster always shows. */
+  fallback: string;
   onChange: (value: string) => void;
+  promo: string;
 }) {
   const id = useId();
   const selected = options.find((option) => option.value === value);
   const [text, setText] = useState(selected?.label ?? "");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const needle = text.trim().toLowerCase();
+  // Focusing selects the whole label so typing replaces it. The mouseup that
+  // follows a click would collapse that selection, so swallow it once.
+  const selectOnMouseUp = useRef(false);
   // Show the full list while the field still reads the current selection.
-  const filtered =
-    needle && text !== selected?.label
-      ? options.filter((option) => option.label.toLowerCase().includes(needle))
-      : options;
+  // Generic is always offered, last when it isn't itself a match.
+  function matches(typed: string): PosterOption[] {
+    const needle = typed.trim().toLowerCase();
+    if (!needle || typed === selected?.label) return options;
+    const hits = options.filter((option) =>
+      option.label.toLowerCase().includes(needle),
+    );
+    const generic = options.find((option) => option.value === fallback);
+    if (generic && !hits.includes(generic)) hits.push(generic);
+    return hits;
+  }
+  const filtered = matches(text);
   function choose(option: PosterOption) {
     onChange(option.value);
     setText(option.label);
@@ -167,8 +232,11 @@ function LocationCombobox({
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       setOpen(true);
+      if (filtered.length === 0) return;
       const step = event.key === "ArrowDown" ? 1 : -1;
-      setActive((i) => (i + step + filtered.length) % filtered.length);
+      const next = (active + step + filtered.length) % filtered.length;
+      setActive(next);
+      onChange(filtered[next].value);
     } else if (event.key === "Enter" && open && filtered[active]) {
       event.preventDefault();
       choose(filtered[active]);
@@ -192,18 +260,28 @@ function LocationCombobox({
           className={`${inputClass} pr-10`}
           placeholder="Type to filter locations"
           value={text}
-          onFocus={() => setOpen(true)}
+          onFocus={(event) => {
+            setOpen(true);
+            event.currentTarget.select();
+            selectOnMouseUp.current = true;
+          }}
+          onMouseUp={(event: MouseEvent<HTMLInputElement>) => {
+            if (selectOnMouseUp.current) event.preventDefault();
+            selectOnMouseUp.current = false;
+          }}
           onClick={() => setOpen(true)}
           onChange={(event) => {
-            setText(event.target.value);
+            const typed = event.target.value;
+            setText(typed);
             setActive(0);
             setOpen(true);
-            const exact = options.find(
+            // The preview mirrors the top match as the user types.
+            const candidates = matches(typed);
+            const exact = candidates.find(
               (option) =>
-                option.label.toLowerCase() ===
-                event.target.value.trim().toLowerCase(),
+                option.label.toLowerCase() === typed.trim().toLowerCase(),
             );
-            onChange(exact?.value ?? "");
+            onChange(exact?.value ?? candidates[0]?.value ?? "");
           }}
           onBlur={() => {
             setOpen(false);
@@ -245,20 +323,31 @@ function LocationCombobox({
           ))}
         </ul>
       )}
-      {selected?.tracking && <TrackingSummary tracking={selected.tracking} />}
+      {selected?.tracking && (
+        <TrackingSummary tracking={selected.tracking} promo={promo} />
+      )}
     </div>
   );
 }
 
-function TrackingSummary({ tracking }: { tracking: PosterTracking }) {
+function TrackingSummary({
+  tracking,
+  promo,
+}: {
+  tracking: PosterTracking;
+  promo: string;
+}) {
   const utms = new URL(tracking.redirectUrl).searchParams;
+  const qrUrl = promo
+    ? `${tracking.qrUrl}?${new URLSearchParams({ [PROMO_PARAM]: promo })}`
+    : tracking.qrUrl;
   const tags = ["utm_source", "utm_medium", "utm_content"]
     .map((key) => utms.get(key))
     .join(" · ");
   return (
     <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5 text-xs text-[#19345b]/60">
       <dt>QR</dt>
-      <dd className="font-mono break-all">{tracking.qrUrl}</dd>
+      <dd className="font-mono break-all">{qrUrl}</dd>
       <dt>Tracking</dt>
       <dd className="font-mono">{tags}</dd>
     </dl>

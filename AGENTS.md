@@ -1,8 +1,10 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
 
@@ -48,16 +50,32 @@ sign-in is refused on unverified accounts. `currentSession()` is the server-side
 read; `src/proxy.ts` only redirects, so every protected page and action calls it
 again.
 
-Team tools (`/admin/*`, `/grade`) open to accounts with `user.role = 'admin'`
-(Better Auth's admin plugin). `adminSession()` in `src/lib/auth.ts` is the one
-role check; `adminAccess()` / `requireAdmin()` (`src/lib/admin-auth.ts`) and
-`gradeAccess()` (`src/lib/grader-auth.ts`) layer the password fallback on it.
-Swap `adminSession()` for `can()` when the permission system lands
-(META-1483). `/admin/users` grants and revokes admin and bans; the first admin
-is bootstrapped by hand in the Neon console:
-`update "user" set role = 'admin' where email = '…'`. The shared-password
-fallback (`ADMIN_PASSWORD`, `GRADER_PASSWORD` and their secrets) stays until
-the team has accounts, then those env vars and the password paths go.
+Team tools (`/admin/*`, `/grade`) each gate on a permission from the catalog
+in `src/lib/permissions.ts`; `can(permission)` in `src/lib/access.ts` is the
+one check, resolving roles (`/admin/roles`) and per-user grants
+(`/admin/users/[id]`) per request. `user.role = 'admin'` (Better Auth's admin
+plugin) bypasses it all and is only set by SQL or by another admin on
+`/admin/users`; the first admin is bootstrapped by hand in the Neon console:
+`update "user" set role = 'admin' where email = '…'`. `toolAccess()` /
+`requireAccess()` (`src/lib/admin-auth.ts`) wrap `can()` for `/backstage`.
+Every team tool now takes accounts only; the shared-password fallbacks are
+gone.
+
+The speaker committee works at `/backstage/speaker-committee`
+(`schedule.manage`), which `/grade` redirects to; `/grade/<id>` is still the
+rubric for one proposal, gated on `submissions.grade`.
+
+## Looking at UI changes
+
+For any substantive UI change, run `node scripts/preview-shot.mjs <preview-url>
+/path [/path…]` against the PR's Vercel preview (URL in the bot comment) and
+inspect the screenshots to see that things appear correct on mobile and
+desktop. It needs `node_modules/playwright` plus a Chromium: the per-machine
+one from `npx playwright install chromium-headless-shell`, or any Chromium on
+the box via `SHOT_BROWSER=<path>`. If either is missing, ask before installing
+and say it's for the screenshots. If anything is off,
+surface the screenshots to the user for review rather than iterating on your
+own. Delete the screenshots afterwards so they don't pile up.
 
 ## Issue tracking (Linear)
 

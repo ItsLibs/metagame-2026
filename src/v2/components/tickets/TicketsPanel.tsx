@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import BtcModal from "@/v2/components/tickets/BtcModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
+import DiscountRateModal from "@/v2/components/tickets/DiscountRateModal";
 import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
@@ -15,8 +16,7 @@ import {
 } from "@/v2/lib/tickets";
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
-import { withUtm } from "@/lib/utm";
-import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
+import { withPromo, withUtm } from "@/lib/utm";
 import { cn } from "@/v2/lib/utils";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
@@ -31,8 +31,7 @@ import { DISPLAY, HEADING } from "../styles";
 // over a big grotesk price, on the raised Button variant (bordered navy face
 // with a salmon hard-shadow that grows and slides up-left on hover).
 // "rulebook": the home page's join panel, cream cards in a grid with a Bebas
-// price and a plain-words note; the panel supplies its own volunteer and aid
-// links there.
+// price and a plain-words note.
 const LOOKS = {
   raised: {
     variant: "raised",
@@ -69,10 +68,10 @@ const subscribeNever = () => () => {};
 const EARLY_BIRD_HREF = stripeCheckoutHref({ tier: "standard" });
 const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 
-// UTMs live in localStorage, so they're added at click time (not render) to keep
-// the server-rendered href stable.
+// UTMs and any promo code live in localStorage, so they're added at click time
+// (not render) to keep the server-rendered href stable.
 const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-  e.currentTarget.href = withUtm(href);
+  e.currentTarget.href = withPromo(withUtm(href));
 };
 
 // One ticket: a checkout link (USD) or a button that opens a flow.
@@ -121,7 +120,6 @@ function Tile({
 
 export default function TicketsPanel({
   showHeading = true,
-  surface = "dark",
   align = "center",
   earlyBird,
   look: lookName = "raised",
@@ -134,14 +132,10 @@ export default function TicketsPanel({
   // The modal shows its own "Tickets" heading; the one-pager section supplies a
   // SectionHeading above the (now background-less) panel, so it hides this one.
   showHeading?: boolean;
-  // The tiles carry their own navy face, but bare text has to match what's behind
-  // the panel: navy in the modal, the cream page background in the section.
-  surface?: "dark" | "light";
   look?: keyof typeof LOOKS;
 }) {
   const look = LOOKS[lookName];
   const rulebook = lookName === "rulebook";
-  const onDark = surface === "dark";
   const start = align === "start";
   const earlyBirdActive = useSyncExternalStore(
     subscribeNever,
@@ -152,6 +146,7 @@ export default function TicketsPanel({
   const [supporterOpen, setSupporterOpen] = useState(false);
   const [dayPassOpen, setDayPassOpen] = useState(false);
   const [familyPackOpen, setFamilyPackOpen] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
   // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
   // gives the browser its scroll target. Closing drops the hash so a repeat
   // click on the same link changes the URL again and reopens it.
@@ -328,7 +323,12 @@ export default function TicketsPanel({
             </>
           )}
         </Tile>
-        <Tile look={look} onClick={() => setFamilyPackOpen(true)}>
+        <Tile
+          look={look}
+          onClick={() => setFamilyPackOpen(true)}
+          // Raised: narrower padding so the long label fits the shared 210px tile.
+          className={rulebook ? undefined : "px-4"}
+        >
           <span className={look.label}>Family &amp; Friends</span>
           <span className="flex items-baseline gap-2.5 leading-none">
             <span className={look.strike}>${STANDARD_USD}</span>
@@ -337,39 +337,39 @@ export default function TicketsPanel({
           <span className={look.note}>
             {rulebook
               ? `Each, in a bundle of ${FAMILY_PACK.min}–${FAMILY_PACK.max}.`
-              : `each · ${FAMILY_PACK.min}–${FAMILY_PACK.max} ticket bundle`}
+              : `each · ${FAMILY_PACK.min}–${FAMILY_PACK.max} tickets`}
           </span>
         </Tile>
-        {/* Volunteer + financial aid: plain application links, deliberately not
-            styled like the purchase tiles. */}
-        {!rulebook && (
-          <div
-            className={`w-full text-sm ${start ? "text-left" : "text-center"} ${onDark ? "text-cream/70" : "text-ink/70"} flex flex-col gap-1.5`}
-          >
-            <span>
-              A limited supply of volunteer tickets are available.{" "}
-              <VolunteerFormLink
-                className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
-              >
-                Apply to volunteer
-              </VolunteerFormLink>
+        <Tile look={look} onClick={() => setDiscountOpen(true)}>
+          <span className={look.label}>Student / Aid</span>
+          <span className={look.price}>50% off</span>
+          {rulebook && (
+            <span className={look.note}>
+              For students, nonprofit staff and anyone in need.
             </span>
-            <span>
-              Ticket price out of reach?{" "}
-              <a
-                href={FINANCIAL_AID_FORM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
-              >
-                Apply for financial aid
-              </a>
-            </span>
-          </div>
-        )}
+          )}
+        </Tile>
+        <Button
+          asChild
+          variant={look.variant}
+          className={cn(look.tile, rulebook && "whitespace-normal")}
+        >
+          <VolunteerFormLink>
+            <span className={look.label}>Volunteer</span>
+            <span className={look.price}>$0</span>
+            {rulebook && (
+              <span className={look.note}>
+                A limited supply, for volunteers.
+              </span>
+            )}
+          </VolunteerFormLink>
+        </Button>
       </div>
       {supporterOpen && <SupporterModal onClose={closeSupporter} />}
       {dayPassOpen && <DayPassModal onClose={() => setDayPassOpen(false)} />}
+      {discountOpen && (
+        <DiscountRateModal onClose={() => setDiscountOpen(false)} />
+      )}
       {familyPackOpen && (
         <FamilyPackModal onClose={() => setFamilyPackOpen(false)} />
       )}

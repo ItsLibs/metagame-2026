@@ -26,6 +26,27 @@ const nextConfig: NextConfig = {
     },
   ],
   redirects: async () => [
+    // The team tools were /admin until the permission system made them
+    // everyone's; bookmarks and old links keep working.
+    { source: "/admin", destination: "/backstage", permanent: true },
+    {
+      source: "/admin/:path*",
+      destination: "/backstage/:path*",
+      permanent: true,
+    },
+    // The speaker committee board moved under /backstage with the other tools.
+    {
+      source: "/speaker_committee",
+      destination: "/backstage/speaker-committee",
+      permanent: true,
+    },
+    // The committee board replaced /grade's own overview; the rubric for one
+    // proposal stays at /grade/<id>.
+    {
+      source: "/grade",
+      destination: "/backstage/speaker-committee",
+      permanent: true,
+    },
     // Key dates used to be its own page.
     { source: "/key-dates", destination: "/#key-dates", permanent: true },
     // Short link to the session-proposal (RFP) Airtable form.
@@ -47,7 +68,7 @@ const nextConfig: NextConfig = {
 };
 
 export default function config(phase: string): NextConfig {
-  // The ER diagram under /admin/schema/erd is generated from drizzle/*.sql.
+  // The ER diagram under /backstage/schema/erd is generated from drizzle/*.sql.
   // Done here rather than in a package.json script so it runs however the
   // site is built (pnpm build, next build, Vercel).
   if (phase === PHASE_PRODUCTION_BUILD || phase === PHASE_DEVELOPMENT_SERVER) {

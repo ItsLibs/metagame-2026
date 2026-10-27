@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GiTheaterCurtains } from "react-icons/gi";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
 import AvatarForm from "./AvatarForm";
@@ -10,7 +12,8 @@ import { parseAccountTab } from "./tabs";
 import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
-import { adminSession, currentSession, hasPassword } from "@/lib/auth";
+import { can, teamAccess } from "@/lib/access";
+import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
 import {
   loadRsvpCounts,
@@ -19,6 +22,7 @@ import {
 } from "@/lib/schedule-store";
 import { emailKey, ticketsForUser } from "@/lib/ticket-store";
 import { ticketView } from "@/lib/ticket-view";
+import { Button } from "@/v2/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Account — Metagame 2026",
@@ -49,6 +53,7 @@ export default async function AccountPage({
     counts,
     linkable,
     admin,
+    backstage,
   ] = await Promise.all([
     getDb()
       .select()
@@ -61,7 +66,8 @@ export default async function AccountPage({
     loadViewerPlans(user.id),
     loadRsvpCounts(),
     canSeeSchedule(),
-    adminSession(),
+    can("schedule.manage"),
+    teamAccess().then((a) => a?.team ?? false),
   ]);
   const tickets = rows.map((t) => ticketView(t, user.id, email));
 
@@ -75,6 +81,16 @@ export default async function AccountPage({
       )}
       <AccountTabs
         initial={initialTab}
+        trailing={
+          backstage && (
+            <Button asChild variant="navy" size="sm">
+              <Link href="/backstage">
+                <GiTheaterCurtains aria-hidden />
+                Backstage
+              </Link>
+            </Button>
+          )
+        }
         panels={{
           profile: (
             <div className="flex max-w-[960px] flex-col gap-10">

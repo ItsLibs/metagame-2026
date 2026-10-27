@@ -33,7 +33,6 @@ import { CHAPTERS, CREDITS } from "@/v2/data/chapters";
 import { upcomingKeyDates } from "@/v2/data/key-dates";
 import { SPEAKERS } from "@/v2/data/speakers";
 import {
-  FINANCIAL_AID_FORM_URL,
   HOTELS_SEARCH_URL,
   HOUSING_URL,
   PODCAST_EPISODE_URL,
@@ -334,7 +333,6 @@ export default function Home() {
           <TicketsPanel
             look="rulebook"
             showHeading={false}
-            surface="dark"
             align="start"
             earlyBird={earlyBird}
           />
@@ -347,19 +345,11 @@ export default function Home() {
               <Link href="/volunteer">Apply to volunteer</Link>
             </Button>
             <Button asChild variant="ghost">
-              <a href={FINANCIAL_AID_FORM_URL} {...EXT}>
-                Apply for financial aid
-              </a>
-            </Button>
-            <Button asChild variant="ghost">
               <a href={RFP_FORM_URL} {...EXT}>
                 Propose a session
               </a>
             </Button>
           </div>
-          <p className="font-space-mono text-[12.5px] text-sky">
-            A limited supply of volunteer tickets is available.
-          </p>
         </div>
       </ChapterSection>
 

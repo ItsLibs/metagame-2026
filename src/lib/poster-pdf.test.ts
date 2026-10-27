@@ -7,14 +7,30 @@ import { PNG } from "pngjs";
 import jsQR from "jsqr";
 import {
   createPosterPdf,
+  posterQrUrl,
   type PosterDesign,
   type PosterSize,
 } from "./poster-pdf";
 
 describe("poster PDF", () => {
+  it("encodes a promo code on the short link", async () => {
+    expect(posterQrUrl("berkeley")).toBe("https://metagame.games/go/berkeley");
+    expect(posterQrUrl("berkeley", "POSTER20")).toBe(
+      "https://metagame.games/go/berkeley?promo=POSTER20",
+    );
+    await expect(
+      createPosterPdf("d20", "letter", "berkeley", "bad code"),
+    ).rejects.toThrow();
+    const bytes = await createPosterPdf(
+      "d20",
+      "letter",
+      "berkeley",
+      "POSTER20",
+    );
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  });
   for (const design of ["d20", "chess"] as PosterDesign[]) {
     for (const size of ["letter", "13x19"] as PosterSize[]) {
-      if (design === "chess" && size === "13x19") continue;
       it(`preserves artwork on an exact ${design} ${size} page`, async () => {
         const bytes = await createPosterPdf(design, size, "berkeley");
         const document = await PDFDocument.load(bytes);
@@ -73,9 +89,4 @@ describe("poster PDF", () => {
       }, 30_000);
     }
   }
-  it("refuses a large chess PDF even when called directly", async () => {
-    await expect(createPosterPdf("chess", "13x19", "berkeley")).rejects.toThrow(
-      "Letter only",
-    );
-  });
 });

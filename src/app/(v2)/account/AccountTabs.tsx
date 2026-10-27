@@ -12,10 +12,16 @@ const LABELS: Record<AccountTab, string> = {
 
 export default function AccountTabs({
   initial,
+  tabs = ACCOUNT_TABS,
   panels,
+  trailing,
 }: {
   initial: AccountTab;
+  /** Which tabs to show, in order; a tab with nothing to show is left out. */
+  tabs?: readonly AccountTab[];
   panels: Record<AccountTab, ReactNode>;
+  /** Sits at the right end of the tab row; not a tab. */
+  trailing?: ReactNode;
 }) {
   const [tab, setTab] = useState(initial);
 
@@ -40,7 +46,7 @@ export default function AccountTabs({
         aria-label="Account"
         className="mb-10 flex max-w-[960px] gap-6 border-b border-line"
       >
-        {ACCOUNT_TABS.map((t) => (
+        {tabs.map((t) => (
           <Tabs.Trigger
             key={t}
             value={t}
@@ -49,8 +55,11 @@ export default function AccountTabs({
             {LABELS[t]}
           </Tabs.Trigger>
         ))}
+        {trailing && (
+          <div className="ml-auto self-center pb-2.5">{trailing}</div>
+        )}
       </Tabs.List>
-      {ACCOUNT_TABS.map((t) => (
+      {tabs.map((t) => (
         <Tabs.Content key={t} value={t} className="outline-none">
           {panels[t]}
         </Tabs.Content>

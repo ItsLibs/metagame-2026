@@ -18,6 +18,7 @@ function getResend(): Resend | null {
 }
 
 const FROM = "Metagame 2026 <tickets@metagame.games>";
+const NO_REPLY = "Metagame 2026 <no-reply@metagame.games>";
 const TEAM = "team@metagame.games";
 const CORE = "core@metagame.games";
 // Email clients load images over the network, so assets must point at the
@@ -363,6 +364,43 @@ export async function sendSignInCodeEmail({ to, code }: SignInCodeEmail) {
       </div>
     `,
     text: `Your Metagame sign-in code is ${code}. It works for 10 minutes.\n\nIf you didn't ask for it, ignore this email — nobody can sign in without the code.`,
+  });
+  if (error) throw new Error(`Resend send failed: ${error.message}`);
+}
+
+/** Tells someone an account was made for them and how to sign in. */
+export async function sendAccountInviteEmail({
+  to,
+  name,
+}: {
+  to: string;
+  name: string;
+}) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn(`[email] Resend not configured — account invite for ${to}`);
+    return;
+  }
+  // ?by=code opens the code form; the password form is the default.
+  const login = `${SITE}/login?by=code`;
+  const { error } = await resend.emails.send({
+    from: NO_REPLY,
+    to,
+    replyTo: [TEAM],
+    subject: "Your Metagame account",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+        <div style="text-align: center; margin: 24px 0;">
+          <img src="${SITE}/images/dice_logo.png" alt="METAGAME" width="240" style="max-width: 100%; height: auto;" />
+        </div>
+        <p>Hi ${name},</p>
+        <p>An account has been set up for you on metagame.games under this email address.</p>
+        <p>To use it, <a href="${login}">sign in here</a>: you'll get a code by email, and can set up a password after.</p>
+        <p style="font-size: 12px; color: #aaa; font-style: italic;">This is not a puzzle.</p>
+        <p style="font-size: 12px; color: #888; font-style: italic;">&copy; 2026 Metagame LLC</p>
+      </div>
+    `,
+    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, sign in at ${login}: you'll get a code by email, and can set up a password after.\n\nThis is not a puzzle.\n© 2026 Metagame LLC`,
   });
   if (error) throw new Error(`Resend send failed: ${error.message}`);
 }

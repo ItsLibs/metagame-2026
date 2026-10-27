@@ -33,12 +33,15 @@ function Messages({ state }: { state: AuthState }) {
 export default function AuthForm({
   mode,
   next,
+  startByCode,
 }: {
   mode: AuthMode;
   next: string;
+  /** Open on the email-code form, for people who have no password yet. */
+  startByCode?: boolean;
 }) {
   const [state, action, pending] = useActionState(authenticate, initial);
-  const [byCode, setByCode] = useState(mode === "signup");
+  const [byCode, setByCode] = useState(startByCode || mode === "signup");
   const verifyButton = useRef<HTMLButtonElement>(null);
 
   const hidden = (
@@ -219,13 +222,13 @@ export default function AuthForm({
         >
           {pending ? "One sec…" : byCode ? "Email me a code" : "Sign in"}
         </Button>
-        {mode === "signin" && (
-          <Button asChild variant="navy">
-            <Link href="/signup">Create Account</Link>
-          </Button>
-        )}
       </div>
       <Messages state={state} />
+      {mode === "signin" && (
+        <Link href="/signup" className={`${LINK} self-start`}>
+          New here? Create an account
+        </Link>
+      )}
       {mode === "signup" && (
         <Link href="/login" className={`${LINK} self-start`}>
           Already have an account? Sign in

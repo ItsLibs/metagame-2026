@@ -42,7 +42,7 @@ it("uses the existing admin workflow's Generic poster placement", async () => {
   expect(
     (await GET(request("area=generic&design=chess&size=letter"))).status,
   ).toBe(200);
-  expect(createPosterPdf).toHaveBeenCalledWith("chess", "letter", "poster");
+  expect(createPosterPdf).toHaveBeenCalledWith("chess", "letter", "poster", "");
 });
 beforeEach(() => {
   vi.clearAllMocks();
@@ -63,7 +63,7 @@ it("downloads without login and never accepts an arbitrary URL or slug", async (
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toBe("application/pdf");
   expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
-  expect(createPosterPdf).toHaveBeenCalledWith("d20", "letter", "berkeley");
+  expect(createPosterPdf).toHaveBeenCalledWith("d20", "letter", "berkeley", "");
   const preview = await GET(
     request("area=area:Berkeley&design=d20&size=letter&preview=1"),
   );
@@ -100,22 +100,37 @@ it("rejects invalid designs and hides provider errors", async () => {
   expect(response.status).toBe(503);
   expect(await response.text()).not.toContain("private");
 });
-it("rejects chess 13x19 before reading Airtable or generating a PDF", async () => {
-  expect(
-    (await GET(request("area=area:Berkeley&design=chess&size=13x19"))).status,
-  ).toBe(400);
-  expect(loadPosterCatalog).not.toHaveBeenCalled();
-  expect(findTrackingLink).not.toHaveBeenCalled();
-  expect(createPosterPdf).not.toHaveBeenCalled();
-});
 it.each([
   ["d20", "letter"],
   ["d20", "13x19"],
   ["chess", "letter"],
+  ["chess", "13x19"],
 ])("allows %s %s", async (design, size) => {
   expect(
     (await GET(request(`area=area:Berkeley&design=${design}&size=${size}`)))
       .status,
   ).toBe(200);
-  expect(createPosterPdf).toHaveBeenCalledWith(design, size, "berkeley");
+  expect(createPosterPdf).toHaveBeenCalledWith(design, size, "berkeley", "");
+});
+it("puts a promo code on the QR and refuses malformed ones", async () => {
+  const response = await GET(
+    request("area=area:Berkeley&design=d20&size=letter&promo=POSTER20"),
+  );
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-disposition")).toContain(
+    "metagame-d20-berkeley-POSTER20-letter.pdf",
+  );
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    "d20",
+    "letter",
+    "berkeley",
+    "POSTER20",
+  );
+  expect(
+    (
+      await GET(
+        request("area=area:Berkeley&design=d20&size=letter&promo=bad%20code"),
+      )
+    ).status,
+  ).toBe(400);
 });

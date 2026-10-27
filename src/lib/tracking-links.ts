@@ -3,7 +3,7 @@ import { airtableConfig } from "@/lib/airtable-config";
 import { VOLUNTEER_FORM_PATH } from "@/v2/lib/links";
 
 // Short links: /go/{slug} → Destination with the row's UTMs appended. Rows live
-// in the Airtable "Tracking Links" table and are created from /admin/links.
+// in the Airtable "Tracking Links" table and are created from /backstage/links.
 
 export type TrackingLink = {
   id: string;
@@ -26,6 +26,14 @@ export type NewTrackingLink = Omit<
 >;
 
 export const GO_PREFIX = "/go/";
+
+// /go/<slug>?promo=CODE forwards the code to the destination, where the site
+// stores it and applies it at Standard checkout. Stripe decides if it's valid.
+export const PROMO_PARAM = "promo";
+export function promoCode(value: string | null | undefined): string {
+  const code = value?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{1,100}$/.test(code) ? code : "";
+}
 
 // The UTM fields mirror single-select columns in Airtable; their choice lists
 // are the source of truth. Open fields also take a typed value, which `typecast`

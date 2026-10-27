@@ -8,17 +8,9 @@ import {
   normalizeText,
   parseGrade,
 } from "@/lib/grade-input";
+import { can } from "@/lib/access";
+import { signOutAccount } from "@/lib/auth";
 import {
-  checkPassword,
-  endAccess,
-  gradeAccess,
-  graderUserId,
-  readSession,
-  startSession,
-} from "@/lib/grader-auth";
-import { SOMEONE_ELSE } from "@/lib/grader-identity";
-import {
-  COMMITTEE_NAMES,
   fromLabel,
   MEGAGAME_INTEGRATION_LABELS,
   NEXT_STEPS_PHASE,
@@ -34,59 +26,23 @@ import {
 import { loadedKey, MARKETING_CONSENT_FIELD } from "@/lib/rfp-rubric";
 import {
   clearGraders,
+  committeeAccounts,
   committeeUserId,
   getRfpSession,
   reassignGrader,
   saveGrade,
+  searchAccounts,
   spaceOptionLocations,
   updateRfpSession,
   type Account,
 } from "@/lib/rfp-sessions";
 import { explainDbError } from "@/lib/schedule-store";
 
-export type FormState = { error?: string };
-
-export async function unlock(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  if (!checkPassword(String(formData.get("password") ?? ""))) {
-    return { error: "Wrong password." };
-  }
-  await startSession(null);
-  revalidatePath("/grade");
-  return {};
-}
-
-export async function identify(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  if (!(await readSession())) return { error: "Your session expired." };
-
-  const name = String(formData.get("grader") ?? "");
-  if (name === SOMEONE_ELSE) {
-    await startSession({ kind: "anon" });
-  } else {
-    // Resolve against the roster so the cookie can't carry an arbitrary identity.
-    if (!COMMITTEE_NAMES.includes(name)) {
-      return { error: "Pick your name from the list." };
-    }
-    await startSession({ kind: "grader", name });
-  }
-  revalidatePath("/grade");
-  return {};
-}
-
-export async function switchGrader(): Promise<void> {
-  if (!(await readSession())) return;
-  await startSession(null);
-  revalidatePath("/grade");
-}
+const COMMITTEE_PATH = "/backstage/speaker-committee";
 
 export async function signOut(): Promise<void> {
-  await endAccess();
-  revalidatePath("/grade");
+  await signOutAccount();
+  revalidatePath(COMMITTEE_PATH);
 }
 
 /** The account behind a committee name, or the error to show. */
@@ -119,7 +75,7 @@ export async function setPipelineField(
   field: PipelineField,
   value: string,
 ): Promise<PipelineResult> {
-  if (!(await gradeAccess())?.identity)
+  if (!(await can("submissions.grade")))
     return { error: "Your session expired." };
   if (!PIPELINE_FIELDS.includes(field)) {
     return { error: "That field isn't editable here." };
@@ -170,16 +126,9 @@ export async function setPipelineField(
         await updateRfpSession(sessionId, { phase });
         break;
       }
-      case "shepherd": {
-        if (!value) {
-          await updateRfpSession(sessionId, { shepherdUserId: null });
-          break;
-        }
-        const account = await committeeAccount(value);
-        if ("error" in account) return account;
-        await updateRfpSession(sessionId, { shepherdUserId: account.userId });
-        break;
-      }
+      case "shepherd":
+        // Any account can shepherd, so the column has its own picker.
+        return { error: "Set the shepherd from its picker." };
       case "grader": {
         // One select over possibly several grade rows: a pick replaces the
         // open assignments, and submitted grades are never thrown away.
@@ -206,10 +155,37 @@ export async function setPipelineField(
   }
 
   const after = await getRfpSession(sessionId);
-  // Deliberately not revalidating /grade: re-sorting the list under the cursor
-  // mid-edit is worse than it being one refresh stale.
+  // Deliberately not revalidating the committee board: re-sorting the list
+  // under the cursor mid-edit is worse than it being one refresh stale.
   revalidatePath(`/grade/${sessionId}`);
   return { value: after ? toRow(after)[field] : null, note };
+}
+
+/** Accounts for the shepherd picker: the committee until two characters are typed. */
+export async function findShepherds(query: string): Promise<Account[]> {
+  if (!(await can("submissions.grade"))) return [];
+  const q = query.trim();
+  return q.length < 2 ? committeeAccounts() : searchAccounts(q);
+}
+
+/** Sets or clears a session's shepherd; any account will do. */
+export async function setShepherd(
+  sessionId: string,
+  userId: string | null,
+): Promise<PipelineResult> {
+  if (!(await can("submissions.grade")))
+    return { error: "Your session expired." };
+  if (!(await getRfpSession(sessionId)))
+    return { error: "That session no longer exists." };
+  try {
+    await updateRfpSession(sessionId, { shepherdUserId: userId });
+  } catch (err) {
+    console.error("[grade] shepherd save failed:", err);
+    return explainDbError(err);
+  }
+  const after = await getRfpSession(sessionId);
+  revalidatePath(`/grade/${sessionId}`);
+  return { value: after ? toRow(after).shepherd : null };
 }
 
 export type SaveState = { savedAt?: number; error?: string };
@@ -220,17 +196,9 @@ export async function submitGrades(
   _prev: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
-  const access = await gradeAccess();
-  if (!access?.identity) return { error: "Your session expired." };
-  const userId = await graderUserId(access);
-  if (!userId) {
-    return {
-      error:
-        access.identity.kind === "grader"
-          ? `${access.identity.name} has no account yet. Sign in with your account to grade.`
-          : "Sign in with your account to grade; a grade has to be someone's.",
-    };
-  }
+  const session = await can("submissions.grade");
+  if (!session) return { error: "Your session expired." };
+  const userId = session.user.id;
 
   const body = formToBody(formData);
   // A session column, not part of the grade. The box posts "true" alongside a
@@ -283,7 +251,7 @@ export async function submitGrades(
     return { error: explainDbError(err).error };
   }
 
-  revalidatePath("/grade");
+  revalidatePath(COMMITTEE_PATH);
   revalidatePath(`/grade/${sessionId}`);
   return { savedAt: Date.now() };
 }

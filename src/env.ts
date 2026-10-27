@@ -40,13 +40,13 @@ const ENV_SPEC: EnvSpec[] = [
     name: "STRIPE_PROMO_KEY",
     required: false,
     description:
-      "Restricted Stripe key (Promotion codes: Write, Coupons: Read) for the promo-code tool at /admin/promo. Separate from STRIPE_SECRET_KEY on purpose; without it the Stripe rail is unavailable.",
+      "Restricted Stripe key (Promotion codes: Write, Coupons: Read) for the promo-code tool at /backstage/promo. Separate from STRIPE_SECRET_KEY on purpose; without it the Stripe rail is unavailable.",
   },
   {
     name: "COMP_COUPON_ID",
     required: false,
     description:
-      "Id of the hand-made 100%-off Stripe coupon: the default selection in /admin/promo's coupon dropdown.",
+      "Id of the hand-made 100%-off Stripe coupon: the default selection in /backstage/promo's coupon dropdown.",
   },
   {
     name: "RESEND_API_KEY",
@@ -61,34 +61,10 @@ const ENV_SPEC: EnvSpec[] = [
       "OpenNode API key for Bitcoin ticket checkout. Without it the BTC routes throw a clear error and BTC checkout is unavailable.",
   },
   {
-    name: "GRADER_PASSWORD",
-    required: false,
-    description:
-      "Shared password for the speaker committee's grading tool at /grade. Fallback while the committee gets accounts; admin accounts sign in without it. Remove once they do.",
-  },
-  {
-    name: "GRADER_SESSION_SECRET",
-    required: false,
-    description:
-      "Random string used to sign the /grade session cookie. Rotating it signs everyone out.",
-  },
-  {
     name: "RFP_AIRTABLE_MIRROR",
     required: false,
     description:
       "Set to 1 to copy /grade's database writes onto the Airtable RFP rows outside production. Production always copies; local dev and previews skip, since they'd write the real base.",
-  },
-  {
-    name: "ADMIN_PASSWORD",
-    required: false,
-    description:
-      "Shared password for the team tools under /admin. Fallback while the team gets accounts; admin accounts sign in without it. Remove once they do.",
-  },
-  {
-    name: "ADMIN_SESSION_SECRET",
-    required: false,
-    description:
-      "Random string used to sign the /admin session cookie. Rotating it signs everyone out.",
   },
   {
     name: "OPENNODE_ENV",
@@ -101,6 +77,47 @@ const ENV_SPEC: EnvSpec[] = [
     required: false,
     description:
       "Neon Postgres connection string (set by the Neon integration on Vercel; a personal branch locally). Without it, anything that touches the database throws a clear error.",
+  },
+  {
+    name: "XERO_CLIENT_ID",
+    required: false,
+    description:
+      "Xero app client id for the budget tool's Xero connection (/backstage/budget). Without it the Connect button is off.",
+  },
+  {
+    name: "XERO_CLIENT_SECRET",
+    required: false,
+    description: "Xero app client secret, paired with XERO_CLIENT_ID.",
+  },
+  {
+    name: "ANTHROPIC_API_KEY",
+    required: false,
+    description:
+      "Anthropic API key — categorizes new Xero lines into budget proposals. Without it imports fail with a clear error.",
+  },
+  {
+    name: "GOOGLE_SERVICE_ACCOUNT_JSON",
+    required: false,
+    description:
+      "Google service-account key (the JSON, raw or base64) with edit access to the budget sheet. Without it the budget tool can't read the sheet.",
+  },
+  {
+    name: "BUDGET_SHEET_ID",
+    required: false,
+    description:
+      "Google Sheet id of the Metagame 2026 Budget. Defaults to the 2026 sheet in src/lib/budget-sheet.ts.",
+  },
+  {
+    name: "BUDGET_MODEL",
+    required: false,
+    description:
+      "Claude model id used for budget proposals. Defaults to claude-opus-5-5.",
+  },
+  {
+    name: "CRON_SECRET",
+    required: false,
+    description:
+      "Bearer token Vercel sends to cron routes (/api/budget/xero/keepalive). Without it the cron route refuses every call.",
   },
   {
     name: "BETTER_AUTH_SECRET",
@@ -151,4 +168,11 @@ export const env = {
   DATABASE_URL: process.env.DATABASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  XERO_CLIENT_ID: process.env.XERO_CLIENT_ID,
+  XERO_CLIENT_SECRET: process.env.XERO_CLIENT_SECRET,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+  BUDGET_SHEET_ID: process.env.BUDGET_SHEET_ID,
+  BUDGET_MODEL: process.env.BUDGET_MODEL,
+  CRON_SECRET: process.env.CRON_SECRET,
 } as const;
