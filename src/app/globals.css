@@ -1043,3 +1043,28 @@ button:not(:disabled) {
     animation: count-up 1.2s cubic-bezier(0.25, 0.7, 0.25, 1) both;
   }
 }
+
+/* /sessions booster packs: holographic foil on the pack and on a featured
+   card, the brand colours drifting across. Reduced motion holds it still. */
+@keyframes foil-drift {
+  to {
+    background-position: 200% 50%;
+  }
+}
+.foil {
+  background-image: linear-gradient(
+    115deg,
+    var(--color-sky),
+    var(--color-peach) 22%,
+    var(--color-tan) 40%,
+    var(--color-moss) 58%,
+    var(--color-brand-blue) 78%,
+    var(--color-sky)
+  );
+  background-size: 200% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .foil {
+    animation: foil-drift 6s linear infinite;
+  }
+}

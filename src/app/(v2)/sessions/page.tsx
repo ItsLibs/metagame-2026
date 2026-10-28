@@ -2,54 +2,37 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PAGE } from "@/v2/components/ChapterHeading";
-import { KINDS } from "@/v2/components/sessions/kinds";
 import SessionDeck from "@/v2/components/sessions/SessionDeck";
+import SessionPack from "@/v2/components/sessions/SessionPack";
 import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
 import { Button } from "@/v2/components/ui/button";
-import {
-  SESSIONS_2026,
-  type SessionKind,
-  type SessionStatus,
-} from "@/v2/data/sessions-2026";
+import { SESSIONS_2026, type SessionStatus } from "@/v2/data/sessions-2026";
 
 export const metadata: Metadata = {
   title: "Sessions — Metagame 2026",
   description:
-    "Every session submitted for Metagame 2026 so far, marked confirmed, in review or unconference.",
+    "Every session submitted for Metagame 2026 so far, marked confirmed, in review or unconference. Open a booster pack for five at random.",
 };
 
 const count = (status: SessionStatus) =>
   SESSIONS_2026.filter((s) => s.status === status).length;
 
-// The box back's numbers, counted from the session list.
+// The cover's numbers, counted from the session list.
 const STATS = [
   { label: "Confirmed", value: count("confirmed") },
   { label: "In review", value: count("review") },
   { label: "Unconference", value: count("unconference") },
 ];
 
-// The commonest kinds of play among the confirmed sessions ("something
-// else" says nothing on its own).
-const TOP_KINDS = (Object.keys(KINDS) as SessionKind[])
-  .filter((kind) => kind !== "other")
-  .map((kind) => ({
-    kind,
-    n: SESSIONS_2026.filter(
-      (s) => s.status === "confirmed" && s.kinds.includes(kind),
-    ).length,
-  }))
-  .filter((k) => k.n > 0)
-  .sort((a, b) => b.n - a.n)
-  .slice(0, 6);
-
-// /sessions: every 2026 session so far, sorted by where it stands. A cover
-// with the counts, the deck (see SessionDeck), and a back cover to tickets.
+// /sessions: every 2026 session so far, as a deck to play with. A cover with
+// the counts and a booster pack to open (SessionPack), the whole deck sorted
+// by where each session stands (SessionDeck), and a back cover to tickets.
 export default function SessionsPage() {
   return (
     <>
       <section id="top" className={SECTION_ANCHOR}>
         <div
-          className={`${PAGE} grid items-center gap-10 pt-10 pb-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12 lg:pt-14`}
+          className={`${PAGE} grid items-center gap-10 pt-10 pb-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12 lg:pt-14`}
         >
           <div>
             <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
@@ -65,40 +48,19 @@ export default function SessionsPage() {
             <p className="mt-5 font-space-mono text-sm font-bold tracking-[0.12em] text-navy uppercase">
               Nov 6–8, 2026 · Lighthaven, Berkeley
             </p>
-            <p className="mt-3 max-w-[34em] text-lg leading-relaxed text-ink/80 sm:text-xl">
-              Everything submitted for Metagame 2026, sorted by where it stands:
-              confirmed, still in review, or on the unconference schedule. Times
-              and rooms aren&apos;t set yet.
+            <p className="mt-3 max-w-[30em] text-lg leading-relaxed text-ink/80 sm:text-xl">
+              Every session submitted for Metagame 2026. Tear open a pack for
+              five at random, or browse the whole deck. Times and rooms
+              aren&apos;t set yet.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild>
-                <a href="#deck">Browse the deck ↓</a>
-              </Button>
-              <Button
-                asChild
-                variant="ghost"
-                className="border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
-              >
-                <Link href="/#tickets">Get tickets</Link>
-              </Button>
-            </div>
-          </div>
-
-          <aside
-            aria-label="Sessions in numbers"
-            className="rounded-[18px] bg-navy p-5 text-cream sm:p-6"
-          >
-            <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-sky uppercase">
-              The deck so far
-            </p>
-            <dl className="mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-[10px] bg-white/20">
+            <dl className="mt-6 flex flex-wrap gap-x-7 gap-y-3">
               {STATS.map(({ label, value }, i) => (
-                <div key={label} className="bg-navy px-3.5 py-3">
-                  <dt className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-tan uppercase">
+                <div key={label} className="flex items-baseline gap-2">
+                  <dt className="order-last font-space-mono text-[11px] font-bold tracking-[0.12em] text-ink/60 uppercase">
                     {label}
                   </dt>
                   <dd
-                    className={`${DISPLAY} mt-1 text-[clamp(40px,4.4vw,52px)] leading-none tracking-[0.02em]`}
+                    className={`${DISPLAY} text-[44px] leading-none tracking-[0.02em] text-navy`}
                   >
                     <span className="sr-only">{value}</span>
                     <span
@@ -115,27 +77,21 @@ export default function SessionsPage() {
                 </div>
               ))}
             </dl>
-            <p className="mt-5 font-space-mono text-xs font-bold tracking-[0.14em] text-sky uppercase">
-              Confirmed, by kind
-            </p>
-            <ul className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-              {TOP_KINDS.map(({ kind, n }) => {
-                const { Icon, label } = KINDS[kind];
-                return (
-                  <li
-                    key={kind}
-                    className="flex items-center gap-2 rounded-lg bg-white/10 px-2.5 py-2"
-                  >
-                    <Icon aria-hidden className="size-4 shrink-0 text-tan" />
-                    <span className="min-w-0 truncate text-sm">{label}</span>
-                    <span className={`${DISPLAY} ml-auto text-xl leading-none`}>
-                      {n}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </aside>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Button asChild>
+                <a href="#deck">Browse the deck ↓</a>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                className="border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
+              >
+                <Link href="/#tickets">Get tickets</Link>
+              </Button>
+            </div>
+          </div>
+
+          <SessionPack />
         </div>
       </section>
 

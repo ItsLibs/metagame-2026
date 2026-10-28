@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layers, Search } from "lucide-react";
+import { CircleCheck, Layers, Search } from "lucide-react";
 import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
+import { NoPuzzle } from "@/v2/components/dividers/DividerRow";
+import GoDivider from "@/v2/components/dividers/go";
+import JigsawDivider from "@/v2/components/dividers/jigsaw";
+import TetrisDivider from "@/v2/components/dividers/tetris";
 import { SESSIONS_CHAPTERS } from "@/v2/data/chapters";
 import {
   SESSIONS_2026,
@@ -12,14 +16,25 @@ import {
 } from "@/v2/data/sessions-2026";
 import { cn } from "@/v2/lib/utils";
 import { DISPLAY, SECTION_ANCHOR } from "../styles";
+import { collect, useCollection } from "./collection";
 import { hostLine, KINDS, STATUS } from "./kinds";
+import { LEAN, lean, SHINE, unlean } from "./lean";
 import SessionDialog from "./SessionDialog";
 
-// One chapter per status, in page order.
+// One chapter per status, in page order, each under a game divider like the
+// home page's chapters (out of the cover puzzle, which lives there).
 const GROUPS = [
-  { status: "confirmed", chapter: SESSIONS_CHAPTERS.confirmed },
-  { status: "review", chapter: SESSIONS_CHAPTERS.review },
-  { status: "unconference", chapter: SESSIONS_CHAPTERS.unconference },
+  {
+    status: "confirmed",
+    chapter: SESSIONS_CHAPTERS.confirmed,
+    rule: <TetrisDivider />,
+  },
+  { status: "review", chapter: SESSIONS_CHAPTERS.review, rule: <GoDivider /> },
+  {
+    status: "unconference",
+    chapter: SESSIONS_CHAPTERS.unconference,
+    rule: <JigsawDivider />,
+  },
 ] as const;
 
 // The kinds that appear, most common first, for the filter chips.
@@ -57,11 +72,15 @@ const CARD: Record<SessionStatus, string> = {
   unconference:
     "border-navy/70 bg-white hover:-translate-y-0.5 hover:border-navy",
 };
+// A card leans toward the mouse and catches the light (lean.ts); one you've
+// turned over carries a check, for the collection.
 function SessionCard({
   s,
+  collected,
   onOpen,
 }: {
   s: Session2026;
+  collected: boolean;
   onOpen: (s: Session2026) => void;
 }) {
   const { Icon, label, band } = KINDS[s.kinds[0]];
@@ -71,8 +90,11 @@ function SessionCard({
       <button
         type="button"
         onClick={() => onOpen(s)}
+        onPointerMove={lean}
+        onPointerLeave={unlean}
         className={cn(
-          "flex h-full w-full flex-col overflow-hidden rounded-[14px] border-2 text-left transition-[translate,box-shadow,border-color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
+          "group relative flex h-full w-full flex-col overflow-hidden rounded-[14px] border-2 text-left transition-[translate,box-shadow,border-color,transform] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
+          LEAN,
           CARD[s.status],
         )}
       >
@@ -91,9 +113,18 @@ function SessionCard({
             <Icon aria-hidden className="size-4" />
             {label}
           </span>
-          {s.duration && (
-            <span className="text-right font-space-mono text-[10.5px] tracking-[0.06em] text-navy/70 uppercase">
+          {(s.duration || collected) && (
+            <span className="flex items-center gap-1.5 text-right font-space-mono text-[10.5px] tracking-[0.06em] text-navy/70 uppercase">
               {s.duration}
+              {collected && (
+                <>
+                  <CircleCheck
+                    aria-hidden
+                    className="size-4 shrink-0 fill-navy text-white"
+                  />
+                  <span className="sr-only">Collected</span>
+                </>
+              )}
             </span>
           )}
         </span>
@@ -122,18 +153,22 @@ function SessionCard({
             )}
           </span>
         </span>
+        <span aria-hidden className={SHINE} />
       </button>
     </li>
   );
 }
 
 // Every 2026 session so far, as a deck: a control bar (deal a random one,
-// search, filter by kind), then one chapter per status. A card opens its
-// details; /sessions#slug links straight to one, and ?q= prefills the search.
+// search, filter by kind, your collection so far), then one chapter per
+// status. A card opens its details and joins the collection; /sessions#slug
+// links straight to one, and ?q= prefills the search.
 export default function SessionDeck() {
   const [kind, setKind] = useState<SessionKind | null>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<Session2026 | null>(null);
+  const collection = useCollection();
+  const collected = SESSIONS_2026.filter((s) => collection.has(s.slug)).length;
 
   // Read the link once mounted (the timer keeps setState out of the effect
   // body), and open whatever session a later #slug names.
@@ -141,7 +176,9 @@ export default function SessionDeck() {
     const fromHash = () => {
       const slug = decodeURIComponent(window.location.hash.slice(1));
       const s = SESSIONS_2026.find((x) => x.slug === slug);
-      if (s) setOpen(s);
+      if (!s) return;
+      setOpen(s);
+      collect(s.slug);
     };
     const t = setTimeout(() => {
       const q = new URLSearchParams(window.location.search).get("q");
@@ -165,6 +202,7 @@ export default function SessionDeck() {
 
   const show = (s: Session2026) => {
     setOpen(s);
+    collect(s.slug);
     history.replaceState(null, "", `#${s.slug}`);
   };
   const hide = () => {
@@ -220,6 +258,15 @@ export default function SessionDeck() {
                 ? `${shown.length} of ${SESSIONS_2026.length} sessions`
                 : `${SESSIONS_2026.length} sessions`}
             </span>
+            {collected > 0 && (
+              <span
+                title="Sessions you've turned over, kept in this browser"
+                className="flex items-center gap-1.5 px-1 font-space-mono text-xs font-bold tracking-[0.1em] text-tan uppercase"
+              >
+                <CircleCheck aria-hidden className="size-4" />
+                {collected} of {SESSIONS_2026.length} collected
+              </span>
+            )}
           </div>
           <div
             role="group"
@@ -254,29 +301,37 @@ export default function SessionDeck() {
         </div>
       </div>
 
-      {GROUPS.map(({ status, chapter }) => {
-        const all = SESSIONS_2026.filter((s) => s.status === status).length;
-        const cards = shown.filter((s) => s.status === status);
-        return (
-          <ChapterSection
-            key={status}
-            chapter={{
-              ...chapter,
-              aka: `${filtered ? `${cards.length} of ` : ""}${all} · ${chapter.aka}`,
-            }}
-          >
-            {cards.length ? (
-              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {cards.map((s) => (
-                  <SessionCard key={s.slug} s={s} onOpen={show} />
-                ))}
-              </ul>
-            ) : (
-              <p className="text-ink/60">Nothing here matches.</p>
-            )}
-          </ChapterSection>
-        );
-      })}
+      <NoPuzzle>
+        {GROUPS.map(({ status, chapter, rule }) => {
+          const all = SESSIONS_2026.filter((s) => s.status === status).length;
+          const cards = shown.filter((s) => s.status === status);
+          return (
+            <ChapterSection
+              key={status}
+              rule={rule}
+              chapter={{
+                ...chapter,
+                aka: `${filtered ? `${cards.length} of ` : ""}${all} · ${chapter.aka}`,
+              }}
+            >
+              {cards.length ? (
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {cards.map((s) => (
+                    <SessionCard
+                      key={s.slug}
+                      s={s}
+                      collected={collection.has(s.slug)}
+                      onOpen={show}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-ink/60">Nothing here matches.</p>
+              )}
+            </ChapterSection>
+          );
+        })}
+      </NoPuzzle>
 
       <SessionDialog session={open} onClose={hide} />
     </>
