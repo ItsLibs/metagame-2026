@@ -111,7 +111,6 @@ export default function RulebookExpansions() {
               </a>
               <a
                 href={NIGHT_MARKET_FORM_URL}
-                {...EXT}
                 className="inline-flex items-center rounded-lg border-2 border-[#fff5e6]/60 px-4 py-[9px] text-sm font-bold transition-colors hover:border-[#fff5e6]"
               >
                 Apply for a booth
@@ -150,7 +149,6 @@ export default function RulebookExpansions() {
           </p>
           <a
             href={MEGAGAME_PROPOSAL_FORM_URL}
-            {...EXT}
             className="mt-2 inline-flex items-center rounded-lg bg-navy px-[18px] py-[11px] text-sm font-bold text-cream transition-transform hover:-translate-y-px"
           >
             Build part of the Megagame

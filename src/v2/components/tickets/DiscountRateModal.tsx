@@ -47,8 +47,6 @@ export default function DiscountRateModal({
           Still too expensive?{" "}
           <a
             href={FINANCIAL_AID_FORM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
             className="font-bold text-tan underline underline-offset-2"
           >
             Apply for financial aid here
