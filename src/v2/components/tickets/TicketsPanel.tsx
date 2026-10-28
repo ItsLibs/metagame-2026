@@ -46,7 +46,7 @@ const LOOKS = {
   },
   rulebook: {
     variant: "tile",
-    row: "grid w-full gap-2.5 sm:grid-cols-2 lg:grid-cols-4",
+    row: "grid w-full gap-2.5 sm:grid-cols-2 lg:grid-cols-3",
     tile: "h-full flex-col items-start justify-start gap-1 p-4 text-left whitespace-normal",
     main: "bg-tan",
     label:
