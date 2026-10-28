@@ -58,13 +58,15 @@ export const volunteer: FormDef = {
       key: "shifts",
       title: "When could you play?",
       intro:
-        "Pick every shift you could be scheduled for, not only the ones you'd prefer.",
+        "Mark every window you could possibly help in, not just your favorites. Marking a window doesn't mean you'll be on shift for all of them: we'll only schedule you for some.",
+      view: "schedule",
       items: availability((day) => day),
     },
     {
       key: "teams",
       title: "Pick your teams",
-      intro: `This helps us slot you in. Not sure what a team involves? [Read the team commitments](${VOLUNTEER_TEAMS_DOC_URL}).`,
+      intro: `This helps us slot you in. Not sure what a team involves? Open its examples, or [read the team commitments](${VOLUNTEER_TEAMS_DOC_URL}).`,
+      view: "teams",
       items: [
         ...teams(
           "What kind of work are you most excited about? Every volunteer attends a 1–2 hour orientation before the event.",

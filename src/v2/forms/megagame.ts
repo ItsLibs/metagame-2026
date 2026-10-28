@@ -40,12 +40,28 @@ export const megagame: FormDef = {
           type: "choice",
           label: "What kind of thing is it?",
           required: true,
+          // The first four and Other are Airtable's; the rest are added to
+          // the field (by typecast) the first time someone picks them.
           options: [
             { value: "Tabletop Board/Card Game", glyph: "board-games" },
             { value: "Puzzle", glyph: "puzzles" },
             { value: "Role-playing Game", glyph: "larps" },
             { value: "Video Game", glyph: "video-games" },
-            { value: "Other" },
+            { value: "LARP", glyph: "larps" },
+            { value: "Escape Room", glyph: "escape-rooms" },
+            { value: "Scavenger Hunt" },
+            { value: "Word Game", glyph: "crosswords" },
+            { value: "Trivia", glyph: "trivia" },
+            { value: "Party/Social Game", glyph: "party-games" },
+            { value: "Physical Challenge" },
+            {
+              value: "Other",
+              more: {
+                key: "kindOther",
+                label: "What kind of thing it is",
+                into: "description",
+              },
+            },
           ],
         },
         {
@@ -74,12 +90,21 @@ export const megagame: FormDef = {
           type: "choices",
           label: "Who's it for?",
           required: true,
-          options: opts(
-            "All ages",
-            "Primarily for children/teens?",
-            "Adults only (18+)",
-            "Other",
-          ),
+          options: [
+            ...opts(
+              "All ages",
+              "Primarily for children/teens?",
+              "Adults only (18+)",
+            ),
+            {
+              value: "Other",
+              more: {
+                key: "ageOther",
+                label: "Who it's for",
+                into: "description",
+              },
+            },
+          ],
         },
         {
           key: "minPlayers",

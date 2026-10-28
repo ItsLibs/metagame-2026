@@ -36,6 +36,7 @@ import {
   LIGHTHAVEN_URL,
   RFP_FORM_URL,
 } from "@/v2/lib/links";
+import { loadClockSessions } from "@/v2/lib/schedule-clock";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 
@@ -246,8 +247,10 @@ const FAQS: Rule[] = [
 // branding/website-rulebook): the box cover, then numbered chapters, the
 // credits and a back cover. Section ids are kept from the one-pager, since
 // the nav, tracking links and printed codes point at /#tickets, /#faq, …
-export default function Home() {
+export default async function Home() {
   const earlyBird = isEarlyBirdActive();
+  // §1's clock runs on the draft 2026 schedule (empty without a database).
+  const clock = await loadClockSessions();
   const salesClose = upcomingKeyDates().find(
     (d) => d.title === "Ticket sales close",
   );
@@ -256,7 +259,7 @@ export default function Home() {
       <RulebookCover />
 
       <ChapterSection chapter={CHAPTERS.object} rule={<CastlingDivider />}>
-        <RulebookObject />
+        <RulebookObject sessions={clock} />
       </ChapterSection>
 
       <ChapterSection chapter={CHAPTERS.components} rule={<CardSuitsDivider />}>

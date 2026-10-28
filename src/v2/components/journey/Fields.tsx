@@ -1,8 +1,23 @@
 "use client";
 
-import { useId, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { Check, ImagePlus, Minus, Plus, X } from "lucide-react";
-import type { Answer, FileAnswer, Option, Question } from "@/v2/forms/engine";
+import {
+  MORE_MAX,
+  optionBoxes,
+  type Answer,
+  type Answers,
+  type FileAnswer,
+  type Option,
+  type Question,
+} from "@/v2/forms/engine";
 import { cn } from "@/v2/lib/utils";
 import Glyph from "../Glyph";
 import { TOKEN } from "../styles";
@@ -34,12 +49,22 @@ export function answerText(q: Question, v: Answer): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/** What was written in the text boxes under a question's picked options. */
+export function boxText(q: Question, a: Answers): string {
+  return optionBoxes(q, a)
+    .filter((b) => b.open && typeof a[b.key] === "string" && a[b.key])
+    .map((b) => `${b.label}: ${String(a[b.key]).trim()}`)
+    .join("\n");
+}
+
 export function Field({
   q,
   value,
   error,
   onChange,
   onEnter,
+  answers = {},
+  onExtra,
 }: {
   q: Question;
   value: Answer;
@@ -47,6 +72,10 @@ export function Field({
   onChange: (v: Answer) => void;
   /** Enter in a one-line field moves the journey on. */
   onEnter: () => void;
+  /** Every answer so far, for the text boxes under picked options. */
+  answers?: Answers;
+  /** Sets one of those boxes' answers. */
+  onExtra?: (key: string, v: Answer) => void;
 }) {
   const id = useId();
   const helpId = `${id}-help`;
@@ -92,6 +121,17 @@ export function Field({
         ) : (
           <Options q={q} value={value} onChange={onChange} name={id} />
         )}
+        {optionBoxes(q, { ...answers, [q.key]: value })
+          .filter((b) => b.open)
+          .map((b) => (
+            <MoreBox
+              key={b.key}
+              label={b.label}
+              placeholder={b.placeholder}
+              value={answers[b.key]}
+              onChange={(v) => onExtra?.(b.key, v)}
+            />
+          ))}
         {err}
       </fieldset>
     );
@@ -300,6 +340,43 @@ function Options({
           </label>
         );
       })}
+    </div>
+  );
+}
+
+// The text box an option like "Other" opens, tucked under the options. A
+// pick that opens it puts the cursor straight in.
+function MoreBox({
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder?: string;
+  value: Answer;
+  onChange: (v: Answer) => void;
+}) {
+  const id = useId();
+  const box = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (!box.current?.value) box.current?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <div className="mt-4 animate-in border-l-2 border-tan pl-4 duration-300 fade-in slide-in-from-top-1">
+      <label htmlFor={id} className="block text-[15px] font-semibold text-navy">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        ref={box}
+        rows={2}
+        maxLength={MORE_MAX}
+        value={typeof value === "string" ? value : ""}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(INPUT, "mt-2 min-h-16 resize-y leading-relaxed")}
+      />
     </div>
   );
 }

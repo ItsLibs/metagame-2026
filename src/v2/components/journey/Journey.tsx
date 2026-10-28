@@ -15,14 +15,17 @@ import {
   type Answer,
   type Answers,
   type Note,
+  type Step,
 } from "@/v2/forms/engine";
 import { cn } from "@/v2/lib/utils";
 import Glyph from "../Glyph";
 import Mg2Die from "../nav/Mg2Die";
 import { DISPLAY, TOKEN } from "../styles";
 import { Button } from "../ui/button";
-import { answerText, Field } from "./Fields";
+import { answerText, boxText, Field } from "./Fields";
 import Rich from "./Rich";
+import ScheduleBoard, { SCHEDULE_KEYS } from "./ScheduleBoard";
+import TeamBoard, { TEAM_KEYS } from "./TeamBoard";
 import Track from "./Track";
 
 type Phase =
@@ -33,6 +36,14 @@ type Phase =
   | { at: "done"; preview?: Record<string, unknown> };
 
 const draftKey = (slug: string) => `journey:${slug}`;
+
+// The questions a step's board asks itself, so they aren't asked twice.
+const BOARD_KEYS: Record<NonNullable<Step["view"]>, readonly string[]> = {
+  schedule: SCHEDULE_KEYS,
+  teams: TEAM_KEYS,
+};
+const onBoard = (step: Step, key: string) =>
+  !!step.view && BOARD_KEYS[step.view].includes(key);
 const EYEBROW =
   "font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase";
 
@@ -125,6 +136,9 @@ export default function Journey({ slug }: { slug: string }) {
       return rest;
     });
   };
+  // For the boards, which can change several answers in one drag.
+  const update = (key: string, fn: (v: Answer) => Answer) =>
+    setAnswers((a) => ({ ...a, [key]: fn(a[key]) }));
 
   const focusFirst = (e: Record<string, string>) =>
     requestAnimationFrame(() => {
@@ -368,20 +382,30 @@ export default function Journey({ slug }: { slug: string }) {
               </p>
             )}
             <div className="mt-8 flex flex-col gap-9">
-              {visibleItems(steps[phase.index], answers).map((item) =>
-                isQuestion(item) ? (
-                  <Field
-                    key={item.key}
-                    q={item}
-                    value={answers[item.key]}
-                    error={errors[item.key]}
-                    onChange={(v) => set(item.key, v)}
-                    onEnter={forward}
-                  />
-                ) : (
-                  <NoteBlock key={item.key} note={item} />
-                ),
+              {steps[phase.index].view === "schedule" && (
+                <ScheduleBoard answers={answers} update={update} />
               )}
+              {steps[phase.index].view === "teams" && (
+                <TeamBoard answers={answers} update={update} />
+              )}
+              {visibleItems(steps[phase.index], answers)
+                .filter((item) => !onBoard(steps[phase.index], item.key))
+                .map((item) =>
+                  isQuestion(item) ? (
+                    <Field
+                      key={item.key}
+                      q={item}
+                      value={answers[item.key]}
+                      error={errors[item.key]}
+                      onChange={(v) => set(item.key, v)}
+                      onEnter={forward}
+                      answers={answers}
+                      onExtra={set}
+                    />
+                  ) : (
+                    <NoteBlock key={item.key} note={item} />
+                  ),
+                )}
             </div>
             <Footer
               onBack={backward}
@@ -444,7 +468,12 @@ export default function Journey({ slug }: { slug: string }) {
                             {q.label}
                           </dt>
                           <dd className="text-[15.5px] leading-snug font-medium break-words whitespace-pre-wrap text-navy">
-                            {answerText(q, answers[q.key])}
+                            {[
+                              answerText(q, answers[q.key]),
+                              boxText(q, answers),
+                            ]
+                              .filter(Boolean)
+                              .join("\n")}
                           </dd>
                         </div>
                       ))}

@@ -91,7 +91,14 @@ export const propose: FormDef = {
               value: "Something weirder than any of the above options",
               label: "Something weirder than all of these",
             },
-            { value: "Other" },
+            {
+              value: "Other",
+              more: {
+                key: "categoryOther",
+                label: "What kind of thing it is",
+                into: "context",
+              },
+            },
           ],
         },
       ],
@@ -186,12 +193,17 @@ export const propose: FormDef = {
           type: "choices",
           label: "Who's it for?",
           required: true,
-          options: opts(
-            "Appropriate for all ages",
-            "Primarily for children",
-            "Adults only (18+)",
-            "Other",
-          ),
+          options: [
+            ...opts(
+              "Appropriate for all ages",
+              "Primarily for children",
+              "Adults only (18+)",
+            ),
+            {
+              value: "Other",
+              more: { key: "ageOther", label: "Who it's for", into: "context" },
+            },
+          ],
         },
         {
           key: "application",

@@ -97,7 +97,15 @@ export const nightMarket: FormDef = {
               hint: "Rights to middle names, tickets to cheat in your next RPG… Black market goods must still be legal!",
               glyph: "larps",
             },
-            { value: "Other", hint: "Too weird for any of the above." },
+            {
+              value: "Other",
+              hint: "Too weird for any of the above.",
+              more: {
+                key: "sectionOther",
+                label: "What kind of booth it is",
+                into: "notes",
+              },
+            },
           ],
         },
         {
@@ -120,7 +128,7 @@ export const nightMarket: FormDef = {
           field: "fldqd3HuyaqfvjRWA",
           type: "longtext",
           label: "Anything else we should know?",
-          help: "For the organizing team only: space, seating, power, loading or access needs. Requests are subject to confirmation. If you agreed something different with the team, say who you spoke with and what.",
+          help: "For the organizing team only: space, seating, power, loading or access needs. Requests are subject to confirmation.",
         },
       ],
     },
@@ -146,7 +154,13 @@ export const nightMarket: FormDef = {
             },
             {
               value: "Separate arrangement discussed with the team",
-              hint: "Describe it in the last step's notes.",
+              hint: "Tell us about it in the box that opens.",
+              more: {
+                key: "arrangement",
+                label: "The arrangement",
+                into: "notes",
+                placeholder: "Who you spoke with, and what you agreed",
+              },
             },
           ],
         },

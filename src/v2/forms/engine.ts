@@ -30,7 +30,17 @@ export type Option = {
   label?: string;
   hint?: string;
   glyph?: GlyphName;
+  /**
+   * Picking this option opens a text box under the question. The table has
+   * no field of its own for it, so its answer (kept under `key`) is written
+   * into another question's field (`into`, a team-only text question in the
+   * same form) as a line headed `label`.
+   */
+  more?: { key: string; label: string; into: string; placeholder?: string };
 };
+
+/** The most a text box under an option takes. */
+export const MORE_MAX = 1000;
 
 type Common = {
   key: string;
@@ -91,6 +101,12 @@ export type Step = {
   intro?: string;
   items: Item[];
   show?: (a: Answers) => boolean;
+  /**
+   * A board that asks some of this step's questions in one picture: the
+   * weekend as a schedule to mark, or the volunteer teams to sort. The rest
+   * of the step's questions follow it as usual.
+   */
+  view?: "schedule" | "teams";
 };
 
 export type FormDef = {
@@ -147,6 +163,14 @@ export const isEmpty = (v: Answer) =>
 /** Whether a choice question has `value` picked (single or multiple). */
 export const picked = (v: Answer, value: string) =>
   Array.isArray(v) ? v.includes(value) : v === value;
+
+/** A choice question's options that open a text box, with what's picked. */
+export const optionBoxes = (q: Question, a: Answers) =>
+  q.type === "choice" || q.type === "choices"
+    ? q.options.flatMap((o) =>
+        o.more ? [{ ...o.more, open: picked(a[q.key], o.value) }] : [],
+      )
+    : [];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TEXT_MAX = 300;
@@ -250,6 +274,19 @@ export function airtableFields(
     else if (q.type === "choice" && q.asList) fields[q.field] = [v as string];
     else fields[q.field] = String(v).trim();
   }
+  // Text from an option's own box joins the field it names, after whatever
+  // was answered there.
+  for (const q of visibleQuestions(def, a))
+    for (const box of optionBoxes(q, a)) {
+      const text = a[box.key];
+      const into = allQuestions(def).find((t) => t.key === box.into);
+      if (!box.open || !into || typeof text !== "string" || !text.trim())
+        continue;
+      const line = `${box.label}: ${text.trim().slice(0, MORE_MAX)}`;
+      const before = fields[into.field];
+      fields[into.field] =
+        typeof before === "string" && before ? `${before}\n\n${line}` : line;
+    }
   return fields;
 }
 
@@ -268,6 +305,10 @@ export function cleanAnswers(def: FormDef, raw: unknown): Answers {
   if (!raw || typeof raw !== "object") return answers;
   const input = raw as Record<string, unknown>;
   for (const q of allQuestions(def)) {
+    for (const box of optionBoxes(q, {})) {
+      const text = input[box.key];
+      if (typeof text === "string") answers[box.key] = text.slice(0, MORE_MAX);
+    }
     const v = input[q.key];
     if (typeof v === "string" || typeof v === "boolean") answers[q.key] = v;
     else if (Array.isArray(v) && v.every((x) => typeof x === "string"))

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { SCHEDULE_KEYS } from "@/v2/components/journey/ScheduleBoard";
+import { TEAM_KEYS, TEAMS } from "@/v2/components/journey/TeamBoard";
 import {
   airtableFields,
   allQuestions,
   checkForm,
   cleanAnswers,
+  optionBoxes,
   visibleItems,
   visibleSteps,
 } from "./engine";
@@ -176,5 +179,80 @@ describe("cleanAnswers", () => {
         email: { not: "a string" },
       }),
     ).toEqual({ name: "Ada", tier: "Gold" });
+  });
+
+  it("keeps what's written in an option's text box", () => {
+    expect(
+      cleanAnswers(FORMS["night-market"], {
+        option: "Separate arrangement discussed with the team",
+        arrangement: "Talked to Ricki",
+      }),
+    ).toEqual({
+      option: "Separate arrangement discussed with the team",
+      arrangement: "Talked to Ricki",
+    });
+  });
+});
+
+describe("text boxes under options", () => {
+  it("each lands in a team-only text question of its own form", () => {
+    for (const def of Object.values(FORMS)) {
+      const questions = allQuestions(def);
+      for (const q of questions)
+        for (const box of optionBoxes(q, {})) {
+          const into = questions.find((t) => t.key === box.into);
+          expect(into?.type, `${def.slug}: ${box.key}`).toBe("longtext");
+          expect(questions.some((t) => t.key === box.key)).toBe(false);
+        }
+    }
+  });
+
+  it("writes the box's text under its heading, after the field's own answer", () => {
+    const def = FORMS["night-market"];
+    const option = "Separate arrangement discussed with the team";
+    expect(
+      airtableFields(def, {
+        notes: "We need power.",
+        option,
+        arrangement: "Agreed a half table with Ricki",
+      }).fldqd3HuyaqfvjRWA,
+    ).toBe("We need power.\n\nThe arrangement: Agreed a half table with Ricki");
+    expect(
+      airtableFields(def, { option, arrangement: "Just this" })
+        .fldqd3HuyaqfvjRWA,
+    ).toBe("The arrangement: Just this");
+  });
+
+  it("drops the text once its option isn't picked", () => {
+    const fields = airtableFields(FORMS.propose, {
+      age: ["Adults only (18+)"],
+      ageOther: "Grandparents",
+    });
+    expect(fields.fldCdTcIyzpR20bJG).toBeUndefined();
+  });
+});
+
+describe("volunteer boards", () => {
+  const def = FORMS.volunteer;
+  const options = (key: string) => {
+    const q = allQuestions(def).find((x) => x.key === key)!;
+    return q.type === "choices" ? q.options.map((o) => o.value) : [];
+  };
+
+  it("mark teams with the option names Airtable has", () => {
+    for (const t of TEAMS) {
+      if (t.want) expect(options("teams"), t.name).toContain(t.want);
+      if (t.avoid) expect(options("notTeams"), t.name).toContain(t.avoid);
+      if (t.lead) expect(options("leadTeams"), t.name).toContain(t.lead);
+    }
+  });
+
+  it("ask the questions their steps hold", () => {
+    const keys = (view: string) =>
+      def.steps
+        .filter((s) => s.view === view)
+        .flatMap((s) => s.items.map((i) => i.key));
+    expect(keys("schedule")).toEqual(expect.arrayContaining(SCHEDULE_KEYS));
+    expect(keys("teams")).toEqual(expect.arrayContaining(TEAM_KEYS));
   });
 });
