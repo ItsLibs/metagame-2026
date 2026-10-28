@@ -3,12 +3,6 @@
 import { useEffect, useState } from "react";
 import { Layers, Search } from "lucide-react";
 import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/v2/components/ui/dialog";
 import { SESSIONS_CHAPTERS } from "@/v2/data/chapters";
 import {
   SESSIONS_2026,
@@ -18,7 +12,8 @@ import {
 } from "@/v2/data/sessions-2026";
 import { cn } from "@/v2/lib/utils";
 import { DISPLAY, SECTION_ANCHOR } from "../styles";
-import { KINDS, STATUS } from "./kinds";
+import { hostLine, KINDS, STATUS } from "./kinds";
+import SessionDialog from "./SessionDialog";
 
 // One chapter per status, in page order.
 const GROUPS = [
@@ -35,9 +30,6 @@ const KIND_COUNTS = (Object.keys(KINDS) as SessionKind[])
   }))
   .filter((k) => k.n > 0)
   .sort((a, b) => b.n - a.n);
-
-const hostLine = (s: Session2026) =>
-  s.hosts.join(", ") + (s.org ? ` · ${s.org}` : "");
 
 // What the search box looks through.
 const TEXT = new Map(
@@ -65,12 +57,6 @@ const CARD: Record<SessionStatus, string> = {
   unconference:
     "border-navy/70 bg-white hover:-translate-y-0.5 hover:border-navy",
 };
-const CHIP: Record<SessionStatus, string> = {
-  confirmed: "bg-cream text-navy",
-  review: "border border-dashed border-navy/50 text-navy/75",
-  unconference: "bg-sky text-navy",
-};
-
 function SessionCard({
   s,
   onOpen,
@@ -128,7 +114,7 @@ function SessionCard({
               <span
                 className={cn(
                   "rounded-md px-1.5 py-0.5 font-space-mono text-[10px] font-bold tracking-[0.1em] uppercase",
-                  CHIP[s.status],
+                  STATUS[s.status].chip,
                 )}
               >
                 {STATUS[s.status].label}
@@ -138,61 +124,6 @@ function SessionCard({
         </span>
       </button>
     </li>
-  );
-}
-
-function SessionDetails({ s }: { s: Session2026 }) {
-  const main = KINDS[s.kinds[0]];
-  return (
-    <DialogContent className="flex max-h-[85vh] max-w-[560px] flex-col gap-4 overflow-y-auto p-6 sm:p-8">
-      <div className="flex flex-wrap items-center gap-2 pr-8">
-        <span className="flex items-center gap-1.5 rounded-md bg-cream px-2 py-1 font-space-mono text-[10.5px] font-bold tracking-[0.12em] text-navy uppercase">
-          <main.Icon aria-hidden className="size-3.5" />
-          {main.label}
-        </span>
-        <span
-          className={cn(
-            "rounded-md px-2 py-1 font-space-mono text-[10.5px] font-bold tracking-[0.12em] uppercase",
-            s.status === "review"
-              ? "border border-dashed border-cream/60 text-cream"
-              : CHIP[s.status],
-          )}
-        >
-          {STATUS[s.status].label}
-        </span>
-      </div>
-      <DialogTitle
-        className={cn(
-          DISPLAY,
-          "text-[clamp(30px,6vw,40px)] leading-[0.95] tracking-[0.01em]",
-          !s.title && "text-cream/60",
-        )}
-      >
-        {s.title ?? "Title to come"}
-      </DialogTitle>
-      <p className="font-space-mono text-xs tracking-[0.08em] text-cream/70 uppercase">
-        {hostLine(s)}
-        {s.duration && ` · ${s.duration}`}
-      </p>
-      <DialogDescription className="text-[15px] leading-relaxed whitespace-pre-line text-cream/85">
-        {s.blurb || "No description yet."}
-      </DialogDescription>
-      {s.kinds.length > 1 && (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Kinds of play">
-          {s.kinds.map((k) => (
-            <li
-              key={k}
-              className="rounded-full border border-cream/25 px-2.5 py-0.5 text-xs text-cream/75"
-            >
-              {KINDS[k].label}
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="border-t border-cream/15 pt-3 text-sm text-sky">
-        {STATUS[s.status].line}
-      </p>
-    </DialogContent>
   );
 }
 
@@ -347,9 +278,7 @@ export default function SessionDeck() {
         );
       })}
 
-      <Dialog open={!!open} onOpenChange={(o) => !o && hide()}>
-        {open && <SessionDetails s={open} />}
-      </Dialog>
+      <SessionDialog session={open} onClose={hide} />
     </>
   );
 }

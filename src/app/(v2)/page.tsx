@@ -14,7 +14,7 @@ import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
 import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
-import Highlights2025 from "@/v2/components/Highlights2025";
+import DeckDoorway from "@/v2/components/DeckDoorway";
 import PlayerCard from "@/v2/components/PlayerCard";
 import RulebookComponents from "@/v2/components/RulebookComponents";
 import RulebookCover from "@/v2/components/RulebookCover";
@@ -31,7 +31,7 @@ import TurnOrder from "@/v2/components/TurnOrder";
 import { Button } from "@/v2/components/ui/button";
 import { CHAPTERS, CREDITS } from "@/v2/data/chapters";
 import { upcomingKeyDates } from "@/v2/data/key-dates";
-import { SESSIONS_2026, sessionsFor } from "@/v2/data/sessions-2026";
+import { sessionsFor } from "@/v2/data/sessions-2026";
 import { SPEAKERS } from "@/v2/data/speakers";
 import {
   HOTELS_SEARCH_URL,
@@ -54,9 +54,6 @@ export const metadata: Metadata = {
 };
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
-const CONFIRMED_SESSIONS = SESSIONS_2026.filter(
-  (s) => s.status === "confirmed",
-).length;
 const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 
 const FAQS: Rule[] = [
@@ -276,17 +273,9 @@ export default function Home() {
             <TetrisDivider />
           </ChapterRule>
         </div>
-        <div className="mt-4 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h3
-            className={`${DISPLAY} text-[clamp(34px,4.4vw,52px)] leading-[0.9] text-navy`}
-          >
-            Examples of play
-          </h3>
-          <span className="w-full font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase md:ml-auto md:w-auto">
-            A hand dealt from 2025
-          </span>
+        <div className="mt-6">
+          <DeckDoorway />
         </div>
-        <Highlights2025 />
       </ChapterSection>
 
       <ChapterSection chapter={CHAPTERS.setup} rule={<SetCardDivider />}>
@@ -312,13 +301,12 @@ export default function Home() {
           </li>
         </ul>
         <p className="mt-6 text-base text-ink/70">
-          And many more: {CONFIRMED_SESSIONS} sessions confirmed so far, with
-          more in review.{" "}
+          Flip a card for a player&apos;s sessions. And many more hosts:{" "}
           <Link
             href="/sessions"
             className="font-bold text-navy underline underline-offset-4 hover:text-meeple"
           >
-            See every session →
+            browse every session →
           </Link>
         </p>
       </ChapterSection>

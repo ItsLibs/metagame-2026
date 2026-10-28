@@ -121,7 +121,7 @@ export const SESSIONS_2026: Session2026[] = [
     slug: "building-an-irl-mmo-a-fireside-chat-on",
     title: "Building an IRL MMO: A Fireside Chat on Sandbox Systems",
     hosts: ["Elli Furedy", "Andrea Furedy"],
-    kinds: ["talk", "immersive"],
+    kinds: ["talk"],
     duration: "1–1½ hours",
     blurb:
       "Alleycat has spent five years exploring the intersection of custom hardware and immersive experiences, all of which is now aimed at turning the platform into an open source IRL MMO. Come explore this interesting and complex design space over an intimate fireside chat with the founders, Elli and Andrea Furedy.",

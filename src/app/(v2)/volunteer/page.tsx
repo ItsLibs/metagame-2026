@@ -4,16 +4,11 @@ import ContentPage from "@/v2/components/ContentPage";
 import { EYEBROW, HEADING } from "@/v2/components/styles";
 import { Button } from "@/v2/components/ui/button";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
-import { upcomingKeyDates } from "@/v2/data/key-dates";
 import {
   VOLUNTEER_TEAMS,
   WHEN_LABEL,
   type VolunteerTeam,
 } from "@/v2/data/volunteer-teams";
-import { VOLUNTEER_FORM_PATH } from "@/v2/lib/links";
-
-// Hourly, so the deadline line flips once applications close.
-export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Volunteer — Metagame 2026",
@@ -45,9 +40,6 @@ function TeamList({ teams }: { teams: VolunteerTeam[] }) {
 }
 
 export default function VolunteerPage() {
-  const deadline = upcomingKeyDates().find(
-    (d) => d.href === VOLUNTEER_FORM_PATH,
-  );
   // Teams that only need help at that time first, then the "both" ones.
   const column = (when: "now" | "weekend") => [
     ...VOLUNTEER_TEAMS.filter((t) => t.when === when),
@@ -66,20 +58,9 @@ export default function VolunteerPage() {
             right now, weeks before the gates open. Others need you on the
             weekend itself. A limited number of volunteer tickets are available.
           </p>
-          {deadline && (
-            <p className="mt-3">
-              Applications close{" "}
-              <strong className="font-semibold text-navy">
-                {deadline.label}
-              </strong>
-              .
-            </p>
-          )}
-          {deadline && (
-            <Button asChild variant="default" className="mt-5">
-              <VolunteerFormLink>Apply to volunteer</VolunteerFormLink>
-            </Button>
-          )}
+          <Button asChild variant="default" className="mt-5">
+            <VolunteerFormLink>Apply to volunteer</VolunteerFormLink>
+          </Button>
         </>
       }
     >

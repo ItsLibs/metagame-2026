@@ -4,9 +4,8 @@ import { upcomingTurns } from "./key-dates";
 
 const titles = (now: number) => upcomingTurns(now).map((d) => d.title);
 
-it("puts the con weekend between the deadlines and the nap", () => {
+it("runs from the con weekend to the nap", () => {
   expect(titles(Date.UTC(2026, 9, 22, 19))).toEqual([
-    "Volunteer applications due",
     "The game begins",
     `Expansion: ${NIGHT_NAME}`,
     "Talks, workshops and games all day",
