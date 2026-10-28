@@ -28,7 +28,7 @@ const BOOTHS = [
 ];
 const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 
-// §6 of the rulebook: the Friday-night event in the brand's night look
+// §5 of the rulebook: the Friday-night event in the brand's night look
 // (its name's last word as glowing letter tiles), beside the Megagame as a
 // side quest. Fig. 6.2 hides the Hat Trick's Crown.
 export default function RulebookExpansions() {

@@ -108,7 +108,7 @@ function D12({ face, spinning }: { face: string; spinning: boolean }) {
 
 const words = (q: string) => q.toLowerCase().split(/\s+/).filter(Boolean);
 
-// §7 of the rulebook, the FAQ: the questions in two ruled columns, each
+// §6 of the rulebook, the FAQ: the questions in two ruled columns, each
 // opening to its answer. Two ways to play it: roll the d12 to open a random
 // rule (there are twelve), or ask the rules lawyer, which opens every rule
 // that mentions what you typed and dims the rest. Under the list, the

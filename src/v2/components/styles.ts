@@ -26,5 +26,5 @@ export const FIELD_LIGHT =
 // card titles.
 export const DISPLAY = "font-[family-name:var(--font-bebas)] font-normal";
 
-// The photo square in a §5 player card; the "You?" silhouette matches it.
+// The photo square in a §4 player card; the "You?" silhouette matches it.
 export const PLAYER_PHOTO = "size-[72px] shrink-0 overflow-hidden rounded-lg";

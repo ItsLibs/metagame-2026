@@ -1,6 +1,6 @@
 // The Friday-night public event. The name is final: the Night Market, as in
 // 2025 (Libi, Oct 27; the proposed "MetaGame Night" rename was dropped).
-// Every rulebook mention reads it from here; §6 sets its last word as tiles.
+// Every rulebook mention reads it from here; §5 sets its last word as tiles.
 export const NIGHT_NAME = "Night Market";
 
 export type Chapter = {
@@ -37,36 +37,29 @@ export const CHAPTERS = {
     short: "Setup",
     aka: "Getting there and staying over",
   },
-  turns: {
-    num: 4,
-    id: "key-dates",
-    title: "Turn order",
-    short: "Turn order",
-    aka: "Key dates and the weekend",
-  },
   players: {
-    num: 5,
+    num: 4,
     id: "speakers",
     title: "Players",
     short: "Players",
     aka: "Speakers and session hosts",
   },
   expansions: {
-    num: 6,
+    num: 5,
     id: "megagame",
     title: "Expansions",
     short: "Expansions",
     aka: `${NIGHT_NAME} and the Megagame`,
   },
   special: {
-    num: 7,
+    num: 6,
     id: "faq",
     title: "Special rules",
     short: "Special rules",
     aka: "FAQ",
   },
   join: {
-    num: 8,
+    num: 7,
     id: "tickets",
     title: "Join the game",
     short: "Join",
@@ -128,12 +121,5 @@ export const LAST_YEAR_CHAPTERS = {
     title: "Trivia round",
     short: "Trivia",
     aka: "Talk, workshop or game?",
-  },
-  log: {
-    num: 4,
-    id: "schedule",
-    title: "Game log",
-    short: "Game log",
-    aka: "Every 2025 session",
   },
 } satisfies Record<string, Chapter>;

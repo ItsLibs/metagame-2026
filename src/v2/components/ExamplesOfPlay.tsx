@@ -4,10 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { SESSIONS_2026, type Session2026 } from "@/v2/data/sessions-2026";
 import { SPEAKERS } from "@/v2/data/speakers";
-import { HATS } from "@/v2/hat-trick/hats";
-import roundRobin from "../../../public/images/misc_photos/board_game_round_robin_2.jpg";
 import Glyph, { type GlyphName } from "./Glyph";
-import RulebookFigure from "./RulebookFigure";
 import { hostLine, isPlayed, KINDS } from "./sessions/kinds";
 import SessionDialog from "./sessions/SessionDialog";
 import { DISPLAY } from "./styles";
@@ -53,11 +50,10 @@ const PILES: {
 // Dealt cards sit a little askew, like a hand on the table.
 const TILT = ["-rotate-2", "rotate-1", "rotate-2"];
 
-// §1's examples of play: a hand of three confirmed 2026 sessions, one talk,
-// one workshop and one game, beside Fig. 2 (which hides the Hat Trick's
-// wizard hat). Deal again for a new hand; a card opens its session; the
-// 2025 recap and every 2026 session are a click away. The first hand is
-// fixed so the server and client agree.
+// §1's examples of play, right under rule one: a hand of three confirmed
+// 2026 sessions, one talk, one workshop and one game. Deal again for a new
+// hand; a card opens its session; the 2025 recap and every 2026 session are a
+// click away. The first hand is fixed so the server and client agree.
 export default function ExamplesOfPlay() {
   const [hand, setHand] = useState(() => PILES.map(() => 0));
   const [deals, setDeals] = useState(0);
@@ -76,69 +72,70 @@ export default function ExamplesOfPlay() {
   };
 
   return (
-    <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-10">
-      <RulebookFigure
-        fig="2"
-        caption="The board game round robin at Metagame 2025."
-        src={roundRobin}
-        alt="A crowd leaning over a long table of abstract games during the board game round robin"
-        hats={[HATS.wizard]}
-      />
-      <div>
-        <ul className="grid gap-4 sm:grid-cols-3 sm:gap-3">
-          {PILES.map(({ chip, tile, glyph, sessions }, k) => {
-            const s = sessions[hand[k]];
-            return (
-              <li
-                key={`${deals}-${chip}`}
-                className="animate-in duration-500 fill-mode-backwards fade-in slide-in-from-bottom-8"
-                style={{ animationDelay: `${k * 110}ms` }}
+    <div>
+      <p className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span
+          className={`${DISPLAY} text-[28px] leading-none tracking-[0.02em] text-navy`}
+        >
+          Examples of play
+        </span>
+        <span className="font-space-mono text-[11px] tracking-[0.12em] text-ink/55 uppercase">
+          Dealt from the 2026 program
+        </span>
+      </p>
+      <ul className="grid gap-4 sm:grid-cols-3 sm:gap-3">
+        {PILES.map(({ chip, tile, glyph, sessions }, k) => {
+          const s = sessions[hand[k]];
+          return (
+            <li
+              key={`${deals}-${chip}`}
+              className="animate-in duration-500 fill-mode-backwards fade-in slide-in-from-bottom-8"
+              style={{ animationDelay: `${k * 110}ms` }}
+            >
+              <button
+                type="button"
+                onClick={() => setOpen(s)}
+                className={`flex h-full min-h-[140px] w-full flex-col rounded-xl border-2 border-navy bg-white p-4 text-left shadow-[4px_4px_0_0_var(--color-navy)] transition-transform duration-300 outline-none hover:-translate-y-1 hover:rotate-0 focus-visible:ring-2 focus-visible:ring-meeple sm:min-h-[220px] ${TILT[k % TILT.length]}`}
               >
-                <button
-                  type="button"
-                  onClick={() => setOpen(s)}
-                  className={`flex h-full min-h-[140px] w-full flex-col rounded-xl border-2 border-navy bg-white p-4 text-left shadow-[4px_4px_0_0_var(--color-navy)] transition-transform duration-300 outline-none hover:-translate-y-1 hover:rotate-0 focus-visible:ring-2 focus-visible:ring-meeple sm:min-h-[220px] ${TILT[k % TILT.length]}`}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span
-                      className={`rounded-md px-2 py-1 font-space-mono text-[10.5px] font-bold tracking-[0.12em] uppercase ${tile}`}
-                    >
-                      {chip === "Game" ? KINDS[s.kinds[0]].label : chip}
-                    </span>
-                    <Glyph name={glyph} className="size-7 text-navy/70" />
+                <span className="flex items-center justify-between gap-2">
+                  <span
+                    className={`rounded-md px-2 py-1 font-space-mono text-[10.5px] font-bold tracking-[0.12em] uppercase ${tile}`}
+                  >
+                    {chip === "Game" ? KINDS[s.kinds[0]].label : chip}
                   </span>
-                  <span className="mt-4 text-[17px] leading-snug font-bold text-navy">
-                    {s.title}
-                  </span>
-                  <span className="mt-auto pt-4 font-space-mono text-[11px] tracking-[0.06em] text-ink/60 uppercase">
-                    {hostLine(s)}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="mt-7 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={deal}
-            className={`${DISPLAY} rounded-lg bg-navy px-5 py-2.5 text-xl leading-none tracking-[0.04em] text-cream transition-transform hover:-translate-y-0.5 active:translate-y-0`}
-          >
-            Deal again ↻
-          </button>
-          <Link
-            href="/last-year"
-            className={`${DISPLAY} rounded-lg border-2 border-navy px-5 py-2 text-xl leading-none tracking-[0.04em] text-navy transition-[translate,background-color] hover:-translate-y-0.5 hover:bg-navy/5 active:translate-y-0`}
-          >
-            The 2025 recap →
-          </Link>
-          <Link
-            href="/sessions"
-            className="text-sm font-bold text-navy underline underline-offset-4 hover:text-meeple"
-          >
-            Every 2026 session →
-          </Link>
-        </div>
+                  <Glyph name={glyph} className="size-7 text-navy/70" />
+                </span>
+                <span className="mt-4 text-[17px] leading-snug font-bold text-navy">
+                  {s.title}
+                </span>
+                <span className="mt-auto pt-4 font-space-mono text-[11px] tracking-[0.06em] text-ink/60 uppercase">
+                  {hostLine(s)}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-7 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={deal}
+          className={`${DISPLAY} rounded-lg bg-navy px-5 py-2.5 text-xl leading-none tracking-[0.04em] text-cream transition-transform hover:-translate-y-0.5 active:translate-y-0`}
+        >
+          Deal again ↻
+        </button>
+        <Link
+          href="/last-year"
+          className={`${DISPLAY} rounded-lg border-2 border-navy px-5 py-2 text-xl leading-none tracking-[0.04em] text-navy transition-[translate,background-color] hover:-translate-y-0.5 hover:bg-navy/5 active:translate-y-0`}
+        >
+          The 2025 recap →
+        </Link>
+        <Link
+          href="/sessions"
+          className="text-sm font-bold text-navy underline underline-offset-4 hover:text-meeple"
+        >
+          Every 2026 session →
+        </Link>
       </div>
       <SessionDialog session={open} onClose={() => setOpen(null)} browse />
     </div>

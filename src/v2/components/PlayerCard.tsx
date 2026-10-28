@@ -21,7 +21,7 @@ const tag = (s: Session2026) =>
 const FLIP =
   "grid size-7 shrink-0 place-items-center rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-meeple";
 
-// One speaker in the rulebook's §5 Players, as a two-sided player card. All
+// One speaker in the rulebook's §4 Players, as a two-sided player card. All
 // cards are one size. The front is the brand mock's compact card (photo
 // square, name, affiliation) with their first session and "+n more". Flip it
 // for every session on the back. Any session opens its details in a pop-up.

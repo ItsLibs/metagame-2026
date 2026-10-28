@@ -6,7 +6,6 @@ import BoxScore from "@/v2/components/last-year/BoxScore";
 import MatchReport from "@/v2/components/last-year/MatchReport";
 import TriviaDeck from "@/v2/components/last-year/TriviaDeck";
 import WeekendReplay from "@/v2/components/last-year/WeekendReplay";
-import LastYearSchedule from "@/v2/components/schedule/LastYearSchedule";
 import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
 import { Button } from "@/v2/components/ui/button";
 import { LAST_YEAR_CHAPTERS } from "@/v2/data/chapters";
@@ -15,13 +14,12 @@ import { LAST_YEAR_SITE_URL } from "@/v2/lib/links";
 export const metadata: Metadata = {
   title: "Last year — Metagame 2026",
   description:
-    "What happened at Metagame 2025: how the megagame played, a replay of the weekend, a trivia round, and the full schedule.",
+    "What happened at Metagame 2025: how the megagame played, a replay of the weekend, and a trivia round on the program.",
 };
 
 // What happened last year, as the rulebook's 2025 edition: a cover with the
-// final box score, four chapters (how the megagame played, the weekend on a
-// clock, a trivia round on the program, the full schedule) and a back cover
-// pointing at 2026.
+// final box score, three chapters (how the megagame played, the weekend on a
+// clock, a trivia round on the program) and a back cover pointing at 2026.
 export default function LastYearPage() {
   return (
     <>
@@ -78,13 +76,6 @@ export default function LastYearPage() {
 
       <ChapterSection chapter={LAST_YEAR_CHAPTERS.trivia}>
         <TriviaDeck />
-      </ChapterSection>
-
-      <ChapterSection chapter={LAST_YEAR_CHAPTERS.log}>
-        <p className="mb-6 max-w-[640px] text-base text-ink/70">
-          The complete program, by day and venue. Tap any session for details.
-        </p>
-        <LastYearSchedule />
       </ChapterSection>
 
       {/* The back cover. */}

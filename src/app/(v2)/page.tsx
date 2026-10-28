@@ -8,13 +8,10 @@ import CastlingDivider from "@/v2/components/dividers/castling";
 import CatanDivider from "@/v2/components/dividers/catan";
 import DiceDivider from "@/v2/components/dividers/dice";
 import { ChapterRule } from "@/v2/components/dividers/DividerRow";
-import GoDivider from "@/v2/components/dividers/go";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
 import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
-import TetrisDivider from "@/v2/components/dividers/tetris";
-import ExamplesOfPlay from "@/v2/components/ExamplesOfPlay";
 import PlayerCard from "@/v2/components/PlayerCard";
 import RulebookComponents from "@/v2/components/RulebookComponents";
 import RulebookCover from "@/v2/components/RulebookCover";
@@ -27,7 +24,6 @@ import SponsorDeck from "@/v2/components/SponsorDeck";
 import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
 import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
-import TurnOrder from "@/v2/components/TurnOrder";
 import { Button } from "@/v2/components/ui/button";
 import { CHAPTERS, CREDITS } from "@/v2/data/chapters";
 import { upcomingKeyDates } from "@/v2/data/key-dates";
@@ -43,8 +39,8 @@ import {
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 
-// Re-render hourly so the early-bird gate flips at the deadline and the turn
-// order's "Today" row advances without a deploy.
+// Re-render hourly so the early-bird gate flips at the deadline without a
+// deploy.
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -264,22 +260,6 @@ export default function Home() {
 
       <ChapterSection chapter={CHAPTERS.object} rule={<CastlingDivider />}>
         <RulebookObject />
-        <div className="mt-12">
-          <ChapterRule>
-            <TetrisDivider />
-          </ChapterRule>
-        </div>
-        <div className="mt-4 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h3
-            className={`${DISPLAY} text-[clamp(34px,4.4vw,52px)] leading-[0.9] text-navy`}
-          >
-            Examples of play
-          </h3>
-          <span className="w-full font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase md:ml-auto md:w-auto">
-            A hand dealt from the 2026 program
-          </span>
-        </div>
-        <ExamplesOfPlay />
       </ChapterSection>
 
       <ChapterSection chapter={CHAPTERS.components} rule={<CardSuitsDivider />}>
@@ -290,14 +270,9 @@ export default function Home() {
         <RulebookSetup />
       </ChapterSection>
 
-      <ChapterSection chapter={CHAPTERS.turns} rule={<DiceDivider />}>
-        <TurnOrder />
-      </ChapterSection>
-
-      <ChapterSection
-        chapter={CHAPTERS.players}
-        rule={<BloodOnTheClocktowerDivider />}
-      >
+      {/* The dice stay above §7: they roll for its Monopoly race, and they're
+          one of the cover puzzle's seven games. */}
+      <ChapterSection chapter={CHAPTERS.players} rule={<DiceDivider />}>
         <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SPEAKERS.map((speaker) => (
             <li key={speaker.name}>
@@ -327,6 +302,9 @@ export default function Home() {
         <SpecialRules rules={FAQS} />
       </ChapterSection>
 
+      {/* /#key-dates (and /key-dates) land on the tickets now that the turn
+          order chapter is gone. */}
+      <div id="key-dates" className={SECTION_ANCHOR} />
       <ChapterSection
         rule={<MonopolyDivider />}
         chapter={{
@@ -360,7 +338,7 @@ export default function Home() {
         </div>
       </ChapterSection>
 
-      <ChapterSection chapter={CREDITS} rule={<GoDivider />}>
+      <ChapterSection chapter={CREDITS} rule={<BloodOnTheClocktowerDivider />}>
         <SponsorDeck />
       </ChapterSection>
 

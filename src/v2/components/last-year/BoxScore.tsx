@@ -10,7 +10,7 @@ const SESSIONS = days.flatMap((d) => d.sessions);
 const count = (category: string) =>
   SESSIONS.filter((s) => s.category === category).length;
 
-// 2025 in numbers, every one counted from the schedule in §4.
+// 2025 in numbers, every one counted from the 2025 schedule snapshot.
 const STATS = [
   { label: "Sessions", value: SESSIONS.length },
   { label: "Session hosts", value: new Set(SESSIONS.flatMap(hostNames)).size },

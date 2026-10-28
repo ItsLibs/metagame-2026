@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { NIGHT_NAME } from "@/v2/data/chapters";
+import { CHAPTERS, NIGHT_NAME } from "@/v2/data/chapters";
 import { SESSIONS_2026, type Session2026 } from "@/v2/data/sessions-2026";
 import Glyph, { type GlyphName } from "./Glyph";
 import { isPlayed, KINDS } from "./sessions/kinds";
@@ -11,6 +11,7 @@ import { DISPLAY } from "./styles";
 const CONFIRMED = SESSIONS_2026.filter(
   (s) => s.status === "confirmed" && s.title,
 );
+const SEE_EXPANSIONS = `See §${CHAPTERS.expansions.num}.`;
 
 type Component = {
   glyph: GlyphName;
@@ -55,7 +56,7 @@ const COMPONENTS: Component[] = [
     tile: "bg-tan text-navy",
     strip: "bg-white/50 hover:bg-white/80",
     title: "The Megagame",
-    body: "A puzzle hunt, game gauntlet and story that runs all weekend. See §6.",
+    body: `A puzzle hunt, game gauntlet and story that runs all weekend. ${SEE_EXPANSIONS}`,
     sessions: CONFIRMED.filter((s) => s.kinds.includes("megagame")),
   },
   {
@@ -63,7 +64,7 @@ const COMPONENTS: Component[] = [
     tile: "bg-navy text-cream",
     strip: "",
     title: NIGHT_NAME,
-    body: "Friday night's booths: games to play, things to try, makers to meet. See §6.",
+    body: `Friday night's booths: games to play, things to try, makers to meet. ${SEE_EXPANSIONS}`,
   },
   {
     glyph: "trivia",
