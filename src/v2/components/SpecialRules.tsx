@@ -49,7 +49,7 @@ export type Rule = {
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
 const PANEL =
-  "divide-y divide-navy/15 overflow-hidden rounded-[14px] border-2 border-navy bg-white shadow-[4px_4px_0_0_var(--color-navy)]";
+  "divide-y divide-navy/15 overflow-hidden rounded-[14px] border-2 border-navy bg-white";
 
 // A d12's outline: a decagon around a pentagon face, joined at the corners.
 const ring = (n: number, r: number) =>

@@ -64,7 +64,7 @@ export default function PlayerCard({
       >
         <div
           inert={flipped}
-          className="relative flex h-full min-w-0 gap-3 rounded-xl border-2 border-navy bg-white p-3 transition-shadow duration-200 [backface-visibility:hidden] [grid-area:1/1] hover:shadow-[4px_4px_0_0_var(--color-navy)]"
+          className="relative flex h-full min-w-0 gap-3 rounded-xl border-2 border-navy bg-white p-3 [backface-visibility:hidden] [grid-area:1/1]"
         >
           {photo && hats?.length ? (
             <HatImage

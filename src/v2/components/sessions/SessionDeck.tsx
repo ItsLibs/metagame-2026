@@ -62,11 +62,10 @@ const TEXT = new Map(
   ]),
 );
 
-// Confirmed cards are the solid ones; in-review cards are dashed and
-// unshadowed, so nobody mistakes them for the program.
+// Confirmed cards are the solid ones; in-review cards are dashed and faded,
+// so nobody mistakes them for the program.
 const CARD: Record<SessionStatus, string> = {
-  confirmed:
-    "border-navy bg-white shadow-[4px_4px_0_0_var(--color-navy)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--color-navy)]",
+  confirmed: "border-navy bg-white hover:-translate-y-1",
   review:
     "border-dashed border-navy/45 bg-white/40 hover:-translate-y-0.5 hover:border-navy",
   unconference:
@@ -93,7 +92,7 @@ function SessionCard({
         onPointerMove={lean}
         onPointerLeave={unlean}
         className={cn(
-          "group relative flex h-full w-full flex-col overflow-hidden rounded-[14px] border-2 text-left transition-[translate,box-shadow,border-color,transform] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
+          "group relative flex h-full w-full flex-col overflow-hidden rounded-[14px] border-2 text-left transition-[translate,border-color,transform] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
           LEAN,
           CARD[s.status],
         )}

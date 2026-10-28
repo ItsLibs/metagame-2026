@@ -83,7 +83,7 @@ const RANKS = [
 ];
 
 const FACE =
-  "flex flex-col overflow-hidden rounded-[18px] border-2 border-navy bg-white shadow-[6px_6px_0_0_var(--color-navy)] [grid-area:1/1] [backface-visibility:hidden]";
+  "flex flex-col overflow-hidden rounded-[18px] border-2 border-navy bg-white [grid-area:1/1] [backface-visibility:hidden]";
 
 // §3: a trivia round on the 2025 program. Each card is a real session; say
 // whether it was a talk, a workshop or a game and the card flips to show
@@ -184,7 +184,7 @@ export default function TriviaDeck() {
                     type="button"
                     onClick={() => answer(kind)}
                     style={{ background: CATEGORY_STYLES[kind].background }}
-                    className={`${DISPLAY} rounded-xl border-2 border-navy py-3 text-[clamp(18px,2.4vw,24px)] leading-none tracking-[0.03em] text-navy transition-[translate,box-shadow] hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-navy)] active:translate-y-0`}
+                    className={`${DISPLAY} rounded-xl border-2 border-navy py-3 text-[clamp(18px,2.4vw,24px)] leading-none tracking-[0.03em] text-navy transition-[translate] hover:-translate-y-0.5 active:translate-y-0`}
                   >
                     {label}
                   </button>

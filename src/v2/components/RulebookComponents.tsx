@@ -147,7 +147,7 @@ export default function RulebookComponents() {
               onMouseLeave={() => {
                 hovered.current = null;
               }}
-              className={`rulebook-rise group flex min-h-[170px] flex-col gap-2 rounded-[14px] p-5 transition-[translate,rotate,box-shadow] duration-300 hover:-translate-y-1.5 hover:-rotate-1 hover:shadow-[6px_6px_0_0_var(--color-navy)] ${tile}`}
+              className={`rulebook-rise group flex min-h-[170px] flex-col gap-2 rounded-[14px] p-5 transition-[translate,rotate] duration-300 hover:-translate-y-1.5 hover:-rotate-1 ${tile}`}
               // The card-games glyph's front card matches its tile.
               style={
                 { "--glyph-bg": "var(--color-navy)" } as React.CSSProperties

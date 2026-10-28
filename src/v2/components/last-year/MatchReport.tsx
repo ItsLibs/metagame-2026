@@ -54,7 +54,7 @@ export default function MatchReport() {
             {TURNS.map((turn, i) => (
               <li
                 key={turn.title}
-                className="rulebook-rise flex items-start gap-4 rounded-xl border-2 border-navy bg-white p-4 shadow-[4px_4px_0_0_var(--color-navy)]"
+                className="rulebook-rise flex items-start gap-4 rounded-xl border-2 border-navy bg-white p-4"
               >
                 <span
                   aria-hidden

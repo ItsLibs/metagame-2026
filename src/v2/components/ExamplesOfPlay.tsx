@@ -95,7 +95,7 @@ export default function ExamplesOfPlay() {
               <button
                 type="button"
                 onClick={() => setOpen(s)}
-                className={`flex h-full min-h-[140px] w-full flex-col rounded-xl border-2 border-navy bg-white p-4 text-left shadow-[4px_4px_0_0_var(--color-navy)] transition-transform duration-300 outline-none hover:-translate-y-1 hover:rotate-0 focus-visible:ring-2 focus-visible:ring-meeple sm:min-h-[220px] ${TILT[k % TILT.length]}`}
+                className={`flex h-full min-h-[140px] w-full flex-col rounded-xl border-2 border-navy bg-white p-4 text-left transition-transform duration-300 outline-none hover:-translate-y-1 hover:rotate-0 focus-visible:ring-2 focus-visible:ring-meeple sm:min-h-[220px] ${TILT[k % TILT.length]}`}
               >
                 <span className="flex items-center justify-between gap-2">
                   <span

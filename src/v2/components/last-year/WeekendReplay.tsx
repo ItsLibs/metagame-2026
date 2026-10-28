@@ -260,10 +260,8 @@ export default function WeekendReplay() {
           return (
             <li
               key={loc.id}
-              className={`flex min-h-[104px] flex-col rounded-xl border-2 p-2.5 transition-[border-color,background-color,box-shadow] duration-300 sm:min-h-[124px] ${
-                here.length
-                  ? "border-navy bg-white shadow-[3px_3px_0_0_var(--color-navy)]"
-                  : "border-navy/15"
+              className={`flex min-h-[104px] flex-col rounded-xl border-2 p-2.5 transition-colors duration-300 sm:min-h-[124px] ${
+                here.length ? "border-navy bg-white" : "border-navy/15"
               }`}
             >
               <h3 className="font-space-mono text-[10.5px] leading-tight font-bold tracking-[0.1em] text-navy uppercase">

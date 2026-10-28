@@ -108,7 +108,7 @@ function SponsorCard({
 }) {
   const cls = `w-auto max-w-full object-contain ${s.logoClass ?? t.logo}`;
   const card = (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border-2 border-navy bg-white shadow-[5px_5px_0_0_var(--color-navy)]">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border-2 border-navy bg-white">
       <div
         className={`flex items-center justify-between gap-2 border-b-2 border-navy px-4 py-2 ${t.band}`}
       >
