@@ -16,8 +16,8 @@ export const metadata: Metadata = {
     "Help make Metagame 2026: some teams need help now, before the con, and others on the weekend of Nov 6–8.",
 };
 
-const CARD =
-  "rounded-2xl border border-navy/[0.16] bg-white p-6 shadow-[0_8px_24px_rgba(23,48,89,0.08)]";
+// Each column sits on the page under a navy rule, like the rulebook's.
+const COLUMN = "border-t-2 border-navy pt-4";
 
 function TeamList({ teams }: { teams: VolunteerTeam[] }) {
   return (
@@ -64,15 +64,15 @@ export default function VolunteerPage() {
         </>
       }
     >
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className={CARD}>
+      <div className="grid gap-x-10 gap-y-10 md:grid-cols-2">
+        <section className={COLUMN}>
           <p className={`${EYEBROW} text-sm text-meeple`}>Before the con</p>
           <h2 className={`${HEADING} mt-1 text-2xl text-navy`}>
             Start helping now
           </h2>
           <TeamList teams={now} />
         </section>
-        <section className={CARD}>
+        <section className={COLUMN}>
           <p className={`${EYEBROW} text-sm text-meeple`}>Nov 6–8</p>
           <h2 className={`${HEADING} mt-1 text-2xl text-navy`}>
             Help on the weekend
@@ -81,9 +81,11 @@ export default function VolunteerPage() {
         </section>
       </div>
 
-      <section className="mt-6 rounded-2xl bg-navy p-6 text-cream shadow-[0_8px_24px_rgba(23,48,89,0.08)]">
-        <h2 className={`${HEADING} text-2xl`}>No application needed</h2>
-        <p className="mt-2 max-w-[640px] text-[15px] text-cream/80">
+      <section className={`mt-12 ${COLUMN}`}>
+        <h2 className={`${HEADING} text-2xl text-navy`}>
+          No application needed
+        </h2>
+        <p className="mt-2 max-w-[640px] text-[15px] text-ink/75">
           You can help today: put up a poster in your neighborhood, or share the
           dice poster (it hides $20 off a ticket) with your group chat.
         </p>
@@ -91,13 +93,17 @@ export default function VolunteerPage() {
           <Button asChild variant="default">
             <Link href="/posters">Print a poster</Link>
           </Button>
-          <Button asChild variant="ghost">
+          <Button
+            asChild
+            variant="ghost"
+            className="border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
+          >
             <Link href="/poster">Share the dice poster</Link>
           </Button>
         </div>
       </section>
 
-      <section className="mt-12">
+      <section className={`mt-12 ${COLUMN}`}>
         <h2 className={`${HEADING} text-2xl text-navy`}>How it works</h2>
         <ol className="mt-5 grid gap-4 sm:grid-cols-3">
           {[

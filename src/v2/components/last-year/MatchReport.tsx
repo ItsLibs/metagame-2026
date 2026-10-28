@@ -2,7 +2,7 @@ import { HATS } from "@/v2/hat-trick/hats";
 import megachess from "../../../../public/images/megachess.jpg";
 import Glyph, { type GlyphName } from "../Glyph";
 import RulebookFigure from "../RulebookFigure";
-import { DISPLAY } from "../styles";
+import { DISPLAY, TOKEN } from "../styles";
 
 // The 2025 megagame in four turns, numbered in the two teams' colours.
 const TURNS = [
@@ -50,15 +50,15 @@ export default function MatchReport() {
             Metagame 2025 ran for three days at Lighthaven, and the whole con
             was one large megagame.
           </p>
-          <ol className="mt-6 grid gap-3">
+          <ol className="mt-6 border-t-2 border-navy">
             {TURNS.map((turn, i) => (
               <li
                 key={turn.title}
-                className="rulebook-rise flex items-start gap-4 rounded-xl border-2 border-navy bg-white p-4"
+                className="rulebook-rise flex items-start gap-4 border-b border-navy/15 py-4"
               >
                 <span
                   aria-hidden
-                  className={`${DISPLAY} grid size-11 shrink-0 place-items-center rounded-full border-2 border-navy text-[26px] leading-none text-navy`}
+                  className={`${DISPLAY} ${TOKEN} size-11 border-2 border-navy text-[26px] leading-none text-navy`}
                   style={{ background: TEAM_BG[i % 2] }}
                 >
                   {i + 1}
@@ -82,13 +82,13 @@ export default function MatchReport() {
       <h3 className="mt-12 font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
         Meanwhile, on the side
       </h3>
-      <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-3 grid gap-x-8 gap-y-5 border-t-2 border-navy pt-5 sm:grid-cols-2 lg:grid-cols-4">
         {SIDE_QUESTS.map((q) => (
           <li
             key={q.glyph}
-            className="rulebook-rise flex items-center gap-3 rounded-xl bg-navy p-3 text-cream"
+            className="rulebook-rise flex items-center gap-3 text-navy"
           >
-            <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-sky text-[30px] text-navy">
+            <span className={`${TOKEN} size-12 bg-sky text-[28px]`}>
               <Glyph name={q.glyph} />
             </span>
             <span className="text-[15px] leading-snug font-semibold">

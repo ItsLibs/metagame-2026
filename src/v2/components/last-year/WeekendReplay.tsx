@@ -254,14 +254,14 @@ export default function WeekendReplay() {
         ))}
       </ul>
 
-      <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+      <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
         {scheduleLocations.map((loc) => {
           const here = running.filter((x) => x.s.location_id === loc.id);
           return (
             <li
               key={loc.id}
-              className={`flex min-h-[104px] flex-col rounded-xl border-2 p-2.5 transition-colors duration-300 sm:min-h-[124px] ${
-                here.length ? "border-navy bg-white" : "border-navy/15"
+              className={`flex min-h-[96px] flex-col border-t-2 pt-2 transition-colors duration-300 sm:min-h-[116px] ${
+                here.length ? "border-navy" : "border-navy/15"
               }`}
             >
               <h3 className="font-space-mono text-[10.5px] leading-tight font-bold tracking-[0.1em] text-navy uppercase">
@@ -289,7 +289,7 @@ export default function WeekendReplay() {
                     </button>
                   ))
                 ) : (
-                  <span className="m-auto font-space-mono text-[11px] tracking-[0.12em] text-ink/35 uppercase">
+                  <span className="font-space-mono text-[11px] tracking-[0.12em] text-ink/35 uppercase">
                     Quiet
                   </span>
                 )}

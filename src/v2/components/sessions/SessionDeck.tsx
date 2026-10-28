@@ -15,10 +15,9 @@ import {
   type SessionStatus,
 } from "@/v2/data/sessions-2026";
 import { cn } from "@/v2/lib/utils";
-import { DISPLAY, SECTION_ANCHOR } from "../styles";
+import { DISPLAY, SECTION_ANCHOR, TOKEN } from "../styles";
 import { collect, useCollection } from "./collection";
 import { hostLine, KINDS, STATUS } from "./kinds";
-import { LEAN, lean, SHINE, unlean } from "./lean";
 import SessionDialog from "./SessionDialog";
 
 // One chapter per status, in page order, each under a game divider like the
@@ -62,17 +61,15 @@ const TEXT = new Map(
   ]),
 );
 
-// Confirmed cards are the solid ones; in-review cards are dashed and faded,
-// so nobody mistakes them for the program.
-const CARD: Record<SessionStatus, string> = {
-  confirmed: "border-navy bg-white hover:-translate-y-1",
-  review:
-    "border-dashed border-navy/45 bg-white/40 hover:-translate-y-0.5 hover:border-navy",
-  unconference:
-    "border-navy/70 bg-white hover:-translate-y-0.5 hover:border-navy",
+// Confirmed sessions sit under a solid rule; in-review ones under a dashed,
+// faded one, so nobody mistakes them for the program.
+const RULE: Record<SessionStatus, string> = {
+  confirmed: "border-navy",
+  review: "border-dashed border-navy/40",
+  unconference: "border-navy/50",
 };
-// A card leans toward the mouse and catches the light (lean.ts); one you've
-// turned over carries a check, for the collection.
+// One session in the deck, on the page: its kind's token and a few lines
+// under a rule. One you've turned over carries a check, for the collection.
 function SessionCard({
   s,
   collected,
@@ -89,27 +86,24 @@ function SessionCard({
       <button
         type="button"
         onClick={() => onOpen(s)}
-        onPointerMove={lean}
-        onPointerLeave={unlean}
         className={cn(
-          "group relative flex h-full w-full flex-col overflow-hidden rounded-[14px] border-2 text-left transition-[translate,border-color,transform] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
-          LEAN,
-          CARD[s.status],
+          "group flex h-full w-full flex-col gap-2 border-t-2 pt-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+          RULE[s.status],
         )}
       >
-        <span
-          className={cn(
-            "flex items-center justify-between gap-2 border-b-2 px-3.5 py-2",
-            review
-              ? "border-dashed border-navy/25"
-              : cn(
-                  band,
-                  s.status === "confirmed" ? "border-navy" : "border-navy/70",
-                ),
-          )}
-        >
-          <span className="flex items-center gap-1.5 font-space-mono text-[10.5px] font-bold tracking-[0.12em] text-navy uppercase">
-            <Icon aria-hidden className="size-4" />
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2 font-space-mono text-[10.5px] font-bold tracking-[0.12em] text-navy uppercase">
+            <span
+              className={cn(
+                TOKEN,
+                "size-8 transition-transform duration-300 group-hover:-rotate-12",
+                review || band === "bg-background"
+                  ? "border border-dashed border-navy/40"
+                  : band,
+              )}
+            >
+              <Icon aria-hidden className="size-4" />
+            </span>
             {label}
           </span>
           {(s.duration || collected) && (
@@ -127,32 +121,33 @@ function SessionCard({
             </span>
           )}
         </span>
-        <span className="flex flex-1 flex-col gap-2 p-3.5">
-          <span
-            className={cn(
-              "text-[16.5px] leading-snug font-bold",
-              s.title ? "text-navy" : "text-ink/45 italic",
-            )}
-          >
-            {s.title ?? "Title to come"}
-          </span>
-          <span className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
-            <span className="font-space-mono text-[11px] tracking-[0.06em] text-ink/60 uppercase">
-              {hostLine(s)}
-            </span>
-            {s.status !== "confirmed" && (
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 font-space-mono text-[10px] font-bold tracking-[0.1em] uppercase",
-                  STATUS[s.status].chip,
-                )}
-              >
-                {STATUS[s.status].label}
-              </span>
-            )}
-          </span>
+        <span
+          className={cn(
+            "text-[17px] leading-snug font-bold decoration-meeple decoration-2 underline-offset-4 group-hover:underline",
+            !s.title
+              ? "text-ink/45 italic"
+              : review
+                ? "text-navy/75"
+                : "text-navy",
+          )}
+        >
+          {s.title ?? "Title to come"}
         </span>
-        <span aria-hidden className={SHINE} />
+        <span className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+          <span className="font-space-mono text-[11px] tracking-[0.06em] text-ink/60 uppercase">
+            {hostLine(s)}
+          </span>
+          {s.status !== "confirmed" && (
+            <span
+              className={cn(
+                "rounded-md px-1.5 py-0.5 font-space-mono text-[10px] font-bold tracking-[0.1em] uppercase",
+                STATUS[s.status].chip,
+              )}
+            >
+              {STATUS[s.status].label}
+            </span>
+          )}
+        </span>
       </button>
     </li>
   );
@@ -221,37 +216,39 @@ export default function SessionDeck() {
 
   const chip = (active: boolean) =>
     cn(
-      "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-space-mono text-[11px] font-bold tracking-[0.08em] whitespace-nowrap uppercase transition-colors",
-      active ? "bg-tan text-navy" : "bg-white/10 text-cream hover:bg-white/20",
+      "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-space-mono text-[11px] font-bold tracking-[0.08em] whitespace-nowrap uppercase transition-colors",
+      active
+        ? "border-navy bg-navy text-cream"
+        : "border-navy/25 text-navy hover:border-navy",
     );
 
   return (
     <>
       <div id="deck" className={cn(PAGE, SECTION_ANCHOR, "pb-4")}>
-        <div className="flex flex-col gap-3 rounded-2xl bg-navy p-2.5 sm:p-3">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-4 border-y-2 border-navy py-4">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
             <button
               type="button"
               onClick={deal}
-              className={`${DISPLAY} flex items-center gap-2 rounded-xl bg-tan py-2 pr-4 pl-3 text-[22px] leading-none text-navy transition-transform hover:-translate-y-0.5 active:translate-y-0`}
+              className={`${DISPLAY} flex items-center gap-2 rounded-xl bg-navy py-2 pr-4 pl-3 text-[22px] leading-none text-cream transition-transform hover:-translate-y-0.5 active:translate-y-0`}
             >
               <Layers aria-hidden className="size-5" />
               Deal me a session
             </button>
-            <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 focus-within:bg-white/15 focus-within:ring-2 focus-within:ring-tan">
-              <Search aria-hidden className="size-5 shrink-0 text-tan" />
+            <label className="flex min-w-[220px] flex-1 items-center gap-2 border-b-2 border-navy py-2 transition-colors focus-within:border-meeple">
+              <Search aria-hidden className="size-5 shrink-0 text-meeple" />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search titles, hosts, descriptions…"
                 aria-label="Search the sessions"
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-cream outline-none placeholder:text-cream/50"
+                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink/45"
               />
             </label>
             <span
               aria-live="polite"
-              className="px-1 font-space-mono text-xs tracking-[0.1em] text-sky uppercase"
+              className="font-space-mono text-xs tracking-[0.1em] text-ink/60 uppercase"
             >
               {filtered
                 ? `${shown.length} of ${SESSIONS_2026.length} sessions`
@@ -260,7 +257,7 @@ export default function SessionDeck() {
             {collected > 0 && (
               <span
                 title="Sessions you've turned over, kept in this browser"
-                className="flex items-center gap-1.5 px-1 font-space-mono text-xs font-bold tracking-[0.1em] text-tan uppercase"
+                className="flex items-center gap-1.5 font-space-mono text-xs font-bold tracking-[0.1em] text-meeple uppercase"
               >
                 <CircleCheck aria-hidden className="size-4" />
                 {collected} of {SESSIONS_2026.length} collected
@@ -314,7 +311,7 @@ export default function SessionDeck() {
               }}
             >
               {cards.length ? (
-                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <ul className="grid gap-x-8 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
                   {cards.map((s) => (
                     <SessionCard
                       key={s.slug}

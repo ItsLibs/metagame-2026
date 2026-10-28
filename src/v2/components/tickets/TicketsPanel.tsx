@@ -30,8 +30,9 @@ import { DISPLAY, HEADING } from "../styles";
 // Two looks for the same tiles. "raised": square tiles, mono uppercase label
 // over a big grotesk price, on the raised Button variant (bordered navy face
 // with a salmon hard-shadow that grows and slides up-left on hover).
-// "rulebook": the home page's join panel, cream cards in a grid with a Bebas
-// price and a plain-words note.
+// "rulebook": the home page's join chapter, a price list on the page. Each
+// ticket is a ruled row (the "tile" Button variant) with its name and a
+// plain-words note on the left and a Bebas price on the right.
 const LOOKS = {
   raised: {
     variant: "raised",
@@ -46,12 +47,12 @@ const LOOKS = {
   },
   rulebook: {
     variant: "tile",
-    row: "grid w-full gap-2.5 sm:grid-cols-2 lg:grid-cols-3",
-    tile: "h-full flex-col items-start justify-start gap-1 p-4 text-left whitespace-normal",
-    main: "bg-tan",
+    row: "grid w-full gap-x-10 border-t-2 border-navy sm:grid-cols-2",
+    tile: "w-full",
+    main: "bg-tan/25 hover:bg-tan/40",
     label:
       "font-space-mono text-xs font-bold tracking-[0.14em] uppercase text-meeple",
-    price: `${DISPLAY} mt-1 text-[46px] leading-none text-navy`,
+    price: `${DISPLAY} text-[40px] leading-none text-navy`,
     strike: "text-lg font-bold text-navy/35 line-through",
     note: "text-[13.5px] font-normal text-ink/60",
   },

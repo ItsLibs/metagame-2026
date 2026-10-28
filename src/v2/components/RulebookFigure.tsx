@@ -2,9 +2,10 @@ import Image, { type StaticImageData } from "next/image";
 import type { Hat } from "@/v2/hat-trick/hats";
 import HatImage from "@/v2/hat-trick/HatImage";
 
-// A rulebook figure: the photo in a navy frame over a mono "Fig. n" caption.
-// Photos with Hat Trick hats keep them (the 4:3 crop matches every hat photo,
-// so no hat is cut off). The night tone is for the night-look card.
+// A rulebook figure: the photo straight on the page over a mono "Fig. n"
+// caption. Photos with Hat Trick hats keep them (the 4:3 crop matches every
+// hat photo, so no hat is cut off). The night tone is for the Night Market's
+// dark band.
 export default function RulebookFigure({
   fig,
   caption,
@@ -26,29 +27,25 @@ export default function RulebookFigure({
 }) {
   const night = tone === "night";
   return (
-    <figure
-      className={`rounded-[4px] border-2 p-2 ${
-        night ? "border-[#2a3470] bg-[#1b2350]" : "border-navy bg-white"
-      } ${className}`}
-    >
+    <figure className={className}>
       {hats?.length ? (
         <HatImage
           src={src}
           alt={alt}
           hats={hats}
-          className="aspect-[4/3] w-full"
+          className="aspect-[4/3] w-full rounded-md"
           sizes={sizes}
         />
       ) : (
         <Image
           src={src}
           alt={alt}
-          className="aspect-[4/3] w-full object-cover"
+          className="aspect-[4/3] w-full rounded-md object-cover"
           sizes={sizes}
         />
       )}
       <figcaption
-        className={`mt-2 font-space-mono text-xs leading-[1.45] ${
+        className={`mt-2.5 font-space-mono text-xs leading-[1.45] ${
           night ? "text-[#fff5e6]/60" : "text-ink/60"
         }`}
       >

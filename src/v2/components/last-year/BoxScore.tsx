@@ -4,7 +4,7 @@ import {
   hostNames,
   scheduleLocations,
 } from "@/v2/lib/last-year-schedule";
-import { DISPLAY } from "../styles";
+import { DISPLAY, TOKEN } from "../styles";
 
 const SESSIONS = days.flatMap((d) => d.sessions);
 const count = (category: string) =>
@@ -26,25 +26,22 @@ const TEAMS = [
   { name: "Orange", bg: "#eaa35a" },
 ];
 
-// The 2025 edition's box back: the final box score, each number counting up
-// as the page opens, and the two teams.
+// The 2025 edition's box back, laid straight on the page: the final box
+// score, each number counting up as the page opens, and the two teams.
 export default function BoxScore() {
   return (
-    <aside
-      aria-label="Metagame 2025 in numbers"
-      className="rounded-[18px] bg-navy p-5 text-cream sm:p-6"
-    >
-      <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-sky uppercase">
+    <aside aria-label="Metagame 2025 in numbers">
+      <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
         Box score · Final
       </p>
-      <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-[10px] bg-white/20 sm:grid-cols-3">
+      <dl className="mt-3 grid grid-cols-2 gap-x-6 border-t-2 border-navy sm:grid-cols-3">
         {STATS.map(({ label, value }, i) => (
-          <div key={label} className="bg-navy px-3.5 py-3">
-            <dt className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-tan uppercase">
+          <div key={label} className="border-b border-navy/15 py-3">
+            <dt className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-ink/60 uppercase">
               {label}
             </dt>
             <dd
-              className={`${DISPLAY} mt-1 text-[clamp(40px,4.4vw,52px)] leading-none tracking-[0.02em]`}
+              className={`${DISPLAY} mt-1 text-[clamp(40px,4.4vw,56px)] leading-none tracking-[0.02em] text-navy`}
             >
               <span className="sr-only">{value}</span>
               <span
@@ -61,22 +58,28 @@ export default function BoxScore() {
           </div>
         ))}
       </dl>
-      <p className="mt-5 font-space-mono text-xs font-bold tracking-[0.14em] text-sky uppercase">
+      <p className="mt-6 font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
         Teams
       </p>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2.5 flex items-center gap-4">
         {TEAMS.map((t, i) => (
           <span key={t.name} className="contents">
             {i > 0 && (
-              <span className="font-space-mono text-xs text-cream/60 uppercase">
+              <span className="font-space-mono text-xs text-ink/55 uppercase">
                 vs
               </span>
             )}
-            <span
-              className={`${DISPLAY} flex-1 rounded-lg px-3 py-2 text-center text-[26px] leading-none tracking-[0.04em] text-navy`}
-              style={{ background: t.bg }}
-            >
-              {t.name}
+            <span className="flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className={`${TOKEN} size-9 border-2 border-navy`}
+                style={{ background: t.bg }}
+              />
+              <span
+                className={`${DISPLAY} text-[30px] leading-none tracking-[0.04em] text-navy`}
+              >
+                {t.name}
+              </span>
             </span>
           </span>
         ))}

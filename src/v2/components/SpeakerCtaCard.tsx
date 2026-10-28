@@ -26,23 +26,24 @@ export default function SpeakerCtaCard({
 
   if (compact)
     return (
-      <div className="group relative flex h-full gap-3 rounded-xl border-2 border-dashed border-navy/50 bg-sky/40 p-3 transition-colors hover:border-navy">
+      <div className="group relative flex h-full gap-3.5">
+        {/* An empty seat: the silhouette square, outlined in dashes. */}
         <div
           aria-hidden
-          className={`${PLAYER_PHOTO} relative flex items-end justify-center bg-navy/[0.06]`}
+          className={`${PLAYER_PHOTO} relative flex items-end justify-center bg-navy/[0.06] outline-2 -outline-offset-2 outline-navy/40 transition-[outline-color] outline-dashed group-hover:outline-navy`}
         >
           <Silhouette />
         </div>
-        {/* Over the silhouette square (p-3 plus the 2px border), outside its
-            clipped frame so a tall stack rises above the card. */}
+        {/* Over the silhouette square, outside its clipped frame so a tall
+            stack rises above it. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute top-[14px] left-[14px] z-10 size-[72px]"
+          className="pointer-events-none absolute top-0 left-0 z-10 size-[72px]"
         >
           <HatPile hats={worn} />
         </div>
         <div className="flex min-w-0 flex-col gap-1">
-          {/* The link covers the card; the score's button sits above it. */}
+          {/* The link covers the seat; the score's button sits above it. */}
           <a
             href={href}
             target="_blank"
@@ -50,7 +51,7 @@ export default function SpeakerCtaCard({
             className="flex flex-col gap-1 after:absolute after:inset-0"
           >
             <h3
-              className={`${DISPLAY} text-2xl leading-none tracking-[0.02em] text-navy`}
+              className={`${DISPLAY} text-[25px] leading-none tracking-[0.02em] text-navy`}
             >
               You?
             </h3>

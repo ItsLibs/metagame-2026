@@ -26,5 +26,10 @@ export const FIELD_LIGHT =
 // card titles.
 export const DISPLAY = "font-[family-name:var(--font-bebas)] font-normal";
 
-// The photo square in a §4 player card; the "You?" silhouette matches it.
+// The photo square beside a §4 player; the "You?" silhouette matches it.
 export const PLAYER_PHOTO = "size-[72px] shrink-0 overflow-hidden rounded-lg";
+
+// The rulebook is laid out on the page itself, not in boxes: rules and
+// hairlines set things apart, and colour comes in tokens, round game pieces
+// that hold a glyph or an icon. Size and colour are the caller's.
+export const TOKEN = "grid shrink-0 place-items-center rounded-full";

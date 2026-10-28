@@ -91,12 +91,12 @@ export default function SessionPack() {
   const anyUp = up.some(Boolean);
 
   return (
-    <div className="rounded-[18px] bg-navy p-4 text-cream sm:p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-sky uppercase">
+    <div className="text-navy">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t-2 border-navy pt-2.5">
+        <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
           Booster pack
         </p>
-        <p className="font-space-mono text-[11px] tracking-[0.1em] text-cream/60 uppercase">
+        <p className="font-space-mono text-[11px] tracking-[0.1em] text-ink/60 uppercase">
           5 sessions · 1 in foil
         </p>
       </div>
@@ -120,7 +120,7 @@ export default function SessionPack() {
             ))}
           </ul>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <p className="text-sm text-cream/70">
+            <p className="text-sm text-ink/65">
               {anyUp
                 ? "Click a turned card for its details."
                 : "Click a card to turn it over."}
@@ -130,7 +130,10 @@ export default function SessionPack() {
                 <button
                   type="button"
                   onClick={turnAll}
-                  className={cn(CONTROL, "bg-white/10 hover:bg-white/20")}
+                  className={cn(
+                    CONTROL,
+                    "border-2 border-navy py-1.5 hover:bg-navy/5",
+                  )}
                 >
                   Turn them all
                 </button>
@@ -169,9 +172,9 @@ function SealedPack({
       onClick={onTear}
       disabled={tearing}
       aria-label="Tear open a booster pack of five sessions"
-      className="group mx-auto mt-4 block w-[min(100%,15.5rem)] rounded-md outline-none focus-visible:ring-2 focus-visible:ring-tan focus-visible:ring-offset-4 focus-visible:ring-offset-navy"
+      className="group mx-auto mt-6 block w-[min(100%,15.5rem)] rounded-md outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-4 focus-visible:ring-offset-background"
     >
-      <span className="block drop-shadow-[0_10px_18px_rgb(0_0_0/0.35)] transition-[rotate,scale] duration-300 group-hover:scale-[1.03] group-hover:-rotate-2">
+      <span className="block -rotate-2 drop-shadow-[0_10px_16px_rgb(23_48_89/0.22)] transition-[rotate,scale] duration-300 group-hover:scale-[1.03] group-hover:rotate-0">
         <span
           style={{ clipPath: CRIMP_TOP }}
           className={cn(
@@ -235,7 +238,7 @@ function PackCard({
       onPointerLeave={unlean}
       aria-label={up ? `${s.title}: details` : "Turn this card over"}
       className={cn(
-        "group block w-full rounded-xl text-left transition-transform duration-200 outline-none [perspective:900px] focus-visible:ring-2 focus-visible:ring-tan focus-visible:ring-offset-2 focus-visible:ring-offset-navy",
+        "group block w-full rounded-xl text-left transition-transform duration-200 outline-none [perspective:900px] focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         LEAN,
       )}
     >
@@ -247,7 +250,7 @@ function PackCard({
       >
         <span
           aria-hidden
-          className="relative flex min-h-[176px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-cream/70 bg-navy bg-[radial-gradient(circle,rgb(255_255_255/0.12)_1.2px,transparent_1.6px)] bg-[length:11px_11px] text-tan [backface-visibility:hidden] [grid-area:1/1]"
+          className="relative flex min-h-[176px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-navy bg-navy bg-[radial-gradient(circle,rgb(255_255_255/0.12)_1.2px,transparent_1.6px)] bg-[length:11px_11px] text-tan [backface-visibility:hidden] [grid-area:1/1]"
         >
           <Mg2Die size={38} />
           <span className="font-space-mono text-[9.5px] font-bold tracking-[0.22em] text-cream/70 uppercase">

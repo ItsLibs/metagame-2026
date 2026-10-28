@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 import AnagramEmail from "./AnagramEmail";
 import CrypticsLightbox from "./CrypticsLightbox";
-import { DISPLAY } from "./styles";
+import { DISPLAY, TOKEN } from "./styles";
 
-// What each rule is about: its icon and the colour of its tile.
+// What each rule is about: its icon and the colour of its token.
 const TOPICS = {
   when: { Icon: Clock, tile: "bg-sky" },
   where: { Icon: MapPin, tile: "bg-sky" },
@@ -48,8 +48,6 @@ export type Rule = {
 };
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
-const PANEL =
-  "divide-y divide-navy/15 overflow-hidden rounded-[14px] border-2 border-navy bg-white";
 
 // A d12's outline: a decagon around a pentagon face, joined at the corners.
 const ring = (n: number, r: number) =>
@@ -108,10 +106,10 @@ function D12({ face, spinning }: { face: string; spinning: boolean }) {
 
 const words = (q: string) => q.toLowerCase().split(/\s+/).filter(Boolean);
 
-// §6 of the rulebook, the FAQ: the questions in two ruled columns, each
-// opening to its answer. Two ways to play it: roll the d12 to open a random
-// rule (there are twelve), or ask the rules lawyer, which opens every rule
-// that mentions what you typed and dims the rest. Under the list, the
+// §6 of the rulebook, the FAQ: the questions in two ruled columns on the
+// page, each opening to its answer. Two ways to play it: roll the d12 to open
+// a random rule (there are twelve), or ask the rules lawyer, which opens every
+// rule that mentions what you typed and dims the rest. Under the list, the
 // cryptic-clue bonus round and the team's email.
 export default function SpecialRules({ rules }: { rules: Rule[] }) {
   const uid = useId();
@@ -188,31 +186,33 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-navy p-2.5 sm:p-3">
+      <div className="mb-7 flex flex-wrap items-center gap-x-6 gap-y-3">
         <button
           type="button"
           onClick={roll}
-          className="group flex items-center gap-2.5 rounded-xl bg-tan py-1 pr-4 pl-1.5 text-navy transition-transform hover:-translate-y-0.5 active:translate-y-0"
+          className="group flex items-center gap-2.5 text-navy outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-4 focus-visible:ring-offset-background"
         >
           <D12 face={face} spinning={rolling} />
-          <span className={`${DISPLAY} text-[22px] leading-none`}>
+          <span
+            className={`${DISPLAY} text-[24px] leading-none decoration-meeple decoration-2 underline-offset-4 group-hover:underline`}
+          >
             Roll for a rule
           </span>
         </button>
-        <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 focus-within:bg-white/15 focus-within:ring-2 focus-within:ring-tan">
-          <Scale aria-hidden className="size-5 shrink-0 text-tan" />
+        <label className="flex min-w-[220px] flex-1 items-center gap-2 border-b-2 border-navy py-2 transition-colors focus-within:border-meeple">
+          <Scale aria-hidden className="size-5 shrink-0 text-meeple" />
           <input
             type="search"
             value={query}
             onChange={(e) => search(e.target.value)}
             placeholder="Ask the rules lawyer: parking, kids, refunds…"
             aria-label="Search the special rules"
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-cream outline-none placeholder:text-cream/50"
+            className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink/45"
           />
         </label>
         <span
           aria-live="polite"
-          className="px-1 font-space-mono text-xs tracking-[0.1em] text-sky uppercase"
+          className="font-space-mono text-xs tracking-[0.1em] text-ink/60 uppercase"
         >
           {lit !== null
             ? `Rolled ${lit + 1 === 8 || lit + 1 === 11 ? "an" : "a"} ${lit + 1}`
@@ -223,15 +223,20 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
       </div>
 
       {matches && hits === 0 && (
-        <p className="mb-5 rounded-xl border-2 border-dashed border-navy/30 p-4 text-ink/70">
+        <p className="mb-5 text-ink/70 italic">
           The rules lawyer finds nothing on that. Ask the team (below) and
           we&apos;ll add a rule.
         </p>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+      <div className="grid gap-x-10 md:grid-cols-2 md:items-start">
         {columns.map((column, c) => (
-          <ul key={c} className={PANEL}>
+          <ul
+            key={c}
+            className={`divide-y divide-navy/15 border-b border-navy/15 ${
+              c ? "md:border-t-2 md:border-navy" : "border-t-2 border-navy"
+            }`}
+          >
             {column.map(({ id, topic, question, answer }, k) => {
               const i = c * half + k;
               const { Icon, tile } = TOPICS[topic];
@@ -245,7 +250,7 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
                   }}
                   className={`scroll-mt-28 transition-[background-color,opacity] duration-500 ${
                     matches && !matches[i] ? "opacity-35" : ""
-                  } ${lit === i ? "bg-peach" : isOpen ? "bg-sky/25" : ""}`}
+                  } ${lit === i ? "bg-peach/70" : ""}`}
                 >
                   <h3>
                     <button
@@ -253,14 +258,14 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
                       aria-expanded={isOpen}
                       aria-controls={`${uid}-a${i}`}
                       onClick={() => toggle(i)}
-                      className="group flex w-full items-center gap-3 px-3.5 py-3 text-left outline-none hover:bg-sky/40 focus-visible:bg-sky/40 focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-inset"
+                      className="group flex w-full items-center gap-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-inset"
                     >
                       <span
-                        className={`grid size-8 shrink-0 place-items-center rounded-lg ${tile}`}
+                        className={`${TOKEN} size-8 transition-transform duration-300 group-hover:-rotate-12 ${tile}`}
                       >
-                        <Icon aria-hidden className="size-[18px] text-navy" />
+                        <Icon aria-hidden className="size-[17px] text-navy" />
                       </span>
-                      <span className="min-w-0 flex-1 text-base leading-snug font-semibold text-navy">
+                      <span className="min-w-0 flex-1 text-base leading-snug font-semibold text-navy decoration-meeple decoration-2 underline-offset-4 group-hover:underline">
                         {question}
                       </span>
                       <Plus
@@ -281,7 +286,7 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
                     }`}
                   >
                     <div className="overflow-hidden">
-                      <div className="pr-4 pb-3.5 pl-[58px] text-[15px] leading-relaxed text-ink/75">
+                      <div className="pr-4 pb-3.5 pl-11 text-[15px] leading-relaxed text-ink/75">
                         {answer}
                       </div>
                     </div>
@@ -293,24 +298,26 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
         ))}
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div className="flex items-center gap-4 rounded-[14px] bg-navy p-3 text-cream">
+      <div className="mt-9 grid gap-x-10 gap-y-7 md:grid-cols-2">
+        <div className="flex items-center gap-4">
           <CrypticsLightbox className="block w-24 shrink-0" />
           <div className="min-w-0">
-            <p className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-tan uppercase">
+            <p className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-meeple uppercase">
               <span aria-hidden>★ </span>Bonus round
             </p>
-            <h3 className={`${DISPLAY} mt-1 text-[26px] leading-none`}>
+            <h3
+              className={`${DISPLAY} mt-1 text-[26px] leading-none text-navy`}
+            >
               Write a clue for META
             </h3>
-            <p className="mt-1.5 text-[13.5px] leading-snug text-cream/75">
+            <p className="mt-1.5 text-[14px] leading-snug text-ink/75">
               Every clue on the 2025 cryptic crossword board resolves to META.
               Click the board to add yours.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4 rounded-[14px] border-2 border-dashed border-navy/30 p-3">
-          <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-peach">
+        <div className="flex items-center gap-4">
+          <span className={`${TOKEN} size-14 bg-peach`}>
             <Mail aria-hidden className="size-6 text-navy" />
           </span>
           <div className="min-w-0">

@@ -51,6 +51,9 @@ export const metadata: Metadata = {
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
 const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
+// The ghost button, outlined in navy for the page.
+const OUTLINE =
+  "border-2 border-navy text-navy hover:border-navy hover:bg-navy/5";
 
 const FAQS: Rule[] = [
   {
@@ -273,7 +276,7 @@ export default function Home() {
       {/* The dice stay above §7: they roll for its Monopoly race, and they're
           one of the cover puzzle's seven games. */}
       <ChapterSection chapter={CHAPTERS.players} rule={<DiceDivider />}>
-        <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ul className="grid gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SPEAKERS.map((speaker) => (
             <li key={speaker.name}>
               <PlayerCard {...speaker} sessions={sessionsFor(speaker.name)} />
@@ -283,8 +286,8 @@ export default function Home() {
             <SpeakerCtaCard href={RFP_FORM_URL} compact />
           </li>
         </ul>
-        <p className="mt-6 text-base text-ink/70">
-          Flip a card for a player&apos;s sessions. And many more hosts:{" "}
+        <p className="mt-8 border-t border-navy/15 pt-4 text-base text-ink/70">
+          Click a session for its details. And many more hosts:{" "}
           <Link
             href="/sessions"
             className="font-bold text-navy underline underline-offset-4 hover:text-meeple"
@@ -314,7 +317,7 @@ export default function Home() {
             : CHAPTERS.join.aka,
         }}
       >
-        <div className="flex flex-col items-start gap-5 rounded-[22px] bg-navy p-5 text-cream sm:p-7">
+        <div className="flex flex-col items-start gap-5">
           <TicketsPanel
             look="rulebook"
             showHeading={false}
@@ -324,12 +327,15 @@ export default function Home() {
           {/* /#get-involved lands here (nav, tracking links). */}
           <div
             id="get-involved"
-            className={`${SECTION_ANCHOR} flex flex-wrap gap-3`}
+            className={`${SECTION_ANCHOR} mt-2 flex flex-wrap items-center gap-3`}
           >
-            <Button asChild variant="ghost">
+            <span className="mr-1 font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
+              Or play another part
+            </span>
+            <Button asChild variant="ghost" className={OUTLINE}>
               <Link href="/volunteer">Apply to volunteer</Link>
             </Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" className={OUTLINE}>
               <a href={RFP_FORM_URL} {...EXT}>
                 Propose a session
               </a>
@@ -348,25 +354,25 @@ export default function Home() {
           <ChapterRule>
             <SpaceInvadersDivider />
           </ChapterRule>
-          <div className="mt-4 grid gap-8 rounded-[22px] bg-navy p-6 text-cream sm:p-8 md:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
+          <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center lg:gap-14">
             <div>
-              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-tan uppercase">
+              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
                 To be continued&hellip;
               </p>
               <h2
-                className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em]`}
+                className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em] text-navy`}
               >
                 Stay in the loop
               </h2>
-              <p className="mt-3 max-w-[460px] text-cream/80">
+              <p className="mt-3 max-w-[460px] text-ink/80">
                 Get notified about ticket sales, updates, volunteer
                 opportunities, future events, and more.
               </p>
-              <p className="mt-5 font-grotesk text-cream/70 italic">
+              <p className="mt-5 font-grotesk text-ink/60 italic">
                 I never met a game I didn&apos;t like.
               </p>
             </div>
-            <SignupForm />
+            <SignupForm light />
           </div>
         </div>
       </section>

@@ -81,21 +81,21 @@ export default function LastYearPage() {
       {/* The back cover. */}
       <section aria-labelledby="next-edition" className={SECTION_ANCHOR}>
         <div className={`${PAGE} pb-20`}>
-          <div className="grid gap-8 rounded-[22px] bg-navy p-6 text-cream sm:p-8 md:p-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
+          <div className="grid gap-8 border-t-2 border-navy pt-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
             <div>
-              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-tan uppercase">
+              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
                 Next edition
               </p>
               <h2
                 id="next-edition"
-                className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em]`}
+                className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em] text-navy`}
               >
                 Your turn: 2026
               </h2>
-              <p className="mt-3 font-space-mono text-sm font-bold tracking-[0.12em] text-sky uppercase">
+              <p className="mt-3 font-space-mono text-sm font-bold tracking-[0.12em] text-navy uppercase">
                 Nov 6–8, 2026 · Lighthaven, Berkeley
               </p>
-              <p className="mt-3 max-w-[460px] text-cream/80">
+              <p className="mt-3 max-w-[460px] text-ink/80">
                 Three more days of games at Lighthaven, with a Megagame running
                 through all of it.
               </p>
@@ -105,7 +105,11 @@ export default function LastYearPage() {
                 <Button asChild>
                   <Link href="/#tickets">Get tickets</Link>
                 </Button>
-                <Button asChild variant="ghost">
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
+                >
                   <Link href="/">Read the 2026 rulebook</Link>
                 </Button>
               </div>
@@ -113,7 +117,7 @@ export default function LastYearPage() {
                 href={LAST_YEAR_SITE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-space-mono text-[12.5px] text-sky underline underline-offset-4 hover:text-cream"
+                className="font-space-mono text-[12.5px] text-ink/65 underline underline-offset-4 hover:text-navy"
               >
                 The 2025 site, archived: 2025.metagame.games ↗
               </a>

@@ -6,7 +6,7 @@ import { SESSIONS_2026, type Session2026 } from "@/v2/data/sessions-2026";
 import Glyph, { type GlyphName } from "./Glyph";
 import { isPlayed, KINDS } from "./sessions/kinds";
 import SessionDialog from "./sessions/SessionDialog";
-import { DISPLAY } from "./styles";
+import { DISPLAY, TOKEN } from "./styles";
 
 const CONFIRMED = SESSIONS_2026.filter(
   (s) => s.status === "confirmed" && s.title,
@@ -15,9 +15,7 @@ const SEE_EXPANSIONS = `See §${CHAPTERS.expansions.num}.`;
 
 type Component = {
   glyph: GlyphName;
-  tile: string;
-  /** The example strip, against the tile's colour. */
-  strip: string;
+  token: string;
   title: string;
   body: string;
   /** Confirmed 2026 sessions of this kind, if it has any. */
@@ -27,24 +25,21 @@ type Component = {
 const COMPONENTS: Component[] = [
   {
     glyph: "talks",
-    tile: "bg-sky text-navy",
-    strip: "bg-white/60 hover:bg-white",
+    token: "bg-sky text-navy",
     title: "Talks",
     body: "Main-room talks from game designers, puzzle makers and people who study play.",
     sessions: CONFIRMED.filter((s) => s.kinds[0] === "talk"),
   },
   {
     glyph: "workshops",
-    tile: "bg-peach text-navy",
-    strip: "bg-white/60 hover:bg-white",
+    token: "bg-peach text-navy",
     title: "Workshops",
     body: "Design a horror scenario, dream up a roleplaying theme park, train as a troll.",
     sessions: CONFIRMED.filter((s) => s.kinds.includes("workshop")),
   },
   {
     glyph: "party-games",
-    tile: "bg-moss text-cream",
-    strip: "bg-white/15 hover:bg-white/25",
+    token: "bg-moss text-cream",
     title: "Games",
     body: "Sessions run by attendees: tournaments, LARPs, social deduction, indie TTRPGs and more.",
     sessions: CONFIRMED.filter(
@@ -53,30 +48,27 @@ const COMPONENTS: Component[] = [
   },
   {
     glyph: "megagame",
-    tile: "bg-tan text-navy",
-    strip: "bg-white/50 hover:bg-white/80",
+    token: "bg-tan text-navy",
     title: "The Megagame",
     body: `A puzzle hunt, game gauntlet and story that runs all weekend. ${SEE_EXPANSIONS}`,
     sessions: CONFIRMED.filter((s) => s.kinds.includes("megagame")),
   },
   {
     glyph: "card-games",
-    tile: "bg-navy text-cream",
-    strip: "",
+    token: "bg-navy text-cream",
     title: NIGHT_NAME,
     body: `Friday night's booths: games to play, things to try, makers to meet. ${SEE_EXPANSIONS}`,
   },
   {
     glyph: "trivia",
-    tile: "bg-brand-blue text-navy",
-    strip: "",
+    token: "bg-brand-blue text-navy",
     title: "Snacks & drinks",
     body: "Free for the taking, with food trucks on site for meals.",
   },
 ];
 const LIVE = COMPONENTS.flatMap((c, i) => (c.sessions?.length ? [i] : []));
 
-// One live card's example changes at a time, round the table.
+// One live component's example changes at a time, round the table.
 const TURN_MS = 1700;
 
 function shuffle<T>(xs: T[]): T[] {
@@ -88,17 +80,18 @@ function shuffle<T>(xs: T[]): T[] {
   return a;
 }
 
-// §2 of the rulebook: what's in the box. The session components count their
-// confirmed 2026 sessions and keep dealing real examples (click one for its
-// details); the rest are plain cards.
+// §2 of the rulebook: what's in the box, each component a token and a few
+// lines under a rule. The session components count their confirmed 2026
+// sessions and keep dealing real examples (click one for its details).
 export default function RulebookComponents() {
   const list = useRef<HTMLUListElement>(null);
-  // Each card's examples, shuffled once mounted; the server shows them in order.
+  // Each component's examples, shuffled once mounted; the server shows them in
+  // order.
   const [decks, setDecks] = useState(() =>
     COMPONENTS.map((c) => c.sessions ?? []),
   );
   const [shown, setShown] = useState(() => COMPONENTS.map(() => 0));
-  // The card under the pointer keeps its example.
+  // The component under the pointer keeps its example.
   const hovered = useRef<number | null>(null);
   const [open, setOpen] = useState<Session2026 | null>(null);
 
@@ -133,9 +126,9 @@ export default function RulebookComponents() {
     <>
       <ul
         ref={list}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {COMPONENTS.map(({ glyph, tile, strip, title, body, sessions }, i) => {
+        {COMPONENTS.map(({ glyph, token, title, body, sessions }, i) => {
           const deck = decks[i];
           const s = deck.length ? deck[shown[i] % deck.length] : null;
           return (
@@ -147,52 +140,53 @@ export default function RulebookComponents() {
               onMouseLeave={() => {
                 hovered.current = null;
               }}
-              className={`rulebook-rise group flex min-h-[170px] flex-col gap-2 rounded-[14px] p-5 transition-[translate,rotate] duration-300 hover:-translate-y-1.5 hover:-rotate-1 ${tile}`}
-              // The card-games glyph's front card matches its tile.
-              style={
-                { "--glyph-bg": "var(--color-navy)" } as React.CSSProperties
-              }
+              className="rulebook-rise group flex flex-col gap-2 border-t-2 border-navy pt-4"
             >
               <div className="flex items-start justify-between gap-3">
-                <Glyph
-                  name={glyph}
-                  className="size-11 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12"
-                />
+                <span
+                  className={`${TOKEN} size-14 transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-12 ${token}`}
+                  // The card-games glyph's front card matches its token.
+                  style={
+                    { "--glyph-bg": "var(--color-navy)" } as React.CSSProperties
+                  }
+                >
+                  <Glyph name={glyph} className="size-9" />
+                </span>
                 {sessions && (
-                  <p className="text-right leading-none">
-                    <span className={`${DISPLAY} block text-[34px]`}>
+                  <p className="text-right leading-none text-navy">
+                    <span className={`${DISPLAY} block text-[38px]`}>
                       {sessions.length}
                     </span>
-                    <span className="font-space-mono text-[10px] font-bold tracking-[0.12em] uppercase opacity-70">
+                    <span className="font-space-mono text-[10px] font-bold tracking-[0.12em] text-ink/55 uppercase">
                       confirmed
                     </span>
                   </p>
                 )}
               </div>
               <h3
-                className={`${DISPLAY} mt-auto text-[28px] leading-none tracking-[0.02em]`}
+                className={`${DISPLAY} mt-2 text-[30px] leading-none tracking-[0.02em] text-navy`}
               >
                 {title}
               </h3>
-              <p className="text-[14.5px] leading-[1.4]">{body}</p>
+              <p className="text-[15px] leading-[1.45] text-ink/75">{body}</p>
               {s && (
                 <button
                   type="button"
                   onClick={() => setOpen(s)}
                   aria-label={`${s.title}: details`}
-                  className={`mt-1 flex items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left transition-colors ${strip}`}
+                  className="group/eg mt-1 flex items-baseline gap-2 overflow-hidden text-left text-navy outline-none focus-visible:ring-2 focus-visible:ring-meeple"
                 >
-                  <span className="shrink-0 font-space-mono text-[10px] font-bold tracking-[0.12em] uppercase opacity-60">
+                  <span className="shrink-0 font-space-mono text-[10px] font-bold tracking-[0.12em] text-meeple uppercase">
                     e.g.
                   </span>
                   <span
                     key={s.slug}
-                    className="min-w-0 flex-1 animate-in truncate text-[14px] font-semibold duration-500 fade-in slide-in-from-bottom-3"
+                    className="min-w-0 flex-1 animate-in truncate text-[14.5px] font-semibold underline decoration-navy/25 underline-offset-4 duration-500 fade-in slide-in-from-bottom-3 group-hover/eg:decoration-meeple"
                   >
                     {s.title}
                   </span>
                   {title === "Games" && (
-                    <span className="hidden shrink-0 font-space-mono text-[10px] tracking-[0.08em] uppercase opacity-60 sm:inline">
+                    <span className="hidden shrink-0 font-space-mono text-[10px] tracking-[0.08em] text-ink/55 uppercase sm:inline">
                       {KINDS[s.kinds[0]].label}
                     </span>
                   )}

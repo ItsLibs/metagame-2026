@@ -100,18 +100,18 @@ export default function SessionsPage() {
       {/* The back cover. */}
       <section aria-labelledby="see-you" className={SECTION_ANCHOR}>
         <div className={`${PAGE} pb-20`}>
-          <div className="grid gap-8 rounded-[22px] bg-navy p-6 text-cream sm:p-8 md:p-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
+          <div className="grid gap-8 border-t-2 border-navy pt-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
             <div>
-              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-tan uppercase">
+              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
                 Your move
               </p>
               <h2
                 id="see-you"
-                className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em]`}
+                className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em] text-navy`}
               >
                 Play them in person
               </h2>
-              <p className="mt-3 font-space-mono text-sm font-bold tracking-[0.12em] text-sky uppercase">
+              <p className="mt-3 font-space-mono text-sm font-bold tracking-[0.12em] text-navy uppercase">
                 Nov 6–8, 2026 · Lighthaven, Berkeley
               </p>
             </div>
@@ -119,7 +119,11 @@ export default function SessionsPage() {
               <Button asChild>
                 <Link href="/#tickets">Get tickets</Link>
               </Button>
-              <Button asChild variant="ghost">
+              <Button
+                asChild
+                variant="ghost"
+                className="border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
+              >
                 <Link href="/last-year">What happened last year?</Link>
               </Button>
             </div>

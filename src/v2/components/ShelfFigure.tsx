@@ -50,7 +50,7 @@ export default function ShelfFigure() {
       <Dialog>
         <DialogTrigger
           aria-label="See the game library photo larger"
-          className="block w-full cursor-zoom-in overflow-hidden rounded-[10px] ring-1 ring-white/20 outline-none focus-visible:ring-2 focus-visible:ring-tan"
+          className="block w-full cursor-zoom-in overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2"
         >
           {photo(CROP)}
         </DialogTrigger>
@@ -67,7 +67,7 @@ export default function ShelfFigure() {
           {photo(ZOOM)}
         </DialogContent>
       </Dialog>
-      <figcaption className="mt-2 font-space-mono text-[11px] leading-snug tracking-[0.04em] text-sky/80">
+      <figcaption className="mt-2 font-space-mono text-[11px] leading-snug tracking-[0.04em] text-ink/60">
         {current === "win"
           ? "Every game is back. Read the sign on the shelf."
           : "Shown: the game library at Lighthaven. Contents may vary from those shown."}

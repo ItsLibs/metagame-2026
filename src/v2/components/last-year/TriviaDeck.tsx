@@ -82,12 +82,9 @@ const RANKS = [
   { at: 10, name: "Metagamer" },
 ];
 
-const FACE =
-  "flex flex-col overflow-hidden rounded-[18px] border-2 border-navy bg-white [grid-area:1/1] [backface-visibility:hidden]";
-
-// §3: a trivia round on the 2025 program. Each card is a real session; say
-// whether it was a talk, a workshop or a game and the card flips to show
-// what it was, who ran it and when.
+// §3: a trivia round on the 2025 program, played on the page. Each question
+// is a real session; say whether it was a talk, a workshop or a game, and the
+// answer comes up in place of the choices: what it was, who ran it and when.
 export default function TriviaDeck() {
   const [card, setCard] = useState(FIRST);
   const [guess, setGuess] = useState<Kind | null>(null);
@@ -99,7 +96,7 @@ export default function TriviaDeck() {
   });
   const [open, setOpen] = useState(false);
   const seen = useRef(new Set([FIRST]));
-  // Where focus goes once the card has turned.
+  // Where focus goes once the answer is in, or the next question is up.
   const turned = useRef<"front" | "back" | null>(null);
   const firstGuess = useRef<HTMLButtonElement>(null);
   const nextCard = useRef<HTMLButtonElement>(null);
@@ -143,136 +140,122 @@ export default function TriviaDeck() {
   const hosts = hostNames(c.s).join(", ");
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] lg:items-start">
-      <div className="[perspective:1600px]">
-        <div
-          className={`grid transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none ${
-            guess ? "[transform:rotateY(180deg)]" : ""
-          }`}
-        >
-          <div
-            role="group"
-            aria-label="Question"
-            inert={!!guess}
-            className={FACE}
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] lg:items-start lg:gap-12">
+      <div>
+        <p className="flex items-center justify-between border-t-2 border-navy pt-2.5 font-space-mono text-[11px] font-bold tracking-[0.14em] text-navy uppercase">
+          <span>Trivia · Card {score.played + (guess ? 0 : 1)}</span>
+          <span
+            aria-hidden
+            className={`${DISPLAY} text-2xl leading-none ${guess && right ? "text-moss" : "text-meeple"}`}
           >
-            <div className="flex items-center justify-between bg-navy px-5 py-2.5 text-cream">
-              <span className="font-space-mono text-[11px] font-bold tracking-[0.14em] uppercase">
-                Trivia · Card {score.played + (guess ? 0 : 1)}
-              </span>
-              <span aria-hidden className={`${DISPLAY} text-xl text-tan`}>
-                ?
-              </span>
-            </div>
-            <div className="flex flex-1 flex-col p-5 sm:p-7">
-              <p className="font-space-mono text-[11px] tracking-[0.12em] text-ink/55 uppercase">
-                On the 2025 schedule
-              </p>
-              <h3
-                className={`${DISPLAY} mt-2 text-[clamp(34px,4.4vw,52px)] leading-[0.95] tracking-[0.01em] text-balance text-navy`}
-              >
-                {c.title}
-              </h3>
-              <p className="mt-auto pt-8 text-[15px] font-semibold text-navy">
-                Talk, workshop or game?
-              </p>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {KINDS.map(({ kind, label }, i) => (
-                  <button
-                    key={kind}
-                    ref={i === 0 ? firstGuess : undefined}
-                    type="button"
-                    onClick={() => answer(kind)}
-                    style={{ background: CATEGORY_STYLES[kind].background }}
-                    className={`${DISPLAY} rounded-xl border-2 border-navy py-3 text-[clamp(18px,2.4vw,24px)] leading-none tracking-[0.03em] text-navy transition-[translate] hover:-translate-y-0.5 active:translate-y-0`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+            {guess ? (right ? "✓" : "✗") : "?"}
+          </span>
+        </p>
+        <p className="mt-6 font-space-mono text-[11px] tracking-[0.12em] text-ink/55 uppercase">
+          On the 2025 schedule
+        </p>
+        <h3
+          key={card}
+          className={`${DISPLAY} mt-2 animate-in text-[clamp(40px,5.4vw,68px)] leading-[0.95] tracking-[0.01em] text-balance text-navy duration-500 fade-in slide-in-from-bottom-3`}
+        >
+          {c.title}
+        </h3>
 
+        {guess ? (
           <div
             role="group"
             aria-label="Answer"
-            inert={!guess}
-            className={`${FACE} [transform:rotateY(180deg)]`}
+            className="mt-7 animate-in duration-500 fade-in slide-in-from-bottom-2"
           >
-            <div
-              className="flex items-center justify-between border-b-2 border-navy px-5 py-2.5"
-              style={{ background: CATEGORY_STYLES[c.kind].background }}
+            <p
+              className={`${DISPLAY} text-[clamp(30px,3.6vw,40px)] leading-none ${right ? "text-moss" : "text-meeple"}`}
             >
-              <span className="font-space-mono text-[11px] font-bold tracking-[0.14em] text-navy uppercase">
-                {LABEL[c.kind]} · {c.day}
-              </span>
-              <span aria-hidden className={`${DISPLAY} text-xl text-navy`}>
-                {right ? "✓" : "✗"}
-              </span>
-            </div>
-            <div className="flex flex-1 flex-col p-5 sm:p-7">
-              <p
-                className={`${DISPLAY} text-[clamp(30px,3.6vw,40px)] leading-none ${right ? "text-moss" : "text-meeple"}`}
+              {right
+                ? "Right!"
+                : `Not quite: a ${LABEL[c.kind].toLowerCase()}.`}
+            </p>
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-space-mono text-[11.5px] tracking-[0.06em] text-ink/60 uppercase">
+              <span
+                className="rounded px-1.5 py-0.5 font-bold text-navy"
+                style={{ background: CATEGORY_STYLES[c.kind].background }}
               >
-                {right
-                  ? "Right!"
-                  : `Not quite: a ${LABEL[c.kind].toLowerCase()}.`}
-              </p>
-              <h3 className="mt-3 text-[19px] leading-snug font-bold text-navy">
+                {LABEL[c.kind]}
+              </span>
+              {c.day} · {formatTimeRange(c.s.start_time, c.s.end_time)}
+              {c.s.location && ` · ${c.s.location.name}`}
+            </p>
+            {c.s.title !== c.title && (
+              <p className="mt-3 text-[17px] leading-snug font-bold text-navy">
                 {c.s.title}
-              </h3>
-              <p className="mt-1 font-space-mono text-[11.5px] tracking-[0.06em] text-ink/60 uppercase">
-                {formatTimeRange(c.s.start_time, c.s.end_time)}
-                {c.s.location && ` · ${c.s.location.name}`}
               </p>
-              {hosts && <p className="mt-2 text-[15px] text-ink/75">{hosts}</p>}
-              {c.s.description && (
-                <p className="mt-3 line-clamp-3 text-[14.5px] leading-relaxed text-ink/70">
-                  {c.s.description}
-                </p>
-              )}
-              <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-3 pt-6">
-                <button
-                  ref={nextCard}
-                  type="button"
-                  onClick={next}
-                  className={`${DISPLAY} rounded-xl bg-navy px-5 py-2.5 text-[22px] leading-none tracking-[0.03em] text-cream transition-transform hover:-translate-y-0.5 active:translate-y-0`}
-                >
-                  Next card →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpen(true)}
-                  className="text-sm font-bold text-navy underline underline-offset-4 hover:text-meeple"
-                >
-                  Read the whole card
-                </button>
-              </div>
+            )}
+            {hosts && <p className="mt-2 text-[15px] text-ink/75">{hosts}</p>}
+            {c.s.description && (
+              <p className="mt-3 line-clamp-3 max-w-[40em] text-[14.5px] leading-relaxed text-ink/70">
+                {c.s.description}
+              </p>
+            )}
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <button
+                ref={nextCard}
+                type="button"
+                onClick={next}
+                className={`${DISPLAY} rounded-xl bg-navy px-5 py-2.5 text-[22px] leading-none tracking-[0.03em] text-cream transition-transform hover:-translate-y-0.5 active:translate-y-0`}
+              >
+                Next card →
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="text-sm font-bold text-navy underline underline-offset-4 hover:text-meeple"
+              >
+                Read the whole card
+              </button>
             </div>
           </div>
-        </div>
+        ) : (
+          <div role="group" aria-label="Question" className="mt-8">
+            <p className="text-[15px] font-semibold text-navy">
+              Talk, workshop or game?
+            </p>
+            <div className="mt-3 grid max-w-[560px] grid-cols-3 gap-2">
+              {KINDS.map(({ kind, label }, i) => (
+                <button
+                  key={kind}
+                  ref={i === 0 ? firstGuess : undefined}
+                  type="button"
+                  onClick={() => answer(kind)}
+                  style={{ background: CATEGORY_STYLES[kind].background }}
+                  className={`${DISPLAY} rounded-xl border-2 border-navy py-3 text-[clamp(18px,2.4vw,24px)] leading-none tracking-[0.03em] text-navy transition-[translate] hover:-translate-y-0.5 active:translate-y-0`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <aside
         aria-label="Your score"
-        className="rounded-[18px] bg-navy p-5 text-cream sm:p-6"
+        className="border-t-2 border-navy pt-2.5 lg:border-t-0 lg:border-l-2 lg:pt-0 lg:pl-8"
       >
-        <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-sky uppercase">
+        <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
           Scoreboard
         </p>
-        <dl className="mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-[10px] bg-white/20">
+        <dl className="mt-3 grid grid-cols-3 gap-x-4 border-b border-navy/15 pb-3">
           {[
             ["Score", `${score.right}/${score.played}`],
             ["Streak", score.streak],
             ["Best", score.best],
           ].map(([label, value]) => (
-            <div key={label} className="bg-navy px-3 py-2.5">
-              <dt className="font-space-mono text-[10px] font-bold tracking-[0.14em] text-tan uppercase">
+            <div key={label}>
+              <dt className="font-space-mono text-[10px] font-bold tracking-[0.14em] text-ink/55 uppercase">
                 {label}
               </dt>
               <dd
                 key={label === "Streak" ? score.streak : undefined}
-                className={`${DISPLAY} mt-1 text-[32px] leading-none ${
+                className={`${DISPLAY} mt-1 text-[36px] leading-none text-navy ${
                   label === "Streak" && score.streak > 0 ? "score-pop" : ""
                 }`}
               >
@@ -281,13 +264,13 @@ export default function TriviaDeck() {
             </div>
           ))}
         </dl>
-        <p className="mt-5 font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-tan uppercase">
+        <p className="mt-4 font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-meeple uppercase">
           Rank
         </p>
-        <p className={`${DISPLAY} mt-1 text-[38px] leading-none`}>
+        <p className={`${DISPLAY} mt-1 text-[42px] leading-none text-navy`}>
           {rank.name}
         </p>
-        <p className="mt-2 text-sm text-cream/75">
+        <p className="mt-2 text-sm text-ink/70">
           {up ? (
             `${up.at} in a row makes you a ${up.name}.`
           ) : (
@@ -295,7 +278,7 @@ export default function TriviaDeck() {
               Top rank. Now prove it in person:{" "}
               <Link
                 href="/#tickets"
-                className="font-bold text-cream underline underline-offset-2"
+                className="font-bold text-navy underline underline-offset-2"
               >
                 Metagame 2026
               </Link>
