@@ -264,10 +264,6 @@ export default function Home() {
 
       <ChapterSection chapter={CHAPTERS.object} rule={<CastlingDivider />}>
         <RulebookObject />
-      </ChapterSection>
-
-      <ChapterSection chapter={CHAPTERS.components} rule={<CardSuitsDivider />}>
-        <RulebookComponents />
         <div className="mt-12">
           <ChapterRule>
             <TetrisDivider />
@@ -284,6 +280,10 @@ export default function Home() {
           </span>
         </div>
         <ExamplesOfPlay />
+      </ChapterSection>
+
+      <ChapterSection chapter={CHAPTERS.components} rule={<CardSuitsDivider />}>
+        <RulebookComponents />
       </ChapterSection>
 
       <ChapterSection chapter={CHAPTERS.setup} rule={<SetCardDivider />}>

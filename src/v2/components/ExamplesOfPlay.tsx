@@ -53,10 +53,11 @@ const PILES: {
 // Dealt cards sit a little askew, like a hand on the table.
 const TILT = ["-rotate-2", "rotate-1", "rotate-2"];
 
-// §2's examples of play: a hand of three confirmed 2026 sessions, one talk,
+// §1's examples of play: a hand of three confirmed 2026 sessions, one talk,
 // one workshop and one game, beside Fig. 2 (which hides the Hat Trick's
-// wizard hat). Deal again for a new hand; a card opens its session. The
-// first hand is fixed so the server and client agree.
+// wizard hat). Deal again for a new hand; a card opens its session; the
+// 2025 recap and every 2026 session are a click away. The first hand is
+// fixed so the server and client agree.
 export default function ExamplesOfPlay() {
   const [hand, setHand] = useState(() => PILES.map(() => 0));
   const [deals, setDeals] = useState(0);
@@ -117,7 +118,7 @@ export default function ExamplesOfPlay() {
             );
           })}
         </ul>
-        <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="mt-7 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={deal}
@@ -126,10 +127,16 @@ export default function ExamplesOfPlay() {
             Deal again ↻
           </button>
           <Link
+            href="/last-year"
+            className={`${DISPLAY} rounded-lg border-2 border-navy px-5 py-2 text-xl leading-none tracking-[0.04em] text-navy transition-[translate,background-color] hover:-translate-y-0.5 hover:bg-navy/5 active:translate-y-0`}
+          >
+            The 2025 recap →
+          </Link>
+          <Link
             href="/sessions"
             className="text-sm font-bold text-navy underline underline-offset-4 hover:text-meeple"
           >
-            See every 2026 session →
+            Every 2026 session →
           </Link>
         </div>
       </div>
