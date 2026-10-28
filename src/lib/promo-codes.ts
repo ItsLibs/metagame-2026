@@ -34,7 +34,11 @@ export type Prior = {
 };
 
 export type MintResult = {
+  /** The Stripe promotion code's id (promo_…). */
+  id: string;
   code: string;
+  active: boolean;
+  couponId: string;
   name: string;
   email: string;
   reused: boolean;

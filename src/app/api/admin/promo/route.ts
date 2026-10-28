@@ -1,9 +1,20 @@
-import { PromoError } from "@/lib/promo-codes";
-import { listStripeCodes, mintStripeCode } from "@/lib/promo-codes-stripe";
+import {
+  normalizeCustomCode,
+  PromoError,
+  type MintResult,
+} from "@/lib/promo-codes";
+import {
+  amountOffCoupons,
+  findStripeCode,
+  listStripeCodes,
+  mintStripeCode,
+} from "@/lib/promo-codes-stripe";
 import { authorize, error, json, readBody } from "@/lib/schedule-api";
 import type { Raw } from "@/lib/schedule-input";
 
 export const dynamic = "force-dynamic";
+
+const CODE = /^[A-Za-z0-9-]+$/;
 
 const str = (body: Raw, key: string) => {
   const value = body[key];
@@ -13,12 +24,23 @@ const str = (body: Raw, key: string) => {
 const message = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
 
-/** Every code /backstage/promo minted, newest first. */
-export async function GET() {
+/**
+ * `?code=`: whether that code exists on Stripe, `{exists, active?}`, so a
+ * caller can check before minting. Without it, every code /backstage/promo
+ * minted, newest first.
+ */
+export async function GET(request: Request) {
   const access = await authorize("promo.manage");
   if (access instanceof Response) return access;
+  const code = new URL(request.url).searchParams.get("code")?.trim();
   try {
-    return json({ codes: await listStripeCodes() });
+    if (code === undefined) return json({ codes: await listStripeCodes() });
+    if (!CODE.test(code))
+      return error("Letters, digits, and dashes only.", 400, "code");
+    const found = await findStripeCode(normalizeCustomCode(code));
+    return json(
+      found ? { exists: true, active: found.active } : { exists: false },
+    );
   } catch (err) {
     return failed(err);
   }
@@ -26,9 +48,9 @@ export async function GET() {
 
 /**
  * Mints one code, checked as the /backstage/promo form checks it:
- * `{name, purpose, email?, customCode?, uses?, unlimited?, notes?, couponId?}`.
- * Re-sending the same code for the same guest reuses it (200, `reused`);
- * a custom code that belongs to someone else is a 409.
+ * `{name, purpose, customCode?, maxUses?, email?, notes?}` plus the coupon as
+ * `couponId` or `amountOffUsd`. `maxUses` null is unlimited; left out, 1.
+ * A custom code that already exists on Stripe is a 409.
  */
 export async function POST(request: Request) {
   const access = await authorize("promo.manage");
@@ -40,30 +62,77 @@ export async function POST(request: Request) {
   if (!name) return error("Required.", 400, "name");
   const purpose = str(body, "purpose");
   if (!purpose) return error("Required.", 400, "purpose");
-  const unlimited = body.unlimited === true;
-  const uses = Number(body.uses ?? 1);
-  if (!unlimited && !(Number.isInteger(uses) && uses >= 1))
-    return error("A whole number, at least 1.", 400, "uses");
-  const customCode = str(body, "customCode");
-  if (customCode && !/^[A-Za-z0-9-]+$/.test(customCode))
+  const { maxUses = 1 } = body;
+  if (maxUses !== null && !(Number.isInteger(maxUses) && Number(maxUses) >= 1))
+    return error("A whole number, at least 1, or null.", 400, "maxUses");
+  const customCode = normalizeCustomCode(str(body, "customCode"));
+  if (customCode && !CODE.test(customCode))
     return error("Letters, digits, and dashes only.", 400, "customCode");
+  let couponId = str(body, "couponId");
+  const { amountOffUsd } = body;
+  if (amountOffUsd !== undefined) {
+    if (couponId)
+      return error(
+        "Send couponId or amountOffUsd, not both.",
+        400,
+        "amountOffUsd",
+      );
+    if (typeof amountOffUsd !== "number" || !(amountOffUsd > 0))
+      return error("A dollar amount above 0.", 400, "amountOffUsd");
+  }
 
   try {
+    if (customCode) {
+      const existing = await findStripeCode(customCode);
+      if (existing) {
+        const archived = existing.active ? "" : " (archived)";
+        return error(
+          `Code ${customCode} already exists${archived}.`,
+          409,
+          "customCode",
+        );
+      }
+    }
+    if (typeof amountOffUsd === "number") {
+      const ids = await amountOffCoupons(Math.round(amountOffUsd * 100));
+      if (ids.length !== 1) {
+        const usd = `$${amountOffUsd}`;
+        return error(
+          ids.length
+            ? `${ids.length} active coupons take ${usd} off (${ids.join(", ")}); send couponId.`
+            : `No active coupon takes ${usd} off.`,
+          400,
+          "amountOffUsd",
+        );
+      }
+      couponId = ids[0];
+    }
+
     const minted = await mintStripeCode({
       name,
       email: str(body, "email"),
       customCode,
-      maxUses: unlimited ? null : uses,
+      maxUses: maxUses as number | null,
       purpose,
       notes: str(body, "notes"),
-      couponId: str(body, "couponId") || undefined,
+      couponId: couponId || undefined,
       issuedBy: access.name,
     });
-    return json({ minted }, minted.reused ? 200 : 201);
+    return json(summary(minted), minted.reused ? 200 : 201);
   } catch (err) {
     return failed(err);
   }
 }
+
+const summary = (m: MintResult) => ({
+  code: m.code,
+  id: m.id,
+  active: m.active,
+  couponId: m.couponId,
+  max: m.max,
+  test: m.test,
+  ...(m.reused && { reused: true }),
+});
 
 function failed(err: unknown): Response {
   if (err instanceof PromoError) {

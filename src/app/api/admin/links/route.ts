@@ -4,6 +4,7 @@ import type { Raw } from "@/lib/schedule-input";
 import { siteOrigin } from "@/lib/site-origin";
 import {
   createTrackingLink,
+  defaultCampaign,
   findTrackingLink,
   isAllowedDestination,
   listTrackingLinks,
@@ -45,8 +46,9 @@ export async function GET(request: Request) {
 
 /**
  * Creates one link, checked as the /backstage/links form checks it:
- * `{destination, slug, source, medium, campaign, placement, internalName?}`.
- * UTM values snap to Airtable's spelling; campaign must already be a choice.
+ * `{destination, slug, source, medium, placement, campaign?, internalName?}`.
+ * UTM values snap to Airtable's spelling; campaign must already be a choice
+ * and defaults to the form's. A taken slug's 409 carries the `existing` link.
  */
 export async function POST(request: Request) {
   const access = await authorize("links.manage");
@@ -68,7 +70,11 @@ export async function POST(request: Request) {
     const options = await loadLinkOptions();
     const utm = {} as Record<UtmSelectField, string>;
     for (const field of UTM_SELECT_FIELDS) {
-      const value = snapToOption(str(body, field), options[field]);
+      const given = str(body, field);
+      const value =
+        field === "campaign" && !given
+          ? defaultCampaign(options)
+          : snapToOption(given, options[field]);
       if (!value) return error("Required.", 400, field);
       if (value.length > UTM_VALUE_MAX)
         return error(`At most ${UTM_VALUE_MAX} characters.`, 400, field);
@@ -81,8 +87,20 @@ export async function POST(request: Request) {
     if (!slug) return error("Required.", 400, "slug");
     const slugProblem = validateSlug(slug);
     if (slugProblem) return error(slugProblem, 400, "slug");
-    if (await findTrackingLink(slug))
-      return error("That short name is already taken.", 409, "slug");
+    const existing = await findTrackingLink(slug);
+    if (existing) {
+      return json(
+        {
+          error: "That short name is already taken.",
+          field: "slug",
+          existing: {
+            destination: existing.destination,
+            shortUrl: shortUrl(origin, existing.slug),
+          },
+        },
+        409,
+      );
+    }
 
     const link = await createTrackingLink({
       slug,
@@ -92,7 +110,14 @@ export async function POST(request: Request) {
       createdBy: access.name,
     });
     revalidatePath("/backstage/links");
-    return json({ link, shortUrl: shortUrl(origin, link.slug) }, 201);
+    return json(
+      {
+        slug: link.slug,
+        shortUrl: shortUrl(origin, link.slug),
+        destination: link.destination,
+      },
+      201,
+    );
   } catch (err) {
     return failed(err);
   }

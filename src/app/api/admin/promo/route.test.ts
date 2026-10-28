@@ -35,6 +35,7 @@ vi.mock("@/lib/permission-store", () => ({
   }),
 }));
 const stripe = vi.hoisted(() => ({
+  coupons: { list: vi.fn() },
   promotionCodes: { create: vi.fn(), list: vi.fn(), update: vi.fn() },
 }));
 vi.mock("@/lib/stripe-promo", () => ({
@@ -46,21 +47,36 @@ import { getPromoStripe } from "@/lib/stripe-promo";
 
 const KEY = "mg_promo";
 const flyer = {
-  name: "Victory Point Cafe",
-  purpose: "Flyer",
-  customCode: "VICTORYPOINTCAFE",
-  unlimited: true,
-  couponId: "flyer100",
+  customCode: "ELYSIAN",
+  name: "Elysian flyer",
+  purpose: "Location flyer",
+  notes: "Location flyer · elysian",
+  maxUses: null,
+  amountOffUsd: 100,
 };
 const promo = (overrides = {}) => ({
   id: "promo_1",
-  code: "VICTORYPOINTCAFE",
+  code: "ELYSIAN",
   max_redemptions: null,
-  metadata: { name: "Victory Point Cafe", source: "comp-tool" },
+  metadata: { name: "Elysian flyer", source: "comp-tool" },
+  promotion: { type: "coupon", coupon: "flyer100" },
   times_redeemed: 0,
   active: true,
   created: 1,
   ...overrides,
+});
+const coupon = (overrides = {}) => ({
+  id: "flyer100",
+  valid: true,
+  amount_off: 10000,
+  currency: "usd",
+  percent_off: null,
+  ...overrides,
+});
+/** What promotionCodes.list answers: `data` when awaited, or paged. */
+const codes = (...data: object[]) => ({
+  data,
+  autoPagingToArray: async () => data,
 });
 const send = (body: unknown, key: string | null = KEY) => {
   auth.headers = new Headers(key ? { "x-api-key": key } : {});
@@ -72,12 +88,30 @@ const send = (body: unknown, key: string | null = KEY) => {
     }),
   );
 };
+const check = (query: string) => {
+  auth.headers = new Headers({ "x-api-key": KEY });
+  return GET(new Request(`https://metagame.games/api/admin/promo${query}`));
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
   auth.keys = { [KEY]: ["promo.manage"], mg_links: ["links.manage"] };
+  stripe.coupons.list.mockReturnValue({
+    autoPagingToArray: async () => [
+      coupon(),
+      coupon({ id: "half", amount_off: null, percent_off: 50 }),
+      coupon({ id: "old100", valid: false }),
+      coupon({ id: "eur100", currency: "eur" }),
+    ],
+  });
+  stripe.promotionCodes.list.mockResolvedValue(codes());
   stripe.promotionCodes.create.mockImplementation(async (params) =>
-    promo({ code: params.code, metadata: params.metadata }),
+    promo({
+      code: params.code,
+      metadata: params.metadata,
+      promotion: params.promotion,
+      max_redemptions: params.max_redemptions ?? null,
+    }),
   );
 });
 
@@ -90,33 +124,51 @@ it("needs a key whose account holds promo.manage", async () => {
   expect(other.status).toBe(403);
   expect((await other.json()).error).toContain("promo.manage");
   auth.headers = new Headers();
-  expect((await GET()).status).toBe(401);
+  expect(
+    (await GET(new Request("https://metagame.games/api/admin/promo"))).status,
+  ).toBe(401);
   expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
 });
 
-it("mints the custom code under the key owner's name", async () => {
+it("mints an unlimited code on the one active $100-off coupon", async () => {
   const response = await send(flyer);
   expect(response.status).toBe(201);
-  expect((await response.json()).minted).toMatchObject({
-    code: "VICTORYPOINTCAFE",
-    name: "Victory Point Cafe",
-    reused: false,
+  expect(await response.json()).toEqual({
+    code: "ELYSIAN",
+    id: "promo_1",
+    active: true,
+    couponId: "flyer100",
     max: null,
     test: true,
   });
   const params = stripe.promotionCodes.create.mock.calls[0][0];
   expect(params).toMatchObject({
-    code: "VICTORYPOINTCAFE",
+    code: "ELYSIAN",
     promotion: { type: "coupon", coupon: "flyer100" },
-    metadata: { purpose: "Flyer", issued_by: "Libi" },
+    metadata: {
+      name: "Elysian flyer",
+      purpose: "Location flyer",
+      notes: "Location flyer · elysian",
+      issued_by: "Libi",
+    },
   });
   expect(params).not.toHaveProperty("max_redemptions");
 });
 
-it("caps uses at 1 unless told otherwise", async () => {
-  await send({ ...flyer, unlimited: undefined });
-  expect(stripe.promotionCodes.create.mock.calls[0][0].max_redemptions).toBe(1);
-  await send({ ...flyer, unlimited: false, uses: 25 });
+it("takes a couponId instead, and caps uses at 1 unless told otherwise", async () => {
+  // undefined drops out of the JSON, as if never sent.
+  await send({
+    ...flyer,
+    amountOffUsd: undefined,
+    maxUses: undefined,
+    couponId: "flyer100",
+  });
+  expect(stripe.coupons.list).not.toHaveBeenCalled();
+  expect(stripe.promotionCodes.create.mock.calls[0][0]).toMatchObject({
+    promotion: { coupon: "flyer100" },
+    max_redemptions: 1,
+  });
+  await send({ ...flyer, maxUses: 25 });
   expect(stripe.promotionCodes.create.mock.calls[1][0].max_redemptions).toBe(
     25,
   );
@@ -125,50 +177,73 @@ it("caps uses at 1 unless told otherwise", async () => {
 it.each([
   ["a blank name", { name: " " }],
   ["a missing purpose", { purpose: undefined }],
-  ["a custom code with a space", { customCode: "VICTORY POINT" }],
-  ["zero uses", { uses: 0, unlimited: false }],
-  ["uses that aren't a number", { uses: "many", unlimited: false }],
+  ["a custom code with a space", { customCode: "ELYSIAN FIELDS" }],
+  ["zero maxUses", { maxUses: 0 }],
+  ["maxUses that aren't a number", { maxUses: "many" }],
+  ["an amount as a string", { amountOffUsd: "100" }],
+  ["a zero amount", { amountOffUsd: 0 }],
+  ["both a coupon and an amount", { amountOffUsd: 100, couponId: "flyer100" }],
 ])("refuses %s before Stripe", async (_, change) => {
   const field = Object.keys(change)[0];
-  const body = { ...flyer, ...change };
-  const response = await send(body);
+  const response = await send({ ...flyer, ...change });
   expect(response.status).toBe(400);
   expect((await response.json()).field).toBe(field);
+  expect(stripe.promotionCodes.list).not.toHaveBeenCalled();
+  expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
+});
+
+it("refuses an amount no coupon, or more than one, takes off", async () => {
+  const none = await send({ ...flyer, amountOffUsd: 75 });
+  expect(none.status).toBe(400);
+  expect(await none.json()).toEqual({
+    error: "No active coupon takes $75 off.",
+    field: "amountOffUsd",
+  });
+  stripe.coupons.list.mockReturnValue({
+    autoPagingToArray: async () => [coupon(), coupon({ id: "flyer100b" })],
+  });
+  const two = await send(flyer);
+  expect(two.status).toBe(400);
+  expect((await two.json()).error).toContain("flyer100, flyer100b");
   expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
 });
 
 it("refuses a body that isn't a JSON object", async () => {
-  expect((await send("name=Victory")).status).toBe(400);
+  expect((await send("name=Elysian")).status).toBe(400);
   expect((await send([flyer])).status).toBe(400);
 });
 
-it("409s a code that already belongs to someone else, reuses one that doesn't", async () => {
+it("409s a custom code that already exists, archived or not", async () => {
+  stripe.promotionCodes.list.mockResolvedValue(codes(promo()));
+  const taken = await send(flyer);
+  expect(taken.status).toBe(409);
+  expect(await taken.json()).toEqual({
+    error: "Code ELYSIAN already exists.",
+    field: "customCode",
+  });
+  expect(stripe.promotionCodes.list).toHaveBeenCalledWith({
+    code: "ELYSIAN",
+    limit: 10,
+  });
+  stripe.promotionCodes.list.mockResolvedValue(codes(promo({ active: false })));
+  expect((await (await send(flyer)).json()).error).toContain("(archived)");
+  expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
+});
+
+it("409s a code someone else takes between the check and the mint", async () => {
+  stripe.promotionCodes.list
+    .mockResolvedValueOnce(codes())
+    .mockResolvedValueOnce(
+      codes(promo({ metadata: { name: "Someone Else", source: "comp-tool" } })),
+    );
   stripe.promotionCodes.create.mockRejectedValue(
     Object.assign(new Error("already exists"), {
       code: "resource_already_exists",
     }),
   );
-  stripe.promotionCodes.list.mockResolvedValue({
-    data: [promo({ metadata: { name: "Someone Else", source: "comp-tool" } })],
-  });
-  const taken = await send(flyer);
-  expect(taken.status).toBe(409);
-  expect(await taken.json()).toMatchObject({ field: "customCode" });
-
-  stripe.promotionCodes.list.mockResolvedValue({
-    data: [
-      promo({
-        metadata: {
-          name: "Victory Point Cafe",
-          source: "comp-tool",
-          purpose: "Flyer",
-        },
-      }),
-    ],
-  });
-  const again = await send(flyer);
-  expect(again.status).toBe(200);
-  expect((await again.json()).minted.reused).toBe(true);
+  const response = await send(flyer);
+  expect(response.status).toBe(409);
+  expect((await response.json()).field).toBe("customCode");
 });
 
 it("pins an unknown coupon on couponId and says when Stripe is off", async () => {
@@ -178,7 +253,11 @@ it("pins an unknown coupon on couponId and says when Stripe is off", async () =>
       param: "promotion[coupon]",
     }),
   );
-  const unknown = await send({ ...flyer, couponId: "nope" });
+  const unknown = await send({
+    ...flyer,
+    amountOffUsd: undefined,
+    couponId: "nope",
+  });
   expect(unknown.status).toBe(400);
   expect(await unknown.json()).toEqual({
     error: "No such coupon: 'nope'",
@@ -189,18 +268,32 @@ it("pins an unknown coupon on couponId and says when Stripe is off", async () =>
   expect((await send(flyer)).status).toBe(503);
 });
 
-it("lists only the codes the promo tool minted", async () => {
-  stripe.promotionCodes.list.mockReturnValue({
-    autoPagingToArray: async () => [
-      promo(),
-      promo({ id: "promo_2", code: "OTHER", metadata: {} }),
-    ],
+it("answers whether a code exists, in any case", async () => {
+  expect(await (await check("?code=elysian")).json()).toEqual({
+    exists: false,
   });
-  auth.headers = new Headers({ "x-api-key": KEY });
-  const response = await GET();
+  expect(stripe.promotionCodes.list).toHaveBeenCalledWith({
+    code: "ELYSIAN",
+    limit: 10,
+  });
+  stripe.promotionCodes.list.mockResolvedValue(
+    codes(promo({ active: false }), promo({ id: "promo_2" })),
+  );
+  expect(await (await check("?code=ELYSIAN")).json()).toEqual({
+    exists: true,
+    active: true,
+  });
+  const bad = await check("?code=ELYSIAN%20FIELDS");
+  expect(bad.status).toBe(400);
+  expect((await bad.json()).field).toBe("code");
+});
+
+it("lists only the codes the promo tool minted", async () => {
+  stripe.promotionCodes.list.mockReturnValue(
+    codes(promo(), promo({ id: "promo_2", code: "OTHER", metadata: {} })),
+  );
+  const response = await check("");
   expect(response.status).toBe(200);
-  const { codes } = await response.json();
-  expect(codes.map((c: { code: string }) => c.code)).toEqual([
-    "VICTORYPOINTCAFE",
-  ]);
+  const { codes: listed } = await response.json();
+  expect(listed.map((c: { code: string }) => c.code)).toEqual(["ELYSIAN"]);
 });

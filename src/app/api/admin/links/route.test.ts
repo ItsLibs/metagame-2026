@@ -54,13 +54,12 @@ import {
 
 const KEY = "mg_links";
 const flyer = {
-  destination: "https://metagame.games/",
-  slug: "Victory Point Cafe",
-  source: "poster",
+  slug: "elysian",
+  destination: "https://metagame.games/buy/ELYSIAN",
+  source: "flyer",
   medium: "PRINT",
-  campaign: "metagame-2026",
-  placement: "Victory Point Cafe",
-  internalName: "Flyer: Victory Point Cafe",
+  placement: "Elysian",
+  internalName: "Flyer · Elysian",
 };
 const send = (body: unknown, key: string | null = KEY) => {
   auth.headers = new Headers(key ? { "x-api-key": key } : {});
@@ -79,7 +78,7 @@ beforeEach(() => {
   vi.mocked(loadLinkOptions).mockResolvedValue({
     source: ["Poster", "Discord"],
     medium: ["print"],
-    campaign: ["metagame-2026"],
+    campaign: ["metagame-2025", "metagame-2026"],
     placement: [],
   });
   vi.mocked(findTrackingLink).mockResolvedValue(null);
@@ -109,35 +108,49 @@ it("needs a key whose account holds links.manage", async () => {
   expect(createTrackingLink).not.toHaveBeenCalled();
 });
 
-it("creates the link with Airtable's spelling under the key owner's name", async () => {
+it("creates a /buy/ link on the default campaign under the key owner's name", async () => {
   const response = await send(flyer);
   expect(response.status).toBe(201);
-  expect(await response.json()).toMatchObject({
-    link: { slug: "victory-point-cafe" },
-    shortUrl: "https://metagame.games/go/victory-point-cafe",
+  expect(await response.json()).toEqual({
+    slug: "elysian",
+    shortUrl: "https://metagame.games/go/elysian",
+    destination: "https://metagame.games/buy/ELYSIAN",
   });
   expect(createTrackingLink).toHaveBeenCalledWith({
-    slug: "victory-point-cafe",
-    destination: "https://metagame.games/",
-    source: "Poster",
+    slug: "elysian",
+    destination: "https://metagame.games/buy/ELYSIAN",
+    // An open field keeps a new value, which Airtable adds as a choice.
+    source: "flyer",
     medium: "print",
     campaign: "metagame-2026",
-    placement: "Victory Point Cafe",
-    internalName: "Flyer: Victory Point Cafe",
+    placement: "Elysian",
+    internalName: "Flyer · Elysian",
     createdBy: "Libi",
   });
   expect(revalidatePath).toHaveBeenCalledWith("/backstage/links");
 });
 
-it("409s a short name that's taken", async () => {
+it("takes a campaign that's in the list, snapped to its spelling", async () => {
+  await send({ ...flyer, source: "POSTER", campaign: "Metagame-2025" });
+  expect(createTrackingLink).toHaveBeenCalledWith(
+    expect.objectContaining({ source: "Poster", campaign: "metagame-2025" }),
+  );
+});
+
+it("409s a short name that's taken, saying where it points", async () => {
   vi.mocked(findTrackingLink).mockResolvedValue({
-    slug: "victory-point-cafe",
+    slug: "elysian",
+    destination: "https://metagame.games/buy/ELYSIAN",
   } as TrackingLink);
   const response = await send(flyer);
   expect(response.status).toBe(409);
   expect(await response.json()).toEqual({
     error: "That short name is already taken.",
     field: "slug",
+    existing: {
+      destination: "https://metagame.games/buy/ELYSIAN",
+      shortUrl: "https://metagame.games/go/elysian",
+    },
   });
   expect(createTrackingLink).not.toHaveBeenCalled();
 });
@@ -149,6 +162,7 @@ it.each([
   ["an empty source", { source: "" }],
   ["a medium over 100 characters", { medium: "x".repeat(101) }],
   ["an unknown campaign", { campaign: "metagame-2027" }],
+  ["an empty placement", { placement: " " }],
   ["an empty slug", { slug: "" }],
   ["a too-short slug", { slug: "vp" }],
   ["a slug with an accent", { slug: "café" }],
