@@ -81,10 +81,14 @@ export default function PlayerCard({
                 >
                   {s.title ?? `${KINDS[s.kinds[0]].label}, title to come`}
                 </Link>
+                {/* The space lets the tag drop to its own line on a narrow card. */}
                 {s.status !== "confirmed" && (
-                  <span className="ml-1.5 font-space-mono text-[10px] tracking-[0.08em] whitespace-nowrap text-ink/50 uppercase">
-                    {s.status === "review" ? "In review" : "Unconference"}
-                  </span>
+                  <>
+                    {" "}
+                    <span className="font-space-mono text-[10px] tracking-[0.08em] whitespace-nowrap text-ink/50 uppercase">
+                      {s.status === "review" ? "In review" : "Unconference"}
+                    </span>
+                  </>
                 )}
               </li>
             ))}

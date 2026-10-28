@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Rubik_Mono_One, Silkscreen } from "next/font/google";
 import { NIGHT_NAME } from "@/v2/data/chapters";
 import { HATS } from "@/v2/hat-trick/hats";
@@ -50,14 +51,24 @@ export default function RulebookExpansions() {
         >
           {words.join(" ")}
         </h3>
-        <div className="mt-3 flex flex-wrap gap-2" aria-label={tiles}>
+        <div
+          className="mt-3 flex flex-wrap gap-1.5 sm:gap-2"
+          aria-label={tiles}
+          // On phones each tile gets an equal share of the card (the viewport
+          // less the page's and card's padding), so the word stays one line.
+          style={
+            {
+              "--tile-w": `clamp(30px, calc((100vw - 80px - ${(tiles.length - 1) * 6}px) / ${tiles.length}), 44px)`,
+            } as CSSProperties
+          }
+        >
           {[...tiles.toUpperCase()].map((letter, i) => (
             <span
               key={i}
               aria-hidden
               // One letter of the sign flickers now and then; hovering the card
               // turns the whole sign up.
-              className={`${nightDisplay.className} grid h-[52px] w-11 place-items-center rounded-[10px] border-[3px] bg-[#1b2350] text-[26px] leading-none transition-[filter] duration-300 group-hover:brightness-125 group-hover:saturate-150 sm:h-[68px] sm:w-[58px] sm:text-[34px] ${i === 2 ? "neon-flicker" : ""}`}
+              className={`${nightDisplay.className} grid h-[52px] w-(--tile-w) place-items-center rounded-[10px] border-[3px] bg-[#1b2350] text-[clamp(20px,7vw,26px)] leading-none transition-[filter] duration-300 group-hover:brightness-125 group-hover:saturate-150 sm:h-[68px] sm:w-[58px] sm:text-[34px] ${i === 2 ? "neon-flicker" : ""}`}
               style={{
                 borderColor: GLOW[i % GLOW.length],
                 boxShadow: `inset 0 -5px 0 #2a3470, 0 0 26px color-mix(in srgb, ${GLOW[i % GLOW.length]} 40%, transparent)`,

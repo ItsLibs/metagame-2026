@@ -1,7 +1,7 @@
-// The Friday-night public event. The 2025 site called it the Night Market;
-// the rulebook brand calls it MetaGame Night. The rename still needs the
-// team's sign-off, so every home-page mention reads it from here.
-export const NIGHT_NAME = "MetaGame Night";
+// The Friday-night public event. The name is final: the Night Market, as in
+// 2025 (Libi, Oct 27; the proposed "MetaGame Night" rename was dropped).
+// Every rulebook mention reads it from here; §6 sets its last word as tiles.
+export const NIGHT_NAME = "Night Market";
 
 export type Chapter = {
   num?: number;
