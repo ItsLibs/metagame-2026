@@ -77,23 +77,39 @@ const NON_GAMES: { thing: string; why: string }[] = [
 
 type Card = {
   title: string;
+  /** For a session: what its host says it is, to judge it by. */
+  teaser?: string;
   counts: boolean;
   why: string;
   session?: Session2026;
 };
 
-// Confirmed sessions with a title whose kind decides the call.
+// The opening of a session's description: a sentence, or two if the first
+// is short, cut at a word.
+function teaser(blurb: string) {
+  const flat = blurb.replace(/\s+/g, " ").trim();
+  const sentences = flat.match(/[^.!?]+[.!?]+(?=\s|$)/g) ?? [flat];
+  let out = sentences[0].trim();
+  if (out.length < 60 && sentences[1]) out += ` ${sentences[1].trim()}`;
+  return out.length > 170
+    ? `${out.slice(0, 167).replace(/\s+\S*$/, "")}…`
+    : out;
+}
+
+// Confirmed sessions with a title and a description, whose kind decides the
+// call.
 const SESSION_POOL: Card[] = SESSIONS_2026.flatMap((s): Card[] => {
-  if (s.status !== "confirmed" || !s.title) return [];
+  if (s.status !== "confirmed" || !s.title || !s.blurb) return [];
+  const card = { title: s.title, teaser: teaser(s.blurb), session: s };
   if (isPlayed(s)) {
     const k = s.kinds.find((k) => PLAYED_WHY[k]);
-    return [{ title: s.title, counts: true, why: PLAYED_WHY[k!]!, session: s }];
+    return [{ ...card, counts: true, why: PLAYED_WHY[k!]! }];
   }
   // Only sessions that are purely talks or workshops make a clear "no".
   const why = s.kinds.every((k) => TALKED_WHY[k])
     ? TALKED_WHY[s.kinds[0]]
     : undefined;
-  return why ? [{ title: s.title, counts: false, why, session: s }] : [];
+  return why ? [{ ...card, counts: false, why }] : [];
 });
 const THING_POOL: Card[] = NON_GAMES.map((n) => ({
   title: n.thing,
@@ -202,6 +218,11 @@ export default function DoesItCount() {
           >
             {card.title}
           </p>
+          {card.teaser && (
+            <p className="mt-2 text-[15px] leading-snug text-ink/70">
+              {card.teaser}
+            </p>
+          )}
           {call === null ? (
             <div className="mt-5 flex flex-wrap gap-2.5">
               <button

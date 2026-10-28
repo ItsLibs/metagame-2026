@@ -14,7 +14,7 @@ import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
 import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
-import DeckDoorway from "@/v2/components/DeckDoorway";
+import ExamplesOfPlay from "@/v2/components/ExamplesOfPlay";
 import PlayerCard from "@/v2/components/PlayerCard";
 import RulebookComponents from "@/v2/components/RulebookComponents";
 import RulebookCover from "@/v2/components/RulebookCover";
@@ -273,9 +273,17 @@ export default function Home() {
             <TetrisDivider />
           </ChapterRule>
         </div>
-        <div className="mt-6">
-          <DeckDoorway />
+        <div className="mt-4 mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h3
+            className={`${DISPLAY} text-[clamp(34px,4.4vw,52px)] leading-[0.9] text-navy`}
+          >
+            Examples of play
+          </h3>
+          <span className="w-full font-space-mono text-xs tracking-[0.12em] text-ink/60 uppercase md:ml-auto md:w-auto">
+            A hand dealt from the 2026 program
+          </span>
         </div>
+        <ExamplesOfPlay />
       </ChapterSection>
 
       <ChapterSection chapter={CHAPTERS.setup} rule={<SetCardDivider />}>

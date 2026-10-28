@@ -29,7 +29,7 @@ const COMPONENTS: Component[] = [
     tile: "bg-sky text-navy",
     strip: "bg-white/60 hover:bg-white",
     title: "Talks",
-    body: "From game designers, puzzle makers and people who study play.",
+    body: "Main-room talks from game designers, puzzle makers and people who study play.",
     sessions: CONFIRMED.filter((s) => s.kinds[0] === "talk"),
   },
   {
@@ -37,7 +37,7 @@ const COMPONENTS: Component[] = [
     tile: "bg-peach text-navy",
     strip: "bg-white/60 hover:bg-white",
     title: "Workshops",
-    body: "Make something: a horror scenario, a fresh idea, a roleplaying theme park.",
+    body: "Design a horror scenario, dream up a roleplaying theme park, train as a troll.",
     sessions: CONFIRMED.filter((s) => s.kinds.includes("workshop")),
   },
   {
@@ -45,7 +45,7 @@ const COMPONENTS: Component[] = [
     tile: "bg-moss text-cream",
     strip: "bg-white/15 hover:bg-white/25",
     title: "Games",
-    body: "Run by attendees: LARPs, social deduction, TTRPGs, tournaments and more.",
+    body: "Sessions run by attendees: tournaments, LARPs, social deduction, indie TTRPGs and more.",
     sessions: CONFIRMED.filter(
       (s) => isPlayed(s) && !s.kinds.includes("megagame"),
     ),
@@ -63,7 +63,7 @@ const COMPONENTS: Component[] = [
     tile: "bg-navy text-cream",
     strip: "",
     title: NIGHT_NAME,
-    body: "Friday night's booths: games to play, things to try, makers to meet. Free and open to all. See §6.",
+    body: "Friday night's booths: games to play, things to try, makers to meet. See §6.",
   },
   {
     glyph: "trivia",
