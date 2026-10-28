@@ -1,11 +1,12 @@
-// Plumbing for the JSON API under /api/admin/schedule: the admin gate, body
-// parsing, host resolution and error responses. The routes themselves are
+// Plumbing for the JSON API under /api/admin: the permission gate, body
+// parsing, host resolution and error responses. The schedule routes are
 // thin wrappers over schedule-store.
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireAccess, type Access } from "./admin-auth";
 import { API_KEY_HEADER, getAuth } from "./auth";
+import type { Permission } from "./permissions";
 import {
   toPacificWall,
   type ScheduleAccount,
@@ -26,17 +27,19 @@ export const error = (message: string, status: number, field?: string) =>
   json({ error: message, ...(field && { field }) }, status);
 
 /**
- * The caller when they may manage the schedule, else the 401/403 to send.
- * Accepts a browser session too, so a team member can hit GET from the address bar.
+ * The caller when they hold `permission`, else the 401/403 to send. Accepts
+ * a browser session too, so a team member can hit GET from the address bar.
  */
-export async function authorize(): Promise<Access | Response> {
-  const access = await requireAccess("schedule.manage");
+export async function authorize(
+  permission: Permission = "schedule.manage",
+): Promise<Access | Response> {
+  const access = await requireAccess(permission);
   if (access) return access;
   const key = (await headers()).get(API_KEY_HEADER);
   if (!key) return error(`Send an API key in ${API_KEY_HEADER}.`, 401);
   const { valid } = await getAuth().api.verifyApiKey({ body: { key } });
   return valid
-    ? error("That key's account can't manage the schedule.", 403)
+    ? error(`That key's account doesn't hold ${permission}.`, 403)
     : error("Invalid API key.", 401);
 }
 
