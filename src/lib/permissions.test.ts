@@ -66,6 +66,7 @@ describe("effectivePermissions", () => {
       }),
     );
     expect([...got].sort()).toEqual([
+      "promo.create",
       "promo.manage",
       "promo.view",
       "schedule.manage",

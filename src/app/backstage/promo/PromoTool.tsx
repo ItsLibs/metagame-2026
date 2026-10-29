@@ -28,13 +28,15 @@ export default function PromoTool({
   couponError,
   mode,
   origin,
-  canManage,
+  canMint,
+  canArchive,
 }: {
   coupons: Coupon[];
   couponError: string | null;
   mode: PromoMode;
   origin: string;
-  canManage: boolean;
+  canMint: boolean;
+  canArchive: boolean;
 }) {
   const [state, setState] = useState<MintState>(initial);
   const [pending, startTransition] = useTransition();
@@ -82,7 +84,7 @@ export default function PromoTool({
 
   return (
     <div className="space-y-10">
-      {canManage && (
+      {canMint && (
         <section className="relative rounded-xl border border-line bg-white p-6 shadow-sm">
           <ModeBadge mode={mode} />
           <h1 className="font-bebas mb-4 text-2xl tracking-wide text-navy">
@@ -290,7 +292,7 @@ export default function PromoTool({
         busy={listsBusy}
         error={listsError}
         origin={origin}
-        canManage={canManage}
+        canArchive={canArchive}
         onLoad={loadLists}
       />
     </div>
@@ -434,14 +436,14 @@ function Existing({
   busy,
   error,
   origin,
-  canManage,
+  canArchive,
   onLoad,
 }: {
   lists: StripeCode[] | null;
   busy: boolean;
   error: string | null;
   origin: string;
-  canManage: boolean;
+  canArchive: boolean;
   onLoad: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -543,7 +545,7 @@ function Existing({
                   code={c}
                   url={redeemUrl(origin, c.code)}
                   acting={acting === c.id}
-                  onToggle={canManage ? () => toggle(c) : undefined}
+                  onToggle={canArchive ? () => toggle(c) : undefined}
                 />
               ))}
             </ul>
@@ -565,7 +567,7 @@ function Existing({
                         code={c}
                         url={redeemUrl(origin, c.code)}
                         acting={acting === c.id}
-                        onToggle={canManage ? () => toggle(c) : undefined}
+                        onToggle={canArchive ? () => toggle(c) : undefined}
                       />
                     ))}
                   </ul>

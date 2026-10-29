@@ -98,13 +98,21 @@ export const PERMISSIONS = {
     label: "View promo codes",
     description: "The comp and discount codes that exist, with their uses.",
   },
+  "promo.create": {
+    audience: "team",
+    group: "Promo codes",
+    level: "edit",
+    label: "Mint promo codes",
+    description: "Mint new codes on Stripe or BTC.",
+    implies: ["promo.view"],
+  },
   "promo.manage": {
     audience: "team",
     group: "Promo codes",
     level: "edit",
     label: "Manage promo codes",
-    description: "Mint, archive and restore codes on Stripe or BTC.",
-    implies: ["promo.view"],
+    description: "Archive and restore codes, on top of minting them.",
+    implies: ["promo.create"],
   },
   "links.manage": {
     audience: "team",

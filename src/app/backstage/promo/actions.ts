@@ -26,7 +26,7 @@ export async function mint(
   _prev: MintState,
   formData: FormData,
 ): Promise<MintState> {
-  const admin = await requireAccess("promo.manage");
+  const admin = await requireAccess("promo.create");
   if (!admin) return { error: EXPIRED };
 
   const name = str(formData, "name");

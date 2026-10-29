@@ -97,6 +97,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   auth.keys = {
     [KEY]: ["promo.manage"],
+    mg_minter: ["promo.create"],
     mg_viewer: ["promo.view"],
     mg_links: ["links.manage"],
   };
@@ -119,14 +120,14 @@ beforeEach(() => {
   );
 });
 
-it("needs a key whose account holds promo.manage", async () => {
+it("needs a key whose account holds promo.create", async () => {
   const none = await send(flyer, null);
   expect(none.status).toBe(401);
   expect(await none.json()).toEqual({ error: "Send an API key in x-api-key." });
   expect((await send(flyer, "mg_revoked")).status).toBe(401);
   const other = await send(flyer, "mg_links");
   expect(other.status).toBe(403);
-  expect((await other.json()).error).toContain("promo.manage");
+  expect((await other.json()).error).toContain("promo.create");
   auth.headers = new Headers();
   expect(
     (await GET(new Request("https://metagame.games/api/admin/promo"))).status,
@@ -137,7 +138,7 @@ it("needs a key whose account holds promo.manage", async () => {
 it("lets a promo.view key read codes but not mint them", async () => {
   const minted = await send(flyer, "mg_viewer");
   expect(minted.status).toBe(403);
-  expect((await minted.json()).error).toContain("promo.manage");
+  expect((await minted.json()).error).toContain("promo.create");
   expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
   auth.headers = new Headers({ "x-api-key": "mg_viewer" });
   const listed = await GET(
@@ -145,6 +146,12 @@ it("lets a promo.view key read codes but not mint them", async () => {
   );
   expect(listed.status).toBe(200);
   expect(await listed.json()).toEqual({ exists: false });
+});
+
+it("lets a promo.create key mint without promo.manage", async () => {
+  const minted = await send(flyer, "mg_minter");
+  expect(minted.status).toBe(201);
+  expect(stripe.promotionCodes.create).toHaveBeenCalledTimes(1);
 });
 
 it("mints an unlimited code on the one active $100-off coupon", async () => {
