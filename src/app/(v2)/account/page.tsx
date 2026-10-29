@@ -6,6 +6,7 @@ import { GiTheaterCurtains } from "react-icons/gi";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
 import AvatarForm from "./AvatarForm";
+import MegagamePanel from "./MegagamePanel";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
@@ -15,6 +16,7 @@ import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
 import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
+import { loadMegagameLevels } from "@/lib/megagame-store";
 import {
   loadRsvpCounts,
   loadSchedule,
@@ -54,6 +56,7 @@ export default async function AccountPage({
     linkable,
     admin,
     backstage,
+    levels,
   ] = await Promise.all([
     getDb()
       .select()
@@ -68,6 +71,7 @@ export default async function AccountPage({
     canSeeSchedule(),
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
+    loadMegagameLevels(user.id),
   ]);
   const tickets = rows.map((t) => ticketView(t, user.id, email));
 
@@ -135,6 +139,7 @@ export default async function AccountPage({
               )}
             />
           ),
+          megagame: <MegagamePanel levels={levels} />,
         }}
       />
     </div>
