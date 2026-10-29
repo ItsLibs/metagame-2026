@@ -60,7 +60,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
 
 // What each table is for, in one line. Reviewed alongside the columns.
 const TABLE_NOTES: Record<string, string> = {
-  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL.",
+  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL. wizard_level, pirate_level and alien_level are the Megagame class levels, 0–5 (check constraints); Better Auth doesn't know them, so only our code sets them (for now, the Megagame tab on /account).",
   session:
     "Signed-in browser sessions. Deleting a user removes their sessions (cascade).",
   account:
