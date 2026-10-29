@@ -3,30 +3,25 @@ import { MEGAGAME_PROPOSAL_FORM_URL, RFP_FORM_URL } from "@/v2/lib/links";
 import type { FormDef } from "./engine";
 import { opts } from "./shared";
 
-// A puzzle or game for the Megagame, as the Airtable form asks it. The
-// spoilers (the factions and the elements they're after) only show to those
-// who ask for them.
+// A puzzle or game for the Megagame, on the table the Airtable form wrote
+// to. The spoilers (the factions and the elements they're after) only show
+// to those who ask for them.
 export const megagame: FormDef = {
   slug: "megagame",
   path: MEGAGAME_PROPOSAL_FORM_URL,
   tableId: airtableConfig.megagameSubmissionsTableId,
   name: "Megagame puzzle or game",
-  eyebrow: "The Megagame · puzzles & games",
-  title: "Build part of the Megagame.",
+  eyebrow: "Submission · Metagame 2026",
+  title: "Build part of the Megagame",
   pitch:
-    "The Megagame starts when you step through the gate and runs all weekend: one part puzzle hunt, one part game gauntlet, one part interlocking story, threaded through the rest of Metagame. Last year about 30 people contributed puzzles and games. We're after more, especially ones that work in alliances, maps, alchemy, space travel, gems or stars.",
-  facts: [
-    { label: "Takes", value: "About 10 minutes" },
-    { label: "Was due", value: "Oct 10" },
-    { label: "Attending?", value: "Not required" },
-  ],
-  notice: `On difficulty: as a crossword, a Friday or Saturday NYT. The late MIT Mystery Hunt is too hard, the early rounds about right, and we'll want plenty of easier 15-minute puzzles too. Got a session and want the Megagame in it? Say so on the [session proposal](${RFP_FORM_URL}).`,
+    "The Megagame runs all weekend: a puzzle hunt, a gauntlet of games and a story, threaded through the rest of Metagame and built from puzzles and games people send in. Tell us about yours here. You don't need to be coming to Metagame to contribute, and pieces that touch alliances, maps, alchemy, space travel, gems or stars are especially welcome. Submissions were due October 10, but the form is still open.",
+  aside: "This should take about 10 minutes.",
   steps: [
     {
       key: "game",
       title: "What are you making?",
       intro:
-        "Tell us as much as you like. It helps most to say which parts are fixed and which could easily change if we asked.",
+        "Tell us as much as you like, and say which parts are fixed and which could change if we asked. For difficulty, think of a Friday or Saturday NYT crossword: the early rounds of the MIT Mystery Hunt are about right, and we want plenty of easier 15-minute puzzles too.",
       items: [
         {
           key: "kind",
@@ -107,6 +102,7 @@ export const megagame: FormDef = {
           label: "Fewest players",
           min: 1,
           max: 1000,
+          row: "players",
         },
         {
           key: "maxPlayers",
@@ -116,6 +112,7 @@ export const megagame: FormDef = {
           help: "No maximum? Say 100, or leave it blank.",
           min: 1,
           max: 1000,
+          row: "players",
         },
         {
           key: "teams",
@@ -141,6 +138,23 @@ export const megagame: FormDef = {
           help: "Assume half the players don't know the rules, if it uses existing ones.",
           min: 1,
           max: 10000,
+        },
+        {
+          key: "output",
+          field: "fldmnRZvkyd3GX0EP",
+          type: "choices",
+          label: "What could solving it give?",
+          help: "The Megagame chains puzzles together, so a result we can use as a clue for the next step helps. Select any it could give.",
+          required: true,
+          options: opts(
+            "Word",
+            "String of letters",
+            "String of numbers",
+            "Coordinates",
+            "Image",
+            "Physical token",
+            "None of the above",
+          ),
         },
       ],
     },
@@ -170,34 +184,10 @@ export const megagame: FormDef = {
       ],
     },
     {
-      key: "output",
-      title: "What does solving it give?",
-      intro:
-        "The Megagame chains puzzles together. Could yours hand out a result we can use as a clue or lead for another step?",
-      items: [
-        {
-          key: "output",
-          field: "fldmnRZvkyd3GX0EP",
-          type: "choices",
-          label: "Which kinds of result could it give?",
-          required: true,
-          options: opts(
-            "Word",
-            "String of letters",
-            "String of numbers",
-            "Coordinates",
-            "Image",
-            "Physical token",
-            "None of the above",
-          ),
-        },
-      ],
-    },
-    {
       key: "spoilers",
       title: "Spoilers?",
       intro:
-        "We know more about this year's themes, but knowing them spoils the surprise. Some people would rather not, and still want to make something.",
+        "We know this year's themes, but knowing them spoils the surprise. Some people would rather not, and still want to make something.",
       items: [
         {
           key: "spoilers",
@@ -219,6 +209,7 @@ export const megagame: FormDef = {
           field: "flds2AXpXTJDHRZ4s",
           type: "choices",
           label: "Elements you could include or adapt",
+          help: "Select any of these that apply.",
           options: opts(
             "Pirates",
             "Wizards",
@@ -246,8 +237,7 @@ export const megagame: FormDef = {
     },
     {
       key: "contact",
-      title: "How do we reach you?",
-      intro: "We'll want to talk to you!",
+      title: "Who are you?",
       items: [
         {
           key: "name",
@@ -256,6 +246,7 @@ export const megagame: FormDef = {
           label: "Your name",
           required: true,
           autoComplete: "name",
+          row: "you",
         },
         {
           key: "email",
@@ -264,6 +255,7 @@ export const megagame: FormDef = {
           label: "Email",
           required: true,
           autoComplete: "email",
+          row: "you",
         },
         {
           key: "phone",
@@ -271,6 +263,7 @@ export const megagame: FormDef = {
           type: "phone",
           label: "Phone",
           autoComplete: "tel",
+          row: "reach",
         },
         {
           key: "otherContact",
@@ -278,18 +271,14 @@ export const megagame: FormDef = {
           type: "text",
           label: "Other contact info",
           help: "Say which app, like Discord @cool_designer or Signal designer.1337.",
+          row: "reach",
         },
-      ],
-    },
-    {
-      key: "lastYear",
-      title: "Were you here last year?",
-      items: [
         {
           key: "lastYear",
           field: "fldCHYyOzYiMqkeXX",
           type: "choices",
           label: "Your part in Metagame 2025",
+          help: "Select any of these that apply.",
           options: opts(
             "Ran a Megagame Session",
             "Ran a Session/Game, not part of the Megagame",
@@ -302,7 +291,7 @@ export const megagame: FormDef = {
     },
   ],
   done: {
-    title: "Your piece is in the pile.",
+    title: "Thanks, we've got it.",
     body: "The Megagame team will look it over and be in touch about where it fits.",
     links: [
       { label: "Read about the Megagame", href: "/#megagame" },
