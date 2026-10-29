@@ -252,12 +252,16 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                     </td>
                     {roles.map((r) => {
                       const stored = r.permissions.includes(key);
-                      const by = stored ? undefined : implier(r, key);
+                      // An implied box is locked even when also stored, so the
+                      // direct grant survives if the implier is later removed.
+                      const by = implier(r, key);
                       return (
                         <td key={r.id} className="px-3 py-2 align-top">
                           <span
                             title={
-                              by && describeSource({ kind: "implied", by })
+                              by &&
+                              describeSource({ kind: "implied", by }) +
+                                (stored ? "; also granted directly." : "")
                             }
                           >
                             <input
