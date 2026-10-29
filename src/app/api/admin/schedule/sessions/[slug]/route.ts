@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 type Ctx = RouteContext<"/api/admin/schedule/sessions/[slug]">;
 
 export async function GET(_request: Request, ctx: Ctx) {
-  const access = await authorize();
+  const access = await authorize("schedule.view");
   if (access instanceof Response) return access;
   const session = await sessionBySlug((await ctx.params).slug);
   return session ? json({ session }) : error("No such session.", 404);

@@ -83,13 +83,23 @@ export const PERMISSIONS = {
     description:
       "Rooms marked volunteer-only, such as ops desks, alongside the public ones.",
   },
+  // Read-only API access, e.g. for pulling needs into a supplies list.
+  "schedule.view": {
+    audience: "team",
+    group: "Schedule",
+    level: "view",
+    label: "View schedule data",
+    description:
+      "Every session, draft or not, with its needs, over the API. Not RSVP lists.",
+    implies: ["schedule.preview", "schedule.volunteer_rooms"],
+  },
   "schedule.manage": {
     audience: "team",
     group: "Schedule",
     level: "edit",
     label: "Edit schedule",
     description: "On the admin grid and over the API.",
-    implies: ["schedule.preview", "schedule.volunteer_rooms"],
+    implies: ["schedule.view"],
   },
   "promo.view": {
     audience: "team",
