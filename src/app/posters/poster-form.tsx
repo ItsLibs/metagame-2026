@@ -24,7 +24,7 @@ export default function PosterForm({
 }: {
   options: PosterOption[];
   initialArea: string;
-  /** Suggested codes for staff with promo.manage; empty for everyone else. */
+  /** Suggested codes for staff with promo.view; empty for everyone else. */
   promos: PromoChoice[];
 }) {
   const [area, setArea] = useState(

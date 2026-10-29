@@ -6,6 +6,7 @@ import BtcModal from "@/v2/components/tickets/BtcModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
 import DiscountRateModal from "@/v2/components/tickets/DiscountRateModal";
 import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
+import FriendSwagModal from "@/v2/components/tickets/FriendSwagModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
 import {
@@ -30,7 +31,10 @@ import { HEADING } from "../styles";
 // via the raised Button variant (bordered navy face with a salmon hard-shadow
 // that grows and slides up-left on hover). Layout only; the visual lives in the
 // variant.
-const TILE = "min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full";
+// The min height matches a three-line tile, so tiles stay even without the
+// row stretching them (it can't: the family tile's swag bubble adds height).
+const TILE =
+  "min-h-[112px] min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full";
 const TILE_LABEL =
   "font-space-mono text-[13px] tracking-[0.18em] uppercase whitespace-nowrap text-cream/85";
 const TILE_NOTE =
@@ -51,6 +55,17 @@ const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.currentTarget.href = withPromo(withUtm(href));
 };
+
+const HASH_MODALS = [
+  "supporter",
+  "day-pass",
+  "family-pack",
+  "friend-swag",
+  "discount-rate",
+] as const;
+type HashModal = (typeof HASH_MODALS)[number];
+const isHashModal = (id: string): id is HashModal =>
+  (HASH_MODALS as readonly string[]).includes(id);
 
 export default function TicketsPanel({
   showHeading = true,
@@ -73,24 +88,24 @@ export default function TicketsPanel({
     () => earlyBird,
   );
   const standard = getTicket("standard");
-  const [supporterOpen, setSupporterOpen] = useState(false);
-  const [dayPassOpen, setDayPassOpen] = useState(false);
-  const [familyPackOpen, setFamilyPackOpen] = useState(false);
-  const [discountOpen, setDiscountOpen] = useState(false);
-  // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
-  // gives the browser its scroll target. Closing drops the hash so a repeat
-  // click on the same link changes the URL again and reopens it.
+  // Each tile that opens a modal (rather than linking straight to Stripe)
+  // deep-links from /#<id>, e.g. /#supporter from /sponsor or /#family-pack
+  // from an email; the tile's id gives the browser its scroll target. Closing
+  // drops the hash so a repeat click on the same link changes the URL again
+  // and reopens it.
+  const [openModal, setOpenModal] = useState<HashModal | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const closeSupporter = () => {
-    setSupporterOpen(false);
-    if (window.location.hash === "#supporter") {
+  const closeModal = () => {
+    setOpenModal(null);
+    if (isHashModal(window.location.hash.slice(1))) {
       router.replace(pathname, { scroll: false });
     }
   };
   useEffect(() => {
     const check = () => {
-      if (window.location.hash === "#supporter") setSupporterOpen(true);
+      const id = window.location.hash.slice(1);
+      if (isHashModal(id)) setOpenModal(id);
     };
     check();
     window.addEventListener("hashchange", check);
@@ -150,7 +165,7 @@ export default function TicketsPanel({
       </button>
 
       <div
-        className={`flex flex-wrap items-stretch gap-[18px] max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
+        className={`flex flex-wrap items-start gap-[18px] max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
       >
         {standard &&
           earlyBirdActive &&
@@ -231,7 +246,7 @@ export default function TicketsPanel({
           type="button"
           variant="raised"
           id="supporter"
-          onClick={() => setSupporterOpen(true)}
+          onClick={() => setOpenModal("supporter")}
           className={`${TILE} scroll-mt-24`}
         >
           <span className={TILE_LABEL}>Supporter</span>
@@ -247,7 +262,8 @@ export default function TicketsPanel({
         <Button
           type="button"
           variant="raised"
-          onClick={() => setDayPassOpen(true)}
+          id="day-pass"
+          onClick={() => setOpenModal("day-pass")}
           // Narrower padding + a 32px line box so the three-price line fits the
           // shared 210px tile at the same height as the others.
           className={TILE.replace("px-7", "px-4")}
@@ -264,30 +280,46 @@ export default function TicketsPanel({
             {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
           </span>
         </Button>
+        {/* The swag bubble is a sibling, not a child: a button can't nest in
+            the tile's button. It straddles the tile's bottom edge and follows
+            the tile's hover lift, and the margin keeps it clear of whatever
+            tile wraps in below. */}
+        <div className="relative mb-9 flex">
+          <Button
+            type="button"
+            variant="raised"
+            id="family-pack"
+            onClick={() => setOpenModal("family-pack")}
+            // Narrower padding so the long label fits the shared 210px tile.
+            className={`peer ${TILE.replace("px-7", "px-4")}`}
+          >
+            <span className={TILE_LABEL}>Family &amp; Friends</span>
+            <span className="flex items-baseline gap-2.5 leading-none">
+              <span className="text-[18px] font-bold text-cream/40 line-through">
+                ${STANDARD_USD}
+              </span>
+              <span className={`${HEADING} text-[30px] text-tan`}>
+                ${FAMILY_PACK.usd}
+              </span>
+            </span>
+            <span className={TILE_NOTE}>
+              each · {FAMILY_PACK.min}–{FAMILY_PACK.max} tickets
+            </span>
+          </Button>
+          <button
+            type="button"
+            id="friend-swag"
+            onClick={() => setOpenModal("friend-swag")}
+            className="absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105"
+          >
+            Plus special bring‑a‑friend reward swag
+          </button>
+        </div>
         <Button
           type="button"
           variant="raised"
-          onClick={() => setFamilyPackOpen(true)}
-          // Narrower padding so the long label fits the shared 210px tile.
-          className={TILE.replace("px-7", "px-4")}
-        >
-          <span className={TILE_LABEL}>Family &amp; Friends</span>
-          <span className="flex items-baseline gap-2.5 leading-none">
-            <span className="text-[18px] font-bold text-cream/40 line-through">
-              ${STANDARD_USD}
-            </span>
-            <span className={`${HEADING} text-[30px] text-tan`}>
-              ${FAMILY_PACK.usd}
-            </span>
-          </span>
-          <span className={TILE_NOTE}>
-            each · {FAMILY_PACK.min}–{FAMILY_PACK.max} tickets
-          </span>
-        </Button>
-        <Button
-          type="button"
-          variant="raised"
-          onClick={() => setDiscountOpen(true)}
+          id="discount-rate"
+          onClick={() => setOpenModal("discount-rate")}
           className={TILE}
         >
           <span className={TILE_LABEL}>Student / Aid</span>
@@ -304,13 +336,17 @@ export default function TicketsPanel({
           </VolunteerFormLink>
         </Button>
       </div>
-      {supporterOpen && <SupporterModal onClose={closeSupporter} />}
-      {dayPassOpen && <DayPassModal onClose={() => setDayPassOpen(false)} />}
-      {discountOpen && (
-        <DiscountRateModal onClose={() => setDiscountOpen(false)} />
+      {openModal === "supporter" && <SupporterModal onClose={closeModal} />}
+      {openModal === "day-pass" && <DayPassModal onClose={closeModal} />}
+      {openModal === "discount-rate" && (
+        <DiscountRateModal onClose={closeModal} />
       )}
-      {familyPackOpen && (
-        <FamilyPackModal onClose={() => setFamilyPackOpen(false)} />
+      {openModal === "family-pack" && <FamilyPackModal onClose={closeModal} />}
+      {openModal === "friend-swag" && (
+        <FriendSwagModal
+          onClose={closeModal}
+          onBuy={() => setOpenModal("family-pack")}
+        />
       )}
       {btcOpen && standard && (
         <BtcModal

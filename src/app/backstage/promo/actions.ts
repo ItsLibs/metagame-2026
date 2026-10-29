@@ -65,7 +65,7 @@ export async function mint(
 }
 
 export async function listCodes(): Promise<StripeCode[]> {
-  if (!(await requireAccess("promo.manage"))) throw new Error(EXPIRED);
+  if (!(await requireAccess("promo.view"))) throw new Error(EXPIRED);
   return listStripeCodes();
 }
 
