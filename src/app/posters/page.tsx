@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 /** Live codes from /backstage/promo as typing suggestions for staff; empty for everyone else. */
 async function promoChoices(): Promise<PromoChoice[]> {
-  if (!(await toolAccess("promo.manage"))) return [];
+  if (!(await toolAccess("promo.view"))) return [];
   try {
     return (await listStripeCodes())
       .filter((c) => c.active && (c.max == null || c.redeemed < c.max))
