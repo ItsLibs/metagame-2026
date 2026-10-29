@@ -26,13 +26,13 @@ const TEAMS = [
   { name: "Orange", bg: "#eaa35a" },
 ];
 
-// The 2025 edition's box back, laid straight on the page: the final box
-// score, each number counting up as the page opens, and the two teams.
-export default function BoxScore() {
+// Last year in numbers, straight on the page: each number counting up as
+// the page opens, and the two megagame teams.
+export default function YearInNumbers() {
   return (
     <aside aria-label="Metagame 2025 in numbers">
       <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
-        Box score · Final
+        2025 in numbers
       </p>
       <dl className="mt-3 grid grid-cols-2 gap-x-6 border-t-2 border-navy sm:grid-cols-3">
         {STATS.map(({ label, value }, i) => (

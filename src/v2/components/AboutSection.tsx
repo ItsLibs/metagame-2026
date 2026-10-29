@@ -2,44 +2,42 @@ import { HATS } from "@/v2/hat-trick/hats";
 import type { ClockSession } from "@/v2/lib/schedule-clock";
 import crossword from "../../../public/images/carousel/4_crossword.jpg";
 import roundRobin from "../../../public/images/misc_photos/board_game_round_robin_2.jpg";
-import ExamplesOfPlay from "./ExamplesOfPlay";
-import RulebookFigure from "./RulebookFigure";
+import Figure from "./Figure";
+import ProgramPicks from "./ProgramPicks";
 import ScheduleClock from "./ScheduleClock";
 
 // The photo column is this wide on a laptop; sizes keeps the downloads to it.
 const FIG_SIZES = "(min-width: 1024px) 304px, (min-width: 640px) 50vw, 100vw";
 
-// §1 of the rulebook as one spread: rule one, then the 2026 weekend on a
-// clock, then the examples of play (a dealt hand of 2026 sessions), beside a
-// column of two 2025 photos. Fig. 1 hides three Hat Trick hats, Fig. 2 the
+// What Metagame is, as one spread: the idea, then the 2026 weekend on a
+// clock, then three picks from the program, beside a column of two 2025
+// photos. The first photo hides three Hat Trick hats, the second the
 // wizard's.
-export default function RulebookObject({
+export default function AboutSection({
   sessions,
 }: {
   sessions: ClockSession[];
 }) {
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-11">
-      <div className="flex flex-col gap-10">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-11">
+      <div className="flex min-w-0 flex-col gap-10">
         <p className="max-w-[30em] text-[clamp(19px,2vw,23px)] leading-[1.4] text-navy">
-          Rule one: if it&apos;s designed to be played, it counts. If building
-          it means asking &ldquo;what would the player choose to do
-          next?&rdquo;, it&apos;s a game.
+          If it&apos;s designed to be played, it counts. If building it means
+          asking &ldquo;what would the player choose to do next?&rdquo;,
+          it&apos;s a game.
         </p>
         <ScheduleClock sessions={sessions} />
-        <ExamplesOfPlay />
+        <ProgramPicks />
       </div>
       <div className="grid content-start gap-5 sm:grid-cols-2 lg:grid-cols-1">
-        <RulebookFigure
-          fig="1"
-          caption="Players solving the wall crossword. Metagame 2025."
+        <Figure
+          caption="Solving the wall crossword at Metagame 2025."
           src={crossword}
           alt="A group solving a crossword written on a wall"
           hats={[HATS.skyCap, HATS.navyCap, HATS.redHat]}
           sizes={FIG_SIZES}
         />
-        <RulebookFigure
-          fig="2"
+        <Figure
           caption="The board game round robin at Metagame 2025."
           src={roundRobin}
           alt="A crowd leaning over a long table of abstract games during the board game round robin"

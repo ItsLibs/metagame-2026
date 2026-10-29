@@ -84,7 +84,7 @@ function Face({ t }: { t: number }) {
   );
 }
 
-// §1's clock: the 2026 weekend replayed fifteen minutes at a time, like
+// The 2026 weekend replayed fifteen minutes at a time, like
 // /last-year's instant replay but with a clock in place of its bars. It runs
 // on the team's draft schedule (loadClockSessions) and lists what's on at
 // each moment.

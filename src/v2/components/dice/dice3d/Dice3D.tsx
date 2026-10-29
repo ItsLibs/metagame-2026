@@ -331,7 +331,7 @@ function initialPhase(): Phase {
   return "meta";
 }
 
-// `size` scales the resting row (RESTING_SIZE by default; the rulebook cover
+// `size` scales the resting row (RESTING_SIZE by default; the home hero
 // uses a smaller one). It scales the whole group, so kept takes still land.
 export default function Dice3D({ size = RESTING_SIZE }: { size?: number }) {
   const [phase, setPhase] = useState<Phase>(initialPhase);

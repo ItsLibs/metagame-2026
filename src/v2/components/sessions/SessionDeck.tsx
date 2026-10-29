@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { CircleCheck, Layers, Search } from "lucide-react";
-import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
+import PageSection, { PAGE } from "@/v2/components/PageSection";
 import { NoPuzzle } from "@/v2/components/dividers/DividerRow";
 import GoDivider from "@/v2/components/dividers/go";
 import JigsawDivider from "@/v2/components/dividers/jigsaw";
 import TetrisDivider from "@/v2/components/dividers/tetris";
-import { SESSIONS_CHAPTERS } from "@/v2/data/chapters";
+import { SESSIONS_SECTIONS } from "@/v2/data/sections";
 import {
   SESSIONS_2026,
   type Session2026,
@@ -20,18 +20,18 @@ import { collect, useCollection } from "./collection";
 import { hostLine, KINDS, STATUS } from "./kinds";
 import SessionDialog from "./SessionDialog";
 
-// One chapter per status, in page order, each under a game divider like the
-// home page's chapters (out of the cover puzzle, which lives there).
+// One section per status, in page order, each under a game divider like the
+// home page's sections (out of the cover puzzle, which lives there).
 const GROUPS = [
   {
     status: "confirmed",
-    chapter: SESSIONS_CHAPTERS.confirmed,
+    section: SESSIONS_SECTIONS.confirmed,
     rule: <TetrisDivider />,
   },
-  { status: "review", chapter: SESSIONS_CHAPTERS.review, rule: <GoDivider /> },
+  { status: "review", section: SESSIONS_SECTIONS.review, rule: <GoDivider /> },
   {
     status: "unconference",
-    chapter: SESSIONS_CHAPTERS.unconference,
+    section: SESSIONS_SECTIONS.unconference,
     rule: <JigsawDivider />,
   },
 ] as const;
@@ -154,7 +154,7 @@ function SessionCard({
 }
 
 // Every 2026 session so far, as a deck: a control bar (deal a random one,
-// search, filter by kind, your collection so far), then one chapter per
+// search, filter by kind, your collection so far), then one section per
 // status. A card opens its details and joins the collection; /sessions#slug
 // links straight to one, and ?q= prefills the search.
 export default function SessionDeck() {
@@ -298,16 +298,16 @@ export default function SessionDeck() {
       </div>
 
       <NoPuzzle>
-        {GROUPS.map(({ status, chapter, rule }) => {
+        {GROUPS.map(({ status, section, rule }) => {
           const all = SESSIONS_2026.filter((s) => s.status === status).length;
           const cards = shown.filter((s) => s.status === status);
           return (
-            <ChapterSection
+            <PageSection
               key={status}
               rule={rule}
-              chapter={{
-                ...chapter,
-                aka: `${filtered ? `${cards.length} of ` : ""}${all} · ${chapter.aka}`,
+              section={{
+                ...section,
+                aka: `${filtered ? `${cards.length} of ` : ""}${all} · ${section.aka}`,
               }}
             >
               {cards.length ? (
@@ -324,7 +324,7 @@ export default function SessionDeck() {
               ) : (
                 <p className="text-ink/60">Nothing here matches.</p>
               )}
-            </ChapterSection>
+            </PageSection>
           );
         })}
       </NoPuzzle>

@@ -22,14 +22,19 @@ export const SECTION = `${SECTION_ANCHOR} py-8`;
 export const FIELD_LIGHT =
   "border-navy/20 bg-white text-ink placeholder:text-ink/40 focus:border-meeple";
 
-// The rulebook's display face (Bebas Neue): chapter heads, box-back stats,
+// The site's display face (Bebas Neue): section heads, at-a-glance facts,
 // card titles.
 export const DISPLAY = "font-[family-name:var(--font-bebas)] font-normal";
 
-// The photo square beside a §4 player; the "You?" silhouette matches it.
+// A small label over a title, a list or a figure: mono, bold, tracked,
+// uppercase. Colour is the caller's (meeple over a title, navy over a list).
+export const KICKER =
+  "font-space-mono text-xs font-bold tracking-[0.14em] uppercase";
+
+// The photo square beside a speaker; the "You?" silhouette matches it.
 export const PLAYER_PHOTO = "size-[72px] shrink-0 overflow-hidden rounded-lg";
 
-// The rulebook is laid out on the page itself, not in boxes: rules and
-// hairlines set things apart, and colour comes in tokens, round game pieces
-// that hold a glyph or an icon. Size and colour are the caller's.
+// Content sits on the page itself, not in boxes: rules and hairlines set
+// things apart, and colour comes in tokens, round game pieces that hold a
+// glyph or an icon. Size and colour are the caller's.
 export const TOKEN = "grid shrink-0 place-items-center rounded-full";

@@ -2,34 +2,33 @@
 
 import { usePathname } from "next/navigation";
 import {
-  CHAPTERS,
-  LAST_YEAR_CHAPTERS,
-  SESSIONS_CHAPTERS,
-  type Chapter,
-} from "@/v2/data/chapters";
+  LAST_YEAR_SECTIONS,
+  SECTIONS,
+  SESSIONS_SECTIONS,
+  type Section,
+} from "@/v2/data/sections";
 import ExpandingNav from "./nav/ExpandingNav";
-import RulebookHeader from "./RulebookHeader";
+import SiteHeader from "./SiteHeader";
 
-// Pages that read as the game's rulebook, each under the sticky header with
-// its own chapters.
-const RULEBOOKS: Record<string, Chapter[]> = {
-  "/": Object.values(CHAPTERS),
-  "/sessions": Object.values(SESSIONS_CHAPTERS),
-  "/last-year": Object.values(LAST_YEAR_CHAPTERS),
+// The long pages, each under the sticky header with its own sections.
+const SECTIONED: Record<string, Section[]> = {
+  "/": Object.values(SECTIONS),
+  "/sessions": Object.values(SESSIONS_SECTIONS),
+  "/last-year": Object.values(LAST_YEAR_SECTIONS),
 };
 
-// Rulebook pages get the chapter header. Every other page keeps the corner
-// die that unfolds into the links.
+// Those pages get the section header. Every other page keeps the corner die
+// that unfolds into the links.
 export default function SiteShell({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const chapters = RULEBOOKS[usePathname()];
+  const sections = SECTIONED[usePathname()];
   return (
     <>
-      {chapters ? <RulebookHeader chapters={chapters} /> : <ExpandingNav />}
+      {sections ? <SiteHeader sections={sections} /> : <ExpandingNav />}
       {/* Symmetric gutter so the page's center doesn't shift under the corner nav. */}
       <main
-        className={`flex-1 overflow-x-clip ${chapters ? "" : "md:px-20 lg:px-24"}`}
+        className={`flex-1 overflow-x-clip ${sections ? "" : "md:px-20 lg:px-24"}`}
       >
         {children}
       </main>

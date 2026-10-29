@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     "Help make Metagame 2026: some teams need help now, before the con, and others on the weekend of Nov 6–8.",
 };
 
-// Each column sits on the page under a navy rule, like the rulebook's.
+// Each column sits on the page under a navy rule, like the home page's.
 const COLUMN = "border-t-2 border-navy pt-4";
 
 function TeamList({ teams }: { teams: VolunteerTeam[] }) {

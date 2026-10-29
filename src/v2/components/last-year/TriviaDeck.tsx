@@ -82,7 +82,7 @@ const RANKS = [
   { at: 10, name: "Metagamer" },
 ];
 
-// §3: a trivia round on the 2025 program, played on the page. Each question
+// A trivia round on the 2025 program, played on the page. Each question
 // is a real session; say whether it was a talk, a workshop or a game, and the
 // answer comes up in place of the choices: what it was, who ran it and when.
 export default function TriviaDeck() {

@@ -11,7 +11,7 @@ import {
 import { getServerSnapshot, getSnapshot, subscribe } from "@/v2/puzzle/store";
 
 // Crops of the 2560×1928 library photo, as background size and position. The
-// box back shows the cubby shelf at 16:10, so the changing cubby reads at a
+// aside shows the cubby shelf at 16:10, so the changing cubby reads at a
 // glance; the enlargement shows a little more at 4:3, big enough to read the
 // win image's sign.
 const CROP: CSSProperties = {
@@ -25,12 +25,12 @@ const ZOOM: CSSProperties = {
   backgroundPosition: "100% 69%",
 };
 
-// The cover puzzle (src/v2/puzzle) as the box back's product photo: the game
+// The cover puzzle (src/v2/puzzle) as the hero's photo: the game
 // library at Lighthaven, whose one changing cubby names the current game. The
 // boot script sets the image as --puzzle-image on <html> before first paint,
 // so this renders without client state; a right guess on a chapter rule
-// swaps it, and the last one brings up the win image. "Contents may vary" is
-// the only hint, as on any game box.
+// swaps it, and the last one brings up the win image. The caption gives
+// nothing away.
 export default function ShelfFigure() {
   const { current } = useSyncExternalStore(
     subscribe,
@@ -70,7 +70,7 @@ export default function ShelfFigure() {
       <figcaption className="mt-2 font-space-mono text-[11px] leading-snug tracking-[0.04em] text-ink/60">
         {current === "win"
           ? "Every game is back. Read the sign on the shelf."
-          : "Shown: the game library at Lighthaven. Contents may vary from those shown."}
+          : "The game library at Lighthaven."}
       </figcaption>
     </figure>
   );

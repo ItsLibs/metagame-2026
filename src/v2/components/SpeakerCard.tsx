@@ -10,7 +10,7 @@ import { KINDS, STATUS } from "./sessions/kinds";
 import SessionDialog from "./sessions/SessionDialog";
 import { DISPLAY, PLAYER_PHOTO } from "./styles";
 
-// Sessions listed under a player; any more are on the sessions page.
+// Sessions listed under a speaker; any more are on the sessions page.
 const LISTED = 3;
 
 const label = (s: Session2026) =>
@@ -18,10 +18,10 @@ const label = (s: Session2026) =>
 const tag = (s: Session2026) =>
   s.status === "confirmed" ? null : STATUS[s.status].label;
 
-// One speaker in the rulebook's §4 Players, straight on the page: the photo
-// square (with any Hat Trick hats), name and affiliation, then their
-// sessions. A session opens its details in a pop-up.
-export default function PlayerCard({
+// One speaker, straight on the page: the photo square (with any Hat Trick
+// hats), name and affiliation, then their sessions. A session opens its
+// details in a pop-up.
+export default function SpeakerCard({
   name,
   title,
   titleUrl,

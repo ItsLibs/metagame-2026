@@ -14,7 +14,7 @@ export default function SpeakerCtaCard({
   compact = false,
 }: {
   href: string;
-  /** The rulebook's §4 player-card size: silhouette square beside the text. */
+  /** The speaker-card size: silhouette square beside the text. */
   compact?: boolean;
 }) {
   const { collected, reset } = useHatTrick();

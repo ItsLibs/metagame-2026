@@ -15,15 +15,15 @@ import {
   MessagesSquare,
   Plus,
   RotateCcw,
-  Scale,
+  Search,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 import AnagramEmail from "./AnagramEmail";
 import CrypticsLightbox from "./CrypticsLightbox";
-import { DISPLAY, TOKEN } from "./styles";
+import { DISPLAY, KICKER, TOKEN } from "./styles";
 
-// What each rule is about: its icon and the colour of its token.
+// What each question is about: its icon and the colour of its token.
 const TOPICS = {
   when: { Icon: Clock, tile: "bg-sky" },
   where: { Icon: MapPin, tile: "bg-sky" },
@@ -39,10 +39,10 @@ const TOPICS = {
   more: { Icon: MessagesSquare, tile: "bg-moss" },
 } satisfies Record<string, { Icon: LucideIcon; tile: string }>;
 
-export type RuleTopic = keyof typeof TOPICS;
-export type Rule = {
+export type FaqTopic = keyof typeof TOPICS;
+export type FaqItem = {
   id?: string;
-  topic: RuleTopic;
+  topic: FaqTopic;
   question: string;
   answer: ReactNode;
 };
@@ -106,18 +106,18 @@ function D12({ face, spinning }: { face: string; spinning: boolean }) {
 
 const words = (q: string) => q.toLowerCase().split(/\s+/).filter(Boolean);
 
-// §6 of the rulebook, the FAQ: the questions in two ruled columns on the
-// page, each opening to its answer. Two ways to play it: roll the d12 to open
-// a random rule (there are twelve), or ask the rules lawyer, which opens every
-// rule that mentions what you typed and dims the rest. Under the list, the
-// cryptic-clue bonus round and the team's email.
-export default function SpecialRules({ rules }: { rules: Rule[] }) {
+// The FAQ: the questions in two ruled columns on the page, each opening to
+// its answer. Two ways in: roll the d12 to open a question at random (there
+// are twelve), or search, which opens every question that mentions what you
+// typed and dims the rest. Under the list, the cryptic-clue bonus round and
+// the team's email.
+export default function Faq({ items }: { items: FaqItem[] }) {
   const uid = useId();
-  const items = useRef<(HTMLLIElement | null)[]>([]);
+  const rows = useRef<(HTMLLIElement | null)[]>([]);
   const texts = useRef<string[] | null>(null);
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set());
   const [query, setQuery] = useState("");
-  // Which rules mention every word typed; null while the box is empty.
+  // Which questions mention every word typed; null while the box is empty.
   const [matches, setMatches] = useState<boolean[] | null>(null);
   const [face, setFace] = useState("?");
   const [rolling, setRolling] = useState(false);
@@ -140,20 +140,20 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
       return;
     }
     // The answers are rich text, so search what's on the page.
-    texts.current ??= items.current.map(
+    texts.current ??= rows.current.map(
       (el) => el?.textContent?.toLowerCase() ?? "",
     );
     const t = texts.current;
-    const hits = rules.map((_, i) => terms.every((w) => t[i].includes(w)));
+    const hits = items.map((_, i) => terms.every((w) => t[i].includes(w)));
     setMatches(hits);
     setOpen(new Set(hits.flatMap((hit, i) => (hit ? [i] : []))));
   };
-  const hits = matches ? matches.filter(Boolean).length : rules.length;
+  const hits = matches ? matches.filter(Boolean).length : items.length;
 
   const roll = () => {
     if (rolling) return;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const n = Math.floor(Math.random() * rules.length);
+    const n = Math.floor(Math.random() * items.length);
     const land = () => {
       setFace(String(n + 1));
       setRolling(false);
@@ -161,7 +161,7 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
       setMatches(null);
       setOpen(new Set([n]));
       setLit(n);
-      items.current[n]?.scrollIntoView({
+      rows.current[n]?.scrollIntoView({
         behavior: still ? "auto" : "smooth",
         block: "center",
       });
@@ -170,7 +170,7 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
     if (still) return land();
     setRolling(true);
     const tick = window.setInterval(
-      () => setFace(String(1 + Math.floor(Math.random() * rules.length))),
+      () => setFace(String(1 + Math.floor(Math.random() * items.length))),
       70,
     );
     window.setTimeout(() => {
@@ -179,10 +179,10 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
     }, 700);
   };
 
-  // Two columns of rules, each its own stack so opening one never moves the
-  // other column.
-  const half = Math.ceil(rules.length / 2);
-  const columns = [rules.slice(0, half), rules.slice(half)];
+  // Two columns of questions, each its own stack so opening one never moves
+  // the other column.
+  const half = Math.ceil(items.length / 2);
+  const columns = [items.slice(0, half), items.slice(half)];
 
   return (
     <div>
@@ -196,17 +196,17 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
           <span
             className={`${DISPLAY} text-[24px] leading-none decoration-meeple decoration-2 underline-offset-4 group-hover:underline`}
           >
-            Roll for a rule
+            Roll for a question
           </span>
         </button>
         <label className="flex min-w-[220px] flex-1 items-center gap-2 border-b-2 border-navy py-2 transition-colors focus-within:border-meeple">
-          <Scale aria-hidden className="size-5 shrink-0 text-meeple" />
+          <Search aria-hidden className="size-5 shrink-0 text-meeple" />
           <input
             type="search"
             value={query}
             onChange={(e) => search(e.target.value)}
-            placeholder="Ask the rules lawyer: parking, kids, refunds…"
-            aria-label="Search the special rules"
+            placeholder="Search: parking, kids, refunds…"
+            aria-label="Search the FAQ"
             className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink/45"
           />
         </label>
@@ -217,15 +217,14 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
           {lit !== null
             ? `Rolled ${lit + 1 === 8 || lit + 1 === 11 ? "an" : "a"} ${lit + 1}`
             : matches
-              ? `${hits} of ${rules.length} rules`
-              : `${rules.length} rules`}
+              ? `${hits} of ${items.length} questions`
+              : `${items.length} questions`}
         </span>
       </div>
 
       {matches && hits === 0 && (
         <p className="mb-5 text-ink/70 italic">
-          The rules lawyer finds nothing on that. Ask the team (below) and
-          we&apos;ll add a rule.
+          Nothing on that yet. Ask the team (below) and we&apos;ll add it.
         </p>
       )}
 
@@ -246,7 +245,7 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
                   key={question}
                   id={id}
                   ref={(el) => {
-                    items.current[i] = el;
+                    rows.current[i] = el;
                   }}
                   className={`scroll-mt-28 transition-[background-color,opacity] duration-500 ${
                     matches && !matches[i] ? "opacity-35" : ""
@@ -302,7 +301,7 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
         <div className="flex items-center gap-4">
           <CrypticsLightbox className="block w-24 shrink-0" />
           <div className="min-w-0">
-            <p className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-meeple uppercase">
+            <p className={`${KICKER} text-[10.5px] text-meeple`}>
               <span aria-hidden>★ </span>Bonus round
             </p>
             <h3
@@ -321,7 +320,7 @@ export default function SpecialRules({ rules }: { rules: Rule[] }) {
             <Mail aria-hidden className="size-6 text-navy" />
           </span>
           <div className="min-w-0">
-            <p className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-meeple uppercase">
+            <p className={`${KICKER} text-[10.5px] text-meeple`}>
               Still stuck?
             </p>
             <h3

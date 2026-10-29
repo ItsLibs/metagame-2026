@@ -9,8 +9,8 @@ import { hostLine, isPlayed, KINDS } from "./sessions/kinds";
 import SessionDialog from "./sessions/SessionDialog";
 import { DISPLAY, TOKEN } from "./styles";
 
-// Featured speakers' sessions first in each pile, so the opening hand
-// shows them.
+// Featured speakers' sessions first in each pile, so the opening picks show
+// them.
 const FEATURED = new Set(SPEAKERS.map((p) => p.name));
 const featured = (s: Session2026) =>
   s.hosts.some((h) => FEATURED.has(h)) ? 0 : 1;
@@ -18,7 +18,7 @@ const CONFIRMED = SESSIONS_2026.filter(
   (s) => s.status === "confirmed" && s.title,
 ).sort((a, b) => featured(a) - featured(b));
 
-// The three piles a hand is dealt from, by each session's main kind, each
+// The three piles the picks come from, by each session's main kind, each
 // with its token.
 const PILES: {
   chip: string;
@@ -48,18 +48,17 @@ const PILES: {
   },
 ];
 
-// §1's examples of play, right under rule one: three confirmed 2026
-// sessions, one talk, one workshop and one game, set in columns under a rule.
-// Deal again for a new hand; a title opens its session; the 2025 recap and
-// every 2026 session are a click away. The first hand is fixed so the server
-// and client agree.
-export default function ExamplesOfPlay() {
-  const [hand, setHand] = useState(() => PILES.map(() => 0));
-  const [deals, setDeals] = useState(0);
+// Three confirmed 2026 sessions, one talk, one workshop and one game, set in
+// columns under a rule. Shuffle for three more; a title opens its session;
+// the 2025 recap and every 2026 session are a click away. The first three
+// are fixed so the server and client agree.
+export default function ProgramPicks() {
+  const [picks, setPicks] = useState(() => PILES.map(() => 0));
+  const [shuffles, setShuffles] = useState(0);
   const [open, setOpen] = useState<Session2026 | null>(null);
 
-  const deal = () => {
-    setHand((h) =>
+  const shuffle = () => {
+    setPicks((h) =>
       PILES.map(({ sessions }, k) => {
         if (sessions.length < 2) return 0;
         let n = h[k];
@@ -67,7 +66,7 @@ export default function ExamplesOfPlay() {
         return n;
       }),
     );
-    setDeals((d) => d + 1);
+    setShuffles((d) => d + 1);
   };
 
   return (
@@ -76,18 +75,18 @@ export default function ExamplesOfPlay() {
         <span
           className={`${DISPLAY} text-[28px] leading-none tracking-[0.02em] text-navy`}
         >
-          Examples of play
+          On the program
         </span>
         <span className="font-space-mono text-[11px] tracking-[0.12em] text-ink/55 uppercase">
-          Dealt from the 2026 program
+          Three from the 2026 lineup
         </span>
       </p>
       <ul className="grid gap-x-8 gap-y-7 sm:grid-cols-3">
         {PILES.map(({ chip, token, glyph, sessions }, k) => {
-          const s = sessions[hand[k]];
+          const s = sessions[picks[k]];
           return (
             <li
-              key={`${deals}-${chip}`}
+              key={`${shuffles}-${chip}`}
               className="animate-in border-t-2 border-navy pt-3.5 duration-500 fill-mode-backwards fade-in slide-in-from-bottom-8"
               style={{ animationDelay: `${k * 110}ms` }}
             >
@@ -120,10 +119,10 @@ export default function ExamplesOfPlay() {
       <div className="mt-7 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={deal}
+          onClick={shuffle}
           className={`${DISPLAY} rounded-lg bg-navy px-5 py-2.5 text-xl leading-none tracking-[0.04em] text-cream transition-transform hover:-translate-y-0.5 active:translate-y-0`}
         >
-          Deal again ↻
+          Shuffle ↻
         </button>
         <Link
           href="/last-year"

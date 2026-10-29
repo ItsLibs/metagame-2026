@@ -1,7 +1,7 @@
 import { HATS } from "@/v2/hat-trick/hats";
 import megachess from "../../../../public/images/megachess.jpg";
 import Glyph, { type GlyphName } from "../Glyph";
-import RulebookFigure from "../RulebookFigure";
+import Figure from "../Figure";
 import { DISPLAY, TOKEN } from "../styles";
 
 // The 2025 megagame in four turns, numbered in the two teams' colours.
@@ -32,14 +32,13 @@ const SIDE_QUESTS: { glyph: GlyphName; text: string }[] = [
   { glyph: "larps", text: "Played every flavor of LARP under the sun" },
 ];
 
-// §1 of the 2025 edition: how the con played, beside the megachess photo
+// How the 2025 con played, beside the megachess photo
 // (which keeps its Hat Trick bishop), and what everyone else got up to.
-export default function MatchReport() {
+export default function HowItPlayed() {
   return (
     <>
       <div className="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-10">
-        <RulebookFigure
-          fig="1"
+        <Figure
           caption="Megachess on the Lighthaven lawn. Purple to move."
           src={megachess}
           alt="Giant purple and orange chess pieces mid-game on the Lighthaven lawn, with a laptop scoreboard reading 'Purple to move'"
@@ -54,7 +53,7 @@ export default function MatchReport() {
             {TURNS.map((turn, i) => (
               <li
                 key={turn.title}
-                className="rulebook-rise flex items-start gap-4 border-b border-navy/15 py-4"
+                className="page-rise flex items-start gap-4 border-b border-navy/15 py-4"
               >
                 <span
                   aria-hidden
@@ -86,7 +85,7 @@ export default function MatchReport() {
         {SIDE_QUESTS.map((q) => (
           <li
             key={q.glyph}
-            className="rulebook-rise flex items-center gap-3 text-navy"
+            className="page-rise flex items-center gap-3 text-navy"
           >
             <span className={`${TOKEN} size-12 bg-sky text-[28px]`}>
               <Glyph name={q.glyph} />

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { Rubik_Mono_One, Silkscreen } from "next/font/google";
-import { NIGHT_NAME } from "@/v2/data/chapters";
+import { NIGHT_NAME } from "@/v2/data/sections";
 import { HATS } from "@/v2/hat-trick/hats";
 import {
   MEGAGAME_PROPOSAL_FORM_URL,
@@ -9,12 +9,12 @@ import {
 } from "@/v2/lib/links";
 import election from "../../../public/images/carousel/2_election.jpg";
 import nightMarketCooks from "../../../public/images/email/night_market_cooks.jpg";
-import { PAGE } from "./ChapterHeading";
+import Figure from "./Figure";
 import Glyph from "./Glyph";
-import RulebookFigure from "./RulebookFigure";
-import { DISPLAY, SECTION_ANCHOR, TOKEN } from "./styles";
+import { PAGE } from "./PageSection";
+import { DISPLAY, KICKER, SECTION_ANCHOR, TOKEN } from "./styles";
 
-// The night look's two faces, loaded only for this chapter.
+// The night look's two faces, loaded only for this section.
 const nightDisplay = Rubik_Mono_One({ weight: "400", subsets: ["latin"] });
 const pixel = Silkscreen({ weight: "400", subsets: ["latin"] });
 
@@ -29,11 +29,11 @@ const BOOTHS = [
 ];
 const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 
-// §5 of the rulebook. The Friday-night event turns the page to night: a band
-// the width of the screen in the brand's night look (its name's last word as
-// glowing letter tiles). Then the Megagame, back on the page as a side quest.
-// Fig. 5.2 hides the Hat Trick's Crown.
-export default function RulebookExpansions() {
+// The Friday-night event turns the page to night: a band the width of the
+// screen in the brand's night look (its name's last word as glowing letter
+// tiles). Then the Megagame, back on the page. The election photo hides the
+// Hat Trick's Crown.
+export default function NightAndMegagame() {
   const words = NIGHT_NAME.split(" ");
   const tiles = words.pop() ?? "";
   return (
@@ -49,7 +49,7 @@ export default function RulebookExpansions() {
             <p
               className={`${pixel.className} text-sm tracking-[0.1em] text-[#59e3b0] uppercase`}
             >
-              Expansion pack · free · open to all
+              Friday night · free · open to all
             </p>
             <h3
               className={`${nightDisplay.className} mt-3.5 text-[clamp(26px,3.4vw,38px)] leading-none uppercase`}
@@ -118,8 +118,7 @@ export default function RulebookExpansions() {
               </a>
             </div>
           </div>
-          <RulebookFigure
-            fig="5.1"
+          <Figure
             caption="“Too Many Cooks” at the 2025 Night Market."
             src={nightMarketCooks}
             alt="“Too Many Cooks” at the Night Market"
@@ -134,8 +133,8 @@ export default function RulebookExpansions() {
           <span className={`${TOKEN} size-16 bg-tan`}>
             <Glyph name="megagame" className="size-10" />
           </span>
-          <p className="mt-1 font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
-            Side quest · runs all weekend
+          <p className={`${KICKER} mt-1 text-meeple`}>
+            All weekend · anyone can play
           </p>
           <h3
             className={`${DISPLAY} text-[clamp(44px,5vw,60px)] leading-[0.9]`}
@@ -156,8 +155,7 @@ export default function RulebookExpansions() {
             Build part of the Megagame
           </a>
         </div>
-        <RulebookFigure
-          fig="5.2"
+        <Figure
           caption="The election game at Metagame 2025."
           src={election}
           alt="The election game at Metagame 2025"

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PAGE } from "@/v2/components/ChapterHeading";
+import { PAGE } from "@/v2/components/PageSection";
 import SessionDeck from "@/v2/components/sessions/SessionDeck";
 import SessionPack from "@/v2/components/sessions/SessionPack";
 import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
@@ -36,7 +36,7 @@ export default function SessionsPage() {
         >
           <div>
             <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
-              The rulebook · 2026 edition
+              The 2026 program
             </p>
             <h1
               className={`${DISPLAY} mt-3.5 text-[clamp(64px,9vw,128px)] leading-[0.86] text-navy`}

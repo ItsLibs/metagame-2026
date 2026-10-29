@@ -27,11 +27,11 @@ export function NoPuzzle({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Wrap a row in this to draw it as the home page rulebook's chapter rule: the
+// Wrap a row in this to draw it as the home page's section rule: the
 // hairlines become navy rules across the column. Same DOM, so the rows'
 // minigames (which measure the hairlines) and the puzzle work unchanged.
 const RuleContext = createContext(false);
-export function ChapterRule({ children }: { children: React.ReactNode }) {
+export function SectionRule({ children }: { children: React.ReactNode }) {
   return <RuleContext.Provider value={true}>{children}</RuleContext.Provider>;
 }
 

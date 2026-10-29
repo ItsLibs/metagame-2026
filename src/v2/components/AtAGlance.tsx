@@ -1,18 +1,18 @@
 import Glyph, { GLYPH_LABELS, type GlyphName } from "./Glyph";
 import ShelfFigure from "./ShelfFigure";
-import { DISPLAY, TOKEN } from "./styles";
+import { DISPLAY, KICKER, TOKEN } from "./styles";
 
-// The box back's stats, as printed on a game box. Same facts as the FAQ.
-const STATS = [
-  { label: "Players", value: "Everyone who shows up" },
-  { label: "Play time", value: "Fri 2 pm – Sun 9 pm" },
+// The weekend's facts. Same facts as the FAQ.
+const FACTS = [
+  { label: "When", value: "Fri 2 pm – Sun 9 pm" },
+  { label: "Where", value: "Lighthaven, Berkeley" },
   { label: "Ages", value: "All · under 13 free" },
-  { label: "Board", value: "Lighthaven, Berkeley" },
+  { label: "Who", value: "Everyone who shows up" },
 ];
 
 // Token colours from the brand guide. The cream ones get a navy edge so they
 // show on the page.
-const CONTENTS: { name: GlyphName; bg: string; fg: string }[] = [
+const KINDS: { name: GlyphName; bg: string; fg: string }[] = [
   { name: "puzzles", bg: "bg-navy", fg: "text-cream" },
   { name: "video-games", bg: "bg-brand-blue", fg: "text-navy" },
   { name: "larps", bg: "bg-meeple", fg: "text-cream" },
@@ -36,19 +36,16 @@ const TILT = [
   "rotate-2",
 ];
 
-// The back of the box beside the cover, laid straight on the page: the game
-// library photo (the cover puzzle), the weekend's stats, and the contents as
-// a pile of tokens, one per kind of play.
-export default function BoxBack() {
+// The weekend at a glance, beside the hero: the game library photo (the
+// cover puzzle), the facts, and the kinds of play as a pile of tokens.
+export default function AtAGlance() {
   return (
     <aside aria-label="At a glance">
       <ShelfFigure />
       <dl className="mt-5 grid grid-cols-2 gap-x-6 border-t-2 border-navy">
-        {STATS.map(({ label, value }) => (
+        {FACTS.map(({ label, value }) => (
           <div key={label} className="border-b border-navy/15 py-3">
-            <dt className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-meeple uppercase">
-              {label}
-            </dt>
+            <dt className={`${KICKER} text-[10.5px] text-meeple`}>{label}</dt>
             <dd
               className={`${DISPLAY} mt-1 text-[22px] leading-[1.05] tracking-[0.02em] text-navy sm:text-[26px]`}
             >
@@ -57,16 +54,14 @@ export default function BoxBack() {
           </div>
         ))}
       </dl>
-      <h3 className="mt-5 mb-3 font-space-mono text-xs font-bold tracking-[0.14em] text-navy uppercase">
-        Contents
-      </h3>
+      <h3 className={`${KICKER} mt-5 mb-3 text-navy`}>Kinds of play</h3>
       {/* The tokens deal in one by one on load and overlap like chips in a
           pile; hovering one lifts it out and names it. */}
       <ul className="flex flex-wrap gap-y-2 pl-2">
-        {CONTENTS.map(({ name, bg, fg }, i) => (
+        {KINDS.map(({ name, bg, fg }, i) => (
           <li
             key={name}
-            className={`rulebook-deal group relative -ml-2 ${TOKEN} size-11 text-[25px] ring-[3px] ring-background transition-[translate,rotate] duration-200 hover:z-10 hover:-translate-y-1.5 hover:rotate-0 ${TILT[i % TILT.length]} ${bg} ${fg} ${
+            className={`page-deal group relative -ml-2 ${TOKEN} size-11 text-[25px] ring-[3px] ring-background transition-[translate,rotate] duration-200 hover:z-10 hover:-translate-y-1.5 hover:rotate-0 ${TILT[i % TILT.length]} ${bg} ${fg} ${
               bg === "bg-background" ? "border-2 border-navy" : ""
             }`}
             // The card-games glyph's front card matches its token.

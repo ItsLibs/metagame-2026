@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CHAPTERS, NIGHT_NAME } from "@/v2/data/chapters";
+import { NIGHT_NAME } from "@/v2/data/sections";
 import { SESSIONS_2026, type Session2026 } from "@/v2/data/sessions-2026";
 import Glyph, { type GlyphName } from "./Glyph";
 import { isPlayed, KINDS } from "./sessions/kinds";
@@ -11,9 +11,8 @@ import { DISPLAY, TOKEN } from "./styles";
 const CONFIRMED = SESSIONS_2026.filter(
   (s) => s.status === "confirmed" && s.title,
 );
-const SEE_EXPANSIONS = `See §${CHAPTERS.expansions.num}.`;
 
-type Component = {
+type Item = {
   glyph: GlyphName;
   token: string;
   title: string;
@@ -22,7 +21,7 @@ type Component = {
   sessions?: Session2026[];
 };
 
-const COMPONENTS: Component[] = [
+const ITEMS: Item[] = [
   {
     glyph: "talks",
     token: "bg-sky text-navy",
@@ -50,14 +49,14 @@ const COMPONENTS: Component[] = [
     glyph: "megagame",
     token: "bg-tan text-navy",
     title: "The Megagame",
-    body: `A puzzle hunt, game gauntlet and story that runs all weekend. ${SEE_EXPANSIONS}`,
+    body: "A puzzle hunt, game gauntlet and story that runs all weekend. Anyone can play.",
     sessions: CONFIRMED.filter((s) => s.kinds.includes("megagame")),
   },
   {
     glyph: "card-games",
     token: "bg-navy text-cream",
     title: NIGHT_NAME,
-    body: `Friday night's booths: games to play, things to try, makers to meet. ${SEE_EXPANSIONS}`,
+    body: "Friday night's booths: games to play, things to try, makers to meet. Free and open to all.",
   },
   {
     glyph: "trivia",
@@ -66,9 +65,9 @@ const COMPONENTS: Component[] = [
     body: "Free for the taking, with food trucks on site for meals.",
   },
 ];
-const LIVE = COMPONENTS.flatMap((c, i) => (c.sessions?.length ? [i] : []));
+const LIVE = ITEMS.flatMap((c, i) => (c.sessions?.length ? [i] : []));
 
-// One live component's example changes at a time, round the table.
+// One live item's example changes at a time, round the table.
 const TURN_MS = 1700;
 
 function shuffle<T>(xs: T[]): T[] {
@@ -80,18 +79,16 @@ function shuffle<T>(xs: T[]): T[] {
   return a;
 }
 
-// §2 of the rulebook: what's in the box, each component a token and a few
-// lines under a rule. The session components count their confirmed 2026
-// sessions and keep dealing real examples (click one for its details).
-export default function RulebookComponents() {
+// What's on over the weekend, each kind a token and a few lines under a
+// rule. The session kinds count their confirmed 2026 sessions and keep
+// showing real examples (click one for its details).
+export default function WhatsOn() {
   const list = useRef<HTMLUListElement>(null);
-  // Each component's examples, shuffled once mounted; the server shows them in
+  // Each item's examples, shuffled once mounted; the server shows them in
   // order.
-  const [decks, setDecks] = useState(() =>
-    COMPONENTS.map((c) => c.sessions ?? []),
-  );
-  const [shown, setShown] = useState(() => COMPONENTS.map(() => 0));
-  // The component under the pointer keeps its example.
+  const [decks, setDecks] = useState(() => ITEMS.map((c) => c.sessions ?? []));
+  const [shown, setShown] = useState(() => ITEMS.map(() => 0));
+  // The item under the pointer keeps its example.
   const hovered = useRef<number | null>(null);
   const [open, setOpen] = useState<Session2026 | null>(null);
 
@@ -100,7 +97,7 @@ export default function RulebookComponents() {
     return () => clearTimeout(t);
   }, []);
 
-  // Deal only while the grid is on screen, the tab is visible and motion is
+  // Rotate only while the grid is on screen, the tab is visible and motion is
   // welcome.
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -128,7 +125,7 @@ export default function RulebookComponents() {
         ref={list}
         className="grid grid-cols-1 gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {COMPONENTS.map(({ glyph, token, title, body, sessions }, i) => {
+        {ITEMS.map(({ glyph, token, title, body, sessions }, i) => {
           const deck = decks[i];
           const s = deck.length ? deck[shown[i] % deck.length] : null;
           return (
@@ -140,7 +137,7 @@ export default function RulebookComponents() {
               onMouseLeave={() => {
                 hovered.current = null;
               }}
-              className="rulebook-rise group flex flex-col gap-2 border-t-2 border-navy pt-4"
+              className="page-rise group flex flex-col gap-2 border-t-2 border-navy pt-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <span

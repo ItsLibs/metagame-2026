@@ -907,12 +907,12 @@ button:not(:disabled) {
   }
 }
 
-/* Rulebook motion (home and /last-year). Chapter heads rise and the
+/* Page motion (home and /last-year). Section heads rise and the
    turn-order rail draws as they scroll into view, and a bar under the header
    tracks how far down the page you are: scroll-driven, so browsers without it
    just show everything. The contents tiles deal in and one neon tile
    flickers. Reduced motion: none of it. */
-@keyframes rulebook-rise {
+@keyframes page-rise {
   from {
     opacity: 0;
     transform: translateY(28px);
@@ -922,7 +922,7 @@ button:not(:disabled) {
     transform: none;
   }
 }
-@keyframes rulebook-draw {
+@keyframes page-draw {
   from {
     transform: scaleY(0);
   }
@@ -930,7 +930,7 @@ button:not(:disabled) {
     transform: scaleY(1);
   }
 }
-@keyframes rulebook-progress {
+@keyframes page-progress {
   from {
     transform: scaleX(0);
   }
@@ -938,7 +938,7 @@ button:not(:disabled) {
     transform: scaleX(1);
   }
 }
-@keyframes rulebook-deal {
+@keyframes page-deal {
   from {
     opacity: 0;
     transform: translateY(-14px) rotate(-10deg) scale(0.85);
@@ -964,32 +964,32 @@ button:not(:disabled) {
     opacity: 0.3;
   }
 }
-.rulebook-progress {
+.page-progress {
   transform: scaleX(0);
   transform-origin: left;
 }
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
-    .rulebook-rise {
-      animation: rulebook-rise linear both;
+    .page-rise {
+      animation: page-rise linear both;
       animation-timeline: view();
       animation-range: entry 0% cover 22%;
     }
-    .rulebook-draw {
+    .page-draw {
       transform-origin: top;
-      animation: rulebook-draw linear both;
+      animation: page-draw linear both;
       animation-timeline: view();
       animation-range: cover 5% cover 65%;
     }
   }
   @supports (animation-timeline: scroll()) {
-    .rulebook-progress {
-      animation: rulebook-progress linear both;
+    .page-progress {
+      animation: page-progress linear both;
       animation-timeline: scroll(root);
     }
   }
-  .rulebook-deal {
-    animation: rulebook-deal 450ms cubic-bezier(0.2, 0.8, 0.3, 1.25) both;
+  .page-deal {
+    animation: page-deal 450ms cubic-bezier(0.2, 0.8, 0.3, 1.25) both;
   }
   .neon-flicker {
     animation: neon-flicker 7s linear 2s infinite;

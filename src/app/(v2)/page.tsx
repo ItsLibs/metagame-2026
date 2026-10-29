@@ -1,31 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import ChapterSection, { PAGE } from "@/v2/components/ChapterHeading";
+import AboutSection from "@/v2/components/AboutSection";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
 import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CastlingDivider from "@/v2/components/dividers/castling";
 import CatanDivider from "@/v2/components/dividers/catan";
 import DiceDivider from "@/v2/components/dividers/dice";
-import { ChapterRule } from "@/v2/components/dividers/DividerRow";
+import { SectionRule } from "@/v2/components/dividers/DividerRow";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
 import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
-import PlayerCard from "@/v2/components/PlayerCard";
-import RulebookComponents from "@/v2/components/RulebookComponents";
-import RulebookCover from "@/v2/components/RulebookCover";
-import RulebookExpansions from "@/v2/components/RulebookExpansions";
-import RulebookObject from "@/v2/components/RulebookObject";
-import RulebookSetup from "@/v2/components/RulebookSetup";
+import Faq, { type FaqItem } from "@/v2/components/Faq";
+import HomeHero from "@/v2/components/HomeHero";
+import NightAndMegagame from "@/v2/components/NightAndMegagame";
+import PageSection, { PAGE } from "@/v2/components/PageSection";
 import SignupForm from "@/v2/components/signup/SignupForm";
-import SpecialRules, { type Rule } from "@/v2/components/SpecialRules";
-import SponsorDeck from "@/v2/components/SponsorDeck";
+import SpeakerCard from "@/v2/components/SpeakerCard";
 import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
-import { DISPLAY, SECTION_ANCHOR } from "@/v2/components/styles";
+import SponsorGrid from "@/v2/components/SponsorGrid";
+import { DISPLAY, KICKER, SECTION_ANCHOR } from "@/v2/components/styles";
 import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
 import { Button } from "@/v2/components/ui/button";
-import { CHAPTERS, CREDITS } from "@/v2/data/chapters";
+import VenueSection from "@/v2/components/VenueSection";
+import WhatsOn from "@/v2/components/WhatsOn";
+import { SECTIONS, SPONSORS } from "@/v2/data/sections";
 import { upcomingKeyDates } from "@/v2/data/key-dates";
 import { sessionsFor } from "@/v2/data/sessions-2026";
 import { SPEAKERS } from "@/v2/data/speakers";
@@ -56,7 +56,7 @@ const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 const OUTLINE =
   "border-2 border-navy text-navy hover:border-navy hover:bg-navy/5";
 
-const FAQS: Rule[] = [
+const FAQS: FaqItem[] = [
   {
     id: "first-faq",
     topic: "when",
@@ -76,7 +76,7 @@ const FAQS: Rule[] = [
         <br />
         2740 Telegraph Ave, Berkeley, CA 94705. See{" "}
         <a href="#venue" className={BODY_LINK}>
-          §3 Setup
+          the venue
         </a>
         .
       </>
@@ -249,40 +249,40 @@ const FAQS: Rule[] = [
   },
 ];
 
-// The home page as the game's rulebook (the brand mock in
-// branding/website-rulebook): the box cover, then numbered chapters, the
-// credits and a back cover. Section ids are kept from the one-pager, since
-// the nav, tracking links and printed codes point at /#tickets, /#faq, …
+// The home page: the hero, then the sections, the sponsors and the sign-up
+// at the end. Section ids are kept from the one-pager, since the nav,
+// tracking links and printed codes point at /#tickets, /#faq, …
 export default async function Home() {
   const earlyBird = isEarlyBirdActive();
-  // §1's clock runs on the draft 2026 schedule (empty without a database).
+  // The About section's clock runs on the draft 2026 schedule (empty without
+  // a database).
   const clock = await loadClockSessions();
   const salesClose = upcomingKeyDates().find(
     (d) => d.title === "Ticket sales close",
   );
   return (
     <>
-      <RulebookCover />
+      <HomeHero />
 
-      <ChapterSection chapter={CHAPTERS.object} rule={<CastlingDivider />}>
-        <RulebookObject sessions={clock} />
-      </ChapterSection>
+      <PageSection section={SECTIONS.about} rule={<CastlingDivider />}>
+        <AboutSection sessions={clock} />
+      </PageSection>
 
-      <ChapterSection chapter={CHAPTERS.components} rule={<CardSuitsDivider />}>
-        <RulebookComponents />
-      </ChapterSection>
+      <PageSection section={SECTIONS.whatsOn} rule={<CardSuitsDivider />}>
+        <WhatsOn />
+      </PageSection>
 
-      <ChapterSection chapter={CHAPTERS.setup} rule={<SetCardDivider />}>
-        <RulebookSetup />
-      </ChapterSection>
+      <PageSection section={SECTIONS.venue} rule={<SetCardDivider />}>
+        <VenueSection />
+      </PageSection>
 
-      {/* The dice stay above §7: they roll for its Monopoly race, and they're
-          one of the cover puzzle's seven games. */}
-      <ChapterSection chapter={CHAPTERS.players} rule={<DiceDivider />}>
+      {/* The dice stay above the tickets' Monopoly rule: they roll for its
+          race, and they're one of the cover puzzle's seven games. */}
+      <PageSection section={SECTIONS.speakers} rule={<DiceDivider />}>
         <ul className="grid gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SPEAKERS.map((speaker) => (
             <li key={speaker.name}>
-              <PlayerCard {...speaker} sessions={sessionsFor(speaker.name)} />
+              <SpeakerCard {...speaker} sessions={sessionsFor(speaker.name)} />
             </li>
           ))}
           <li>
@@ -298,31 +298,31 @@ export default async function Home() {
             browse every session →
           </Link>
         </p>
-      </ChapterSection>
+      </PageSection>
 
-      <ChapterSection chapter={CHAPTERS.expansions} rule={<CatanDivider />}>
-        <RulebookExpansions />
-      </ChapterSection>
+      <PageSection section={SECTIONS.events} rule={<CatanDivider />}>
+        <NightAndMegagame />
+      </PageSection>
 
-      <ChapterSection chapter={CHAPTERS.special} rule={<ScrabbleDivider />}>
-        <SpecialRules rules={FAQS} />
-      </ChapterSection>
+      <PageSection section={SECTIONS.faq} rule={<ScrabbleDivider />}>
+        <Faq items={FAQS} />
+      </PageSection>
 
-      {/* /#key-dates (and /key-dates) land on the tickets now that the turn
-          order chapter is gone. */}
+      {/* /#key-dates (and /key-dates) land on the tickets, which carry the
+          sales deadline. */}
       <div id="key-dates" className={SECTION_ANCHOR} />
-      <ChapterSection
+      <PageSection
         rule={<MonopolyDivider />}
-        chapter={{
-          ...CHAPTERS.join,
+        section={{
+          ...SECTIONS.tickets,
           aka: salesClose
-            ? `Tickets · sales close ${salesClose.label}`
-            : CHAPTERS.join.aka,
+            ? `Sales close ${salesClose.label}`
+            : SECTIONS.tickets.aka,
         }}
       >
         <div className="flex flex-col items-start gap-5">
           <TicketsPanel
-            look="rulebook"
+            look="list"
             showHeading={false}
             align="start"
             earlyBird={earlyBird}
@@ -332,8 +332,8 @@ export default async function Home() {
             id="get-involved"
             className={`${SECTION_ANCHOR} mt-2 flex flex-wrap items-center gap-3`}
           >
-            <span className="mr-1 font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
-              Or play another part
+            <span className={`${KICKER} mr-1 text-meeple`}>
+              Or get involved
             </span>
             <Button asChild variant="ghost" className={OUTLINE}>
               <Link href="/volunteer">Apply to volunteer</Link>
@@ -345,23 +345,21 @@ export default async function Home() {
             </Button>
           </div>
         </div>
-      </ChapterSection>
+      </PageSection>
 
-      <ChapterSection chapter={CREDITS} rule={<BloodOnTheClocktowerDivider />}>
-        <SponsorDeck />
-      </ChapterSection>
+      <PageSection section={SPONSORS} rule={<BloodOnTheClocktowerDivider />}>
+        <SponsorGrid />
+      </PageSection>
 
-      {/* The back cover. */}
+      {/* The sign-up, at the end of the page. */}
       <section id="stay-in-the-loop" className={SECTION_ANCHOR}>
         <div className={`${PAGE} pb-20`}>
-          <ChapterRule>
+          <SectionRule>
             <SpaceInvadersDivider />
-          </ChapterRule>
+          </SectionRule>
           <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center lg:gap-14">
             <div>
-              <p className="font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase">
-                To be continued&hellip;
-              </p>
+              <p className={`${KICKER} text-meeple`}>Newsletter</p>
               <h2
                 className={`${DISPLAY} mt-2 text-[clamp(44px,6vw,72px)] leading-[0.9] tracking-[0.01em] text-navy`}
               >

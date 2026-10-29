@@ -33,7 +33,7 @@ import { DISPLAY, HEADING } from "../styles";
 // with a salmon hard-shadow that grows and slides up-left on hover). Their min
 // height matches a three-line tile, so tiles stay even without the row
 // stretching them (it can't: the family tile's swag bubble adds height).
-// "rulebook": the home page's join chapter, a price list on the page. Each
+// "list": the home page's tickets section, a price list on the page. Each
 // ticket is a ruled row (the "tile" Button variant) with its name and a
 // plain-words note on the left and a Bebas price on the right.
 const LOOKS = {
@@ -53,7 +53,7 @@ const LOOKS = {
     swagTile: "",
     swag: "absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105",
   },
-  rulebook: {
+  list: {
     variant: "tile",
     row: "grid w-full gap-x-10 border-t-2 border-navy sm:grid-cols-2",
     // A row stretched to its neighbour's height (the family row, with its
@@ -162,7 +162,7 @@ export default function TicketsPanel({
   look?: keyof typeof LOOKS;
 }) {
   const look = LOOKS[lookName];
-  const rulebook = lookName === "rulebook";
+  const list = lookName === "list";
   const start = align === "start";
   const earlyBirdActive = useSyncExternalStore(
     subscribeNever,
@@ -250,7 +250,7 @@ export default function TicketsPanel({
       <div
         className={cn(
           look.row,
-          !rulebook && (start ? "justify-start" : "justify-center"),
+          !list && (start ? "justify-start" : "justify-center"),
         )}
       >
         {standard && earlyBirdActive && (
@@ -273,7 +273,7 @@ export default function TicketsPanel({
               </span>
             </span>
             <span className={look.note}>
-              {rulebook
+              {list
                 ? `Until ${EARLY_BIRD_DEADLINE}.`
                 : `until ${EARLY_BIRD_DEADLINE}`}
             </span>
@@ -292,7 +292,7 @@ export default function TicketsPanel({
             <span className={look.price}>
               {money(standard.prices.full.usd, standard.prices.full.btc)}
             </span>
-            {rulebook && <span className={look.note}>The whole weekend.</span>}
+            {list && <span className={look.note}>The whole weekend.</span>}
           </Tile>
         )}
         <Tile
@@ -305,7 +305,7 @@ export default function TicketsPanel({
           <span className={look.price}>
             {money(supporterTier.floor.usd, supporterTier.floor.btc)}+
           </span>
-          {rulebook && (
+          {list && (
             <span className={look.note}>
               The whole weekend, plus you help make it happen.
             </span>
@@ -318,10 +318,10 @@ export default function TicketsPanel({
           onClick={() => setOpenModal("day-pass")}
           // Raised: narrower padding + a 32px line box so the three-price line
           // fits the shared 210px tile at the same height as the others.
-          className={rulebook ? undefined : "px-4"}
+          className={list ? undefined : "px-4"}
         >
           <span className={look.label}>Day pass</span>
-          {rulebook ? (
+          {list ? (
             <>
               <span className={look.price}>
                 {isBtc
@@ -360,7 +360,7 @@ export default function TicketsPanel({
             onClick={() => setOpenModal("family-pack")}
             // Raised: narrower padding so the long label fits the shared 210px
             // tile.
-            className={cn("peer", look.swagTile, !rulebook && "px-4")}
+            className={cn("peer", look.swagTile, !list && "px-4")}
           >
             <span className={look.label}>Family &amp; Friends</span>
             <span className="flex items-baseline gap-2.5 leading-none">
@@ -368,7 +368,7 @@ export default function TicketsPanel({
               <span className={look.price}>${FAMILY_PACK.usd}</span>
             </span>
             <span className={look.note}>
-              {rulebook
+              {list
                 ? `Each, in a bundle of ${FAMILY_PACK.min}–${FAMILY_PACK.max}.`
                 : `each · ${FAMILY_PACK.min}–${FAMILY_PACK.max} tickets`}
             </span>
@@ -389,7 +389,7 @@ export default function TicketsPanel({
         >
           <span className={look.label}>Student / Aid</span>
           <span className={look.price}>50% off</span>
-          {rulebook && (
+          {list && (
             <span className={look.note}>
               For students, nonprofit staff and anyone in need.
             </span>
@@ -398,12 +398,12 @@ export default function TicketsPanel({
         <Button
           asChild
           variant={look.variant}
-          className={cn(look.tile, rulebook && "whitespace-normal")}
+          className={cn(look.tile, list && "whitespace-normal")}
         >
           <VolunteerFormLink>
             <span className={look.label}>Volunteer</span>
             <span className={look.price}>$0</span>
-            {rulebook && (
+            {list && (
               <span className={look.note}>
                 A limited supply, for volunteers.
               </span>
