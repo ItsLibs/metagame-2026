@@ -1,4 +1,5 @@
 import {
+  BookOpenIcon,
   CalendarIcon,
   DatabaseIcon,
   DollarSignIcon,
@@ -98,6 +99,13 @@ const TOOLS: {
     blurb:
       "Keys for scripts and Claude sessions to act as an account over HTTP.",
     perm: ["api_keys.self", "api_keys.manage"],
+  },
+  {
+    href: "/backstage/api-docs",
+    icon: BookOpenIcon,
+    name: "API docs",
+    blurb: "Every admin API endpoint, plus a guide to hand to an agent.",
+    perm: "api_docs.view",
   },
   {
     href: "/backstage/schema",

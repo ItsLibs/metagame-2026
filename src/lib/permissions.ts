@@ -155,12 +155,21 @@ export const PERMISSIONS = {
     label: "View sent emails",
     description: "The announcements and other emails we've sent, as a catalog.",
   },
+  "api_docs.view": {
+    audience: "team",
+    group: "API keys",
+    level: "view",
+    label: "API docs",
+    description:
+      "The admin API reference and agent guide at /backstage/api-docs.",
+  },
   "api_keys.self": {
     audience: "team",
     group: "API keys",
     level: "edit",
     label: "Own API keys",
     description: "Mint and revoke your own API keys from /backstage/api-keys.",
+    implies: ["api_docs.view"],
   },
   "schema.view": {
     audience: "team",
@@ -190,6 +199,7 @@ export const PERMISSIONS = {
     label: "All API keys",
     description:
       "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
+    implies: ["api_docs.view"],
   },
   "users.delete": {
     audience: "team",
