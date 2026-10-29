@@ -3,25 +3,22 @@ import { SPONSOR_FORM_URL } from "@/v2/lib/links";
 import type { FormDef } from "./engine";
 import { opts } from "./shared";
 
-// Sponsor interest, as the Airtable form asks it. It writes to Interest
-// Intake, like the email signups.
+// Sponsor interest, on the Interest Intake table the Airtable form wrote to,
+// like the email signups.
 export const sponsor: FormDef = {
   slug: "sponsor",
   path: SPONSOR_FORM_URL,
   tableId: airtableConfig.signupsTableId,
   name: "Sponsor interest",
-  eyebrow: "Sponsor Metagame 2026",
-  title: "Back the game.",
+  eyebrow: "Interest form · Metagame 2026",
+  title: "Sponsor Metagame",
   pitch:
-    "Thanks for thinking of sponsoring Metagame. Give us a few details and we'll reach out. What each tier includes is on the [sponsor page](/sponsor).",
-  facts: [
-    { label: "Takes", value: "About a minute" },
-    { label: "Then", value: "We reach out" },
-  ],
+    "Tell us who you are and what you have in mind, and someone from the team will reach out to talk it through. Every package is flexible; what each tier includes is on the [sponsor page](/sponsor).",
+  aside: "This should only take about a minute.",
   steps: [
     {
       key: "you",
-      title: "Who's sponsoring?",
+      title: "Who are you?",
       items: [
         {
           key: "name",
@@ -30,6 +27,15 @@ export const sponsor: FormDef = {
           label: "Your name",
           required: true,
           autoComplete: "name",
+          row: "who",
+        },
+        {
+          key: "company",
+          field: "fldb4I32HWFaiFWWd",
+          type: "text",
+          label: "Company or organization",
+          autoComplete: "organization",
+          row: "who",
         },
         {
           key: "email",
@@ -38,26 +44,20 @@ export const sponsor: FormDef = {
           label: "Email",
           required: true,
           autoComplete: "email",
-        },
-        {
-          key: "company",
-          field: "fldb4I32HWFaiFWWd",
-          type: "text",
-          label: "Company or sponsoring entity",
-          autoComplete: "organization",
+          row: "email",
         },
       ],
     },
     {
       key: "tier",
-      title: "Pick a tier",
-      intro: "Not sure yet? Pick Other and tell us what you have in mind.",
+      title: "What do you have in mind?",
       items: [
         {
           key: "tier",
           field: "fldvRIark8ZyTFpNf",
           type: "choice",
           label: "Sponsorship tier",
+          help: "Not sure yet? Pick Other, or leave it and we'll talk it through.",
           options: opts(
             "Headline",
             "Platinum",
@@ -71,7 +71,8 @@ export const sponsor: FormDef = {
           key: "notes",
           field: "fldBaSmooUULI2bbe",
           type: "longtext",
-          label: "Notes",
+          label: "Anything else?",
+          help: "What you're hoping to get out of it, questions, or how you'd like us to follow up.",
         },
       ],
     },
