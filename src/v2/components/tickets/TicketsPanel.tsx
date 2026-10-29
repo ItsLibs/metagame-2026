@@ -6,6 +6,7 @@ import BtcModal from "@/v2/components/tickets/BtcModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
 import DiscountRateModal from "@/v2/components/tickets/DiscountRateModal";
 import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
+import FriendSwagModal from "@/v2/components/tickets/FriendSwagModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
 import {
@@ -30,7 +31,10 @@ import { HEADING } from "../styles";
 // via the raised Button variant (bordered navy face with a salmon hard-shadow
 // that grows and slides up-left on hover). Layout only; the visual lives in the
 // variant.
-const TILE = "min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full";
+// The min height matches a three-line tile, so tiles stay even without the
+// row stretching them (it can't: the family tile's swag bubble adds height).
+const TILE =
+  "min-h-[112px] min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full";
 const TILE_LABEL =
   "font-space-mono text-[13px] tracking-[0.18em] uppercase whitespace-nowrap text-cream/85";
 const TILE_NOTE =
@@ -56,6 +60,7 @@ const HASH_MODALS = [
   "supporter",
   "day-pass",
   "family-pack",
+  "friend-swag",
   "discount-rate",
 ] as const;
 type HashModal = (typeof HASH_MODALS)[number];
@@ -160,7 +165,7 @@ export default function TicketsPanel({
       </button>
 
       <div
-        className={`flex flex-wrap items-stretch gap-[18px] max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
+        className={`flex flex-wrap items-start gap-[18px] max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
       >
         {standard &&
           earlyBirdActive &&
@@ -275,27 +280,41 @@ export default function TicketsPanel({
             {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
           </span>
         </Button>
-        <Button
-          type="button"
-          variant="raised"
-          id="family-pack"
-          onClick={() => setOpenModal("family-pack")}
-          // Narrower padding so the long label fits the shared 210px tile.
-          className={TILE.replace("px-7", "px-4")}
-        >
-          <span className={TILE_LABEL}>Family &amp; Friends</span>
-          <span className="flex items-baseline gap-2.5 leading-none">
-            <span className="text-[18px] font-bold text-cream/40 line-through">
-              ${STANDARD_USD}
+        {/* The swag bubble is a sibling, not a child: a button can't nest in
+            the tile's button. It straddles the tile's bottom edge and follows
+            the tile's hover lift, and the margin keeps it clear of whatever
+            tile wraps in below. */}
+        <div className="relative mb-9 flex">
+          <Button
+            type="button"
+            variant="raised"
+            id="family-pack"
+            onClick={() => setOpenModal("family-pack")}
+            // Narrower padding so the long label fits the shared 210px tile.
+            className={`peer ${TILE.replace("px-7", "px-4")}`}
+          >
+            <span className={TILE_LABEL}>Family &amp; Friends</span>
+            <span className="flex items-baseline gap-2.5 leading-none">
+              <span className="text-[18px] font-bold text-cream/40 line-through">
+                ${STANDARD_USD}
+              </span>
+              <span className={`${HEADING} text-[30px] text-tan`}>
+                ${FAMILY_PACK.usd}
+              </span>
             </span>
-            <span className={`${HEADING} text-[30px] text-tan`}>
-              ${FAMILY_PACK.usd}
+            <span className={TILE_NOTE}>
+              each · {FAMILY_PACK.min}–{FAMILY_PACK.max} tickets
             </span>
-          </span>
-          <span className={TILE_NOTE}>
-            each · {FAMILY_PACK.min}–{FAMILY_PACK.max} tickets
-          </span>
-        </Button>
+          </Button>
+          <button
+            type="button"
+            id="friend-swag"
+            onClick={() => setOpenModal("friend-swag")}
+            className="absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105"
+          >
+            Plus special bring‑a‑friend reward swag
+          </button>
+        </div>
         <Button
           type="button"
           variant="raised"
@@ -323,6 +342,12 @@ export default function TicketsPanel({
         <DiscountRateModal onClose={closeModal} />
       )}
       {openModal === "family-pack" && <FamilyPackModal onClose={closeModal} />}
+      {openModal === "friend-swag" && (
+        <FriendSwagModal
+          onClose={closeModal}
+          onBuy={() => setOpenModal("family-pack")}
+        />
+      )}
       {btcOpen && standard && (
         <BtcModal
           ticket={standard}
