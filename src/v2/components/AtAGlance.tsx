@@ -26,30 +26,53 @@ const KINDS: { name: GlyphName; bg: string; fg: string }[] = [
   { name: "board-games", bg: "bg-background", fg: "text-navy" },
 ];
 
-// The web: twelve hexes on a triangular lattice, three staggered rows of
-// four, every one joined to its neighbours. Coordinates are in the SVG's
-// space; the hexes are laid over it by percentage so the whole thing
-// scales with the column.
-const W = 432;
-const H = 232;
-const HEX = 50;
-const ROWS = [
-  [48, 144, 240, 336],
-  [96, 192, 288, 384],
-  [48, 144, 240, 336],
-];
-const Y = [40, 116, 192];
-const NODES = ROWS.flatMap((xs, r) => xs.map((x) => ({ x, y: Y[r], r })));
-// Neighbours: along a row, and down to the two hexes that straddle it.
-const EDGES = NODES.flatMap((a, i) =>
-  NODES.flatMap((b, j) => {
-    if (j <= i) return [];
-    const dx = Math.abs(a.x - b.x);
-    const dy = b.r - a.r;
-    const near = (dy === 0 && dx === 96) || (dy === 1 && dx === 48);
-    return near ? [[i, j] as const] : [];
-  }),
+// The web is an icosahedron, flat on the page: twelve corners, one kind of
+// play on each, and its thirty edges between them. It's turned so that no
+// two corners land near each other (the angles came from a search), and
+// the edges on the far side draw fainter, which is all the depth it needs.
+const PHI = (1 + Math.sqrt(5)) / 2;
+const CORNERS = [-1, 1].flatMap((a) =>
+  [-1, 1].flatMap((b) => [
+    [0, a, b * PHI],
+    [a, b * PHI, 0],
+    [a * PHI, 0, b],
+  ]),
 );
+const TILT = 2.897;
+const TURN = 1.955;
+const turned = CORNERS.map(([x, y, z]) => {
+  const y1 = y * Math.cos(TILT) - z * Math.sin(TILT);
+  const z1 = y * Math.sin(TILT) + z * Math.cos(TILT);
+  return [
+    x * Math.cos(TURN) + z1 * Math.sin(TURN),
+    y1,
+    -x * Math.sin(TURN) + z1 * Math.cos(TURN),
+  ];
+});
+// Laid into a box W wide, with room for a hex at every edge.
+const W = 432;
+const HEX = 50;
+const PAD = HEX * 0.6;
+const xs = turned.map((c) => c[0]);
+const ys = turned.map((c) => c[1]);
+const SCALE = (W - 2 * PAD) / (Math.max(...xs) - Math.min(...xs));
+const H = Math.round((Math.max(...ys) - Math.min(...ys)) * SCALE + 2 * PAD);
+const NODES = turned.map(([x, y, z]) => ({
+  x: PAD + (x - Math.min(...xs)) * SCALE,
+  y: PAD + (y - Math.min(...ys)) * SCALE,
+  z,
+}));
+// An edge joins corners two units apart.
+const EDGES = CORNERS.flatMap((a, i) =>
+  CORNERS.flatMap((b, j) =>
+    j > i && Math.abs(Math.hypot(...a.map((v, k) => v - b[k])) - 2) < 1e-6
+      ? [[i, j] as const]
+      : [],
+  ),
+);
+const zs = NODES.map((n) => n.z);
+const depth = (z: number) =>
+  (z - Math.min(...zs)) / (Math.max(...zs) - Math.min(...zs));
 
 const HEX_CLIP = "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)";
 
@@ -72,7 +95,7 @@ export default function AtAGlance() {
           </div>
         ))}
       </dl>
-      <h3 className={`${KICKER} mt-5 mb-2 text-navy`}>Kinds of play</h3>
+      <h3 className={`${KICKER} mt-5 mb-1 text-navy`}>Kinds of play</h3>
       <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
@@ -86,22 +109,24 @@ export default function AtAGlance() {
               y1={NODES[i].y}
               x2={NODES[j].x}
               y2={NODES[j].y}
-              className="stroke-navy/30"
+              className="stroke-navy"
               strokeWidth={1.5}
+              strokeOpacity={0.12 + 0.3 * depth((NODES[i].z + NODES[j].z) / 2)}
             />
           ))}
         </svg>
         <ul>
           {KINDS.map(({ name, bg, fg }, i) => {
-            const { x, y } = NODES[i];
+            const { x, y, z } = NODES[i];
             return (
               <li
                 key={name}
-                className="group absolute -translate-x-1/2 -translate-y-1/2 transition-transform duration-200 hover:z-10 hover:-translate-y-[60%]"
+                className="group absolute -translate-x-1/2 -translate-y-1/2 transition-transform duration-200 hover:z-20 hover:-translate-y-[60%]"
                 style={{
                   left: `${(x / W) * 100}%`,
                   top: `${(y / H) * 100}%`,
                   width: `${(HEX / W) * 100}%`,
+                  zIndex: Math.round(depth(z) * 10),
                 }}
               >
                 {/* A navy hex with the coloured one inset, for an outline the
