@@ -1,31 +1,27 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import { RFP_FORM_URL } from "@/v2/lib/links";
+import { MEGAGAME_PROPOSAL_FORM_URL, RFP_FORM_URL } from "@/v2/lib/links";
+import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import type { FormDef } from "./engine";
 import { opts } from "./shared";
 
 // The request for proposals: a session (talk, game, workshop, anything) for
-// the program, as the Airtable form asks it. Lands in RFP Submissions, where
-// the speaker committee grades it.
+// the program. Lands in RFP Submissions, where the speaker committee grades
+// it.
 export const propose: FormDef = {
   slug: "propose",
   path: RFP_FORM_URL,
   tableId: airtableConfig.rfpSubmissionsTableId,
   name: "Session proposal",
   eyebrow: "Request for proposals · Metagame 2026",
-  title: "Run something at Metagame.",
-  pitch:
-    "A talk, a game, a workshop, or something stranger: if you'd like to run it at Metagame this November 6–8, pitch it here. For inspiration, see [what happened last year](/last-year).",
-  facts: [
-    { label: "Takes", value: "About 10 minutes" },
-    { label: "Was due", value: "Oct 5" },
-    { label: "This is", value: "Not a puzzle" },
-  ],
+  title: "Propose a session",
+  pitch: `Pitch a talk, a game, a workshop, or something stranger to run at Metagame this November 6–8. The speaker committee reads every proposal and gets back to you. Building a puzzle or game for the all-weekend Megagame instead? That has [its own form](${MEGAGAME_PROPOSAL_FORM_URL}). For a sense of what fits, see [last year's program](/last-year).`,
+  aside: "This form should only take about 10 minutes.",
   notice:
-    "The proposal deadline has passed. You can still submit, and we may consider it, but we're less committed to doing so. Need an answer quickly? Say so in the last step.",
+    "The proposal deadline has passed. You can still send one in, and we may still find it a slot, but we can't promise to.",
   steps: [
     {
       key: "host",
-      title: "Who's running it?",
+      title: "Who are you?",
       items: [
         {
           key: "name",
@@ -34,6 +30,15 @@ export const propose: FormDef = {
           label: "Your name",
           required: true,
           autoComplete: "name",
+          row: "host",
+        },
+        {
+          key: "cohosts",
+          field: "fldXxvUxOJbApec8G",
+          type: "text",
+          label: "Cohosts",
+          help: "Running it with others? Their names here.",
+          row: "host",
         },
         {
           key: "email",
@@ -42,26 +47,29 @@ export const propose: FormDef = {
           label: "Email address",
           required: true,
           autoComplete: "email",
+          row: "contact",
         },
         {
-          key: "cohosts",
-          field: "fldXxvUxOJbApec8G",
+          key: "discord",
+          field: "fldAlMupeupZbJUFk",
           type: "text",
-          label: "Cohosts",
-          help: "Running it with others? Their names here. It might just be you.",
+          label: "Discord handle",
+          aside: `[join our Discord](${SOCIAL_LINKS.DISCORD})`,
+          placeholder: "@yourname",
+          row: "contact",
         },
       ],
     },
     {
       key: "kind",
       title: "What kind of thing is it?",
-      intro: "Pick everything that applies.",
       items: [
         {
           key: "category",
           field: "fldYq5ZlqNDwRKLRu",
           type: "choices",
           label: "Category",
+          help: "Select any of these that apply.",
           options: [
             { value: "Lecture / talk", glyph: "talks" },
             { value: "Panel", glyph: "talks" },
@@ -103,16 +111,16 @@ export const propose: FormDef = {
     },
     {
       key: "pitch",
-      title: "Name it and pitch it",
+      title: "Pitch it",
       intro:
-        "This is how it'll read on the schedule. You can edit it all later.",
+        "The title and description go on the public schedule. You can change them later.",
       items: [
         {
           key: "title",
           field: "fldUiKcH1uUsVqig6",
           type: "text",
           label: "Title",
-          help: "A working title is fine: it's what goes on the schedule until you change it.",
+          help: "A working title is fine.",
           required: true,
           max: 120,
         },
@@ -121,7 +129,7 @@ export const propose: FormDef = {
           field: "fldndEfMtSxIRBld0",
           type: "longtext",
           label: "Description for the schedule",
-          help: "A brief blurb, two or three sentences. It'll be public.",
+          help: "Two or three sentences. It'll be public.",
           required: true,
           max: 800,
         },
@@ -130,7 +138,7 @@ export const propose: FormDef = {
           field: "fldCdTcIyzpR20bJG",
           type: "longtext",
           label: "Tell us everything",
-          help: "Your vision, how you plan to run it, how far along the idea is. Only the team sees this.",
+          help: "Your vision, how you'd run it, how far along it is. Only the team sees this.",
         },
       ],
     },
@@ -146,6 +154,7 @@ export const propose: FormDef = {
           placeholder: "1 hour",
           required: true,
           max: 80,
+          row: "duration",
         },
         {
           key: "timing",
@@ -159,31 +168,40 @@ export const propose: FormDef = {
           field: "fldITeLEeSaeZOfhl",
           type: "longtext",
           label: "Space needs",
-          help: 'For example, "indoors, with a projector," "a round table for 7," "the room must go fully dark," or "a secret trapdoor that only opens when spoken to in Aramaic under a crescent moon."',
+          help: 'For example, "indoors, with a projector," "a round table for 7," or "the room must go fully dark."',
+        },
+        {
+          key: "bespoke",
+          field: "fldKp1AZCiV0TGNnc",
+          type: "longtext",
+          label: "Anything unusual you need?",
+          help: 'Anything not covered above, like "two giant chess sets on opposite ends of campus," or "this is really an ad for my product, which I\'ll also sell during the session."',
         },
       ],
     },
     {
       key: "players",
-      title: "Who can play?",
+      title: "Who's it for?",
       items: [
         {
           key: "minimum",
           field: "fldcG8kpbYamOUFMr",
           type: "number",
-          label: "Fewest players it needs",
-          help: "Not counting hosts. Leave it blank if anyone can drop in.",
+          label: "Fewest players",
+          help: "Not counting hosts. Blank if anyone can drop in.",
           min: 0,
           max: 1000,
+          row: "players",
         },
         {
           key: "maximum",
           field: "fldRpAuLCHje72Z3b",
           type: "number",
-          label: "Most players it can take",
+          label: "Most players",
           help: "Not counting hosts.",
           min: 0,
           max: 1000,
+          row: "players",
         },
         {
           key: "age",
@@ -208,36 +226,27 @@ export const propose: FormDef = {
           field: "fldXgOwFbED8kH1Lj",
           type: "longtext",
           label: "Handpicking players?",
-          help: "If people need to apply, link the application or describe the process and its timeline. Otherwise leave this blank.",
+          help: "If people need to apply, link the application or describe the process and its timeline.",
         },
         {
           key: "constraints",
           field: "fldlG50bYU7g1v8Qu",
           type: "longtext",
           label: "Anything that limits who'd want to come?",
-          help: "Ability constraints, content warnings, anything else we should know.",
+          help: "Ability constraints, content warnings, anything else people should know before they sign up.",
         },
       ],
     },
     {
-      key: "profile",
-      title: "Your host profile",
-      intro:
-        "Optional, but it saves us chasing you later. It shows on the public schedule.",
+      key: "more",
+      title: "A few more things",
       items: [
-        {
-          key: "discord",
-          field: "fldAlMupeupZbJUFk",
-          type: "text",
-          label: "Discord handle",
-          placeholder: "@yourname",
-        },
         {
           key: "picture",
           field: "fldxZvtxqGBAHEBO1",
           type: "file",
           label: "Picture",
-          help: "It's public, so pick one you're happy for the internet to see. Not a fan of your face? Your cat or cactus works.",
+          help: "It goes on the public schedule next to your session, so pick one you're happy for the internet to see. Your cat or cactus works too.",
           accept: ["image/jpeg", "image/png", "image/webp"],
           maxBytes: 3_000_000,
         },
@@ -246,34 +255,21 @@ export const propose: FormDef = {
           field: "fldKAUgbBp7BLGuwU",
           type: "text",
           label: "A link for your profile",
-          help: "Ideally something games-related you do, though nearly any link is fine. Leave it blank for none.",
+          help: "Ideally something games-related you do. It goes on the schedule too.",
           placeholder: "https://",
-        },
-      ],
-    },
-    {
-      key: "else",
-      title: "Anything else?",
-      items: [
-        {
-          key: "bespoke",
-          field: "fldKp1AZCiV0TGNnc",
-          type: "longtext",
-          label: "Bespoke needs",
-          help: 'Anything not covered yet, like "two giant chess sets on opposite ends of campus," or "this is really an ad for my product, which I\'ll also sell during the session."',
         },
         {
           key: "anythingElse",
           field: "fld4jmHBnJTAcy8Md",
           type: "longtext",
           label: "Anything else?",
-          help: "Need an answer soon? Say so here and we'll try to speed it up.",
+          help: "Need an answer soon? Say so here.",
         },
       ],
     },
   ],
   done: {
-    title: "Your proposal is in the deck.",
+    title: "Thanks, your proposal is in.",
     body: "The speaker committee reads every proposal and will get back to you.",
     links: [
       { label: "See what happened last year", href: "/last-year" },
