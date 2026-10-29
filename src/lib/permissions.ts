@@ -24,6 +24,8 @@ export const PERMISSIONS = {
     label: "View users",
     description:
       "The account list and each one's roles, permissions and tickets.",
+    // Strictly more than the profile page, so the /u link from here works.
+    implies: ["profiles.view"],
   },
   "users.create": {
     audience: "team",
@@ -41,6 +43,16 @@ export const PERMISSIONS = {
     label: "Edit users",
     description: "Change other accounts' roles and per-user permissions.",
     implies: ["users.view"],
+  },
+  // Attendee, not team: team audience opens the whole /backstage index via
+  // hasTeamPermission(), and this is meant for volunteers on the door.
+  "profiles.view": {
+    audience: "attendee",
+    group: "Profiles",
+    level: "view",
+    label: "View profiles",
+    description:
+      "Anyone's /u profile page, including the ones not shown to other attendees.",
   },
   "tickets.view": {
     audience: "team",
@@ -63,20 +75,44 @@ export const PERMISSIONS = {
     label: "RSVP names",
     description: "RSVP names on a session page, not just the counts.",
   },
+  "schedule.volunteer_rooms": {
+    audience: "attendee",
+    group: "Schedule",
+    level: "view",
+    label: "Volunteer rooms",
+    description:
+      "Rooms marked volunteer-only, such as ops desks, alongside the public ones.",
+  },
   "schedule.manage": {
     audience: "team",
     group: "Schedule",
     level: "edit",
     label: "Edit schedule",
     description: "On the admin grid and over the API.",
-    implies: ["schedule.preview"],
+    implies: ["schedule.preview", "schedule.volunteer_rooms"],
+  },
+  "promo.view": {
+    audience: "team",
+    group: "Promo codes",
+    level: "view",
+    label: "View promo codes",
+    description: "The comp and discount codes that exist, with their uses.",
+  },
+  "promo.create": {
+    audience: "team",
+    group: "Promo codes",
+    level: "edit",
+    label: "Mint promo codes",
+    description: "Mint new codes on Stripe or BTC.",
+    implies: ["promo.view"],
   },
   "promo.manage": {
     audience: "team",
     group: "Promo codes",
     level: "edit",
-    label: "Promo codes",
-    description: "Comp and discount codes on Stripe or BTC.",
+    label: "Manage promo codes",
+    description: "Archive and restore codes, on top of minting them.",
+    implies: ["promo.create"],
   },
   "links.manage": {
     audience: "team",
@@ -101,6 +137,13 @@ export const PERMISSIONS = {
     description:
       "Approve or reject proposals, add plans, run imports and connect Xero.",
     implies: ["budget.view"],
+  },
+  "emails.view": {
+    audience: "team",
+    group: "Emails",
+    level: "view",
+    label: "View sent emails",
+    description: "The announcements and other emails we've sent, as a catalog.",
   },
   "api_keys.self": {
     audience: "team",

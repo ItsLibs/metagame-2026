@@ -3,6 +3,7 @@ import {
   effectivePermissions,
   expand,
   explainPermissions,
+  hasTeamPermission,
   permissionGroups,
   PERMISSION_KEYS,
   PERMISSIONS,
@@ -31,11 +32,26 @@ describe("catalog", () => {
   });
 });
 
+describe("profiles.view", () => {
+  it("is attendee audience, so a volunteer holding it gets no backstage", () => {
+    expect(PERMISSIONS["profiles.view"].audience).toBe("attendee");
+    expect(hasTeamPermission(expand(["profiles.view"]))).toBe(false);
+    expect(hasTeamPermission(expand(["schedule.rsvps", "profiles.view"]))).toBe(
+      false,
+    );
+  });
+
+  it("comes with users.view, which already shows strictly more", () => {
+    expect(expand(["users.view"]).has("profiles.view")).toBe(true);
+  });
+});
+
 describe("expand", () => {
   it("closes over implications and drops unknown keys", () => {
     expect([...expand(["schedule.manage", "gone.away"])]).toEqual([
       "schedule.manage",
       "schedule.preview",
+      "schedule.volunteer_rooms",
     ]);
     expect(expand([]).size).toBe(0);
   });
@@ -50,16 +66,23 @@ describe("effectivePermissions", () => {
       }),
     );
     expect([...got].sort()).toEqual([
+      "promo.create",
       "promo.manage",
+      "promo.view",
       "schedule.manage",
       "schedule.preview",
+      "schedule.volunteer_rooms",
       "tickets.view",
     ]);
   });
 
   it("expands a grant's implications", () => {
     const got = effectivePermissions(input({ grants: ["schedule.manage"] }));
-    expect([...got].sort()).toEqual(["schedule.manage", "schedule.preview"]);
+    expect([...got].sort()).toEqual([
+      "schedule.manage",
+      "schedule.preview",
+      "schedule.volunteer_rooms",
+    ]);
   });
 
   it("gives admins everything", () => {

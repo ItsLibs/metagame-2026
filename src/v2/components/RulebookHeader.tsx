@@ -3,16 +3,23 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Chapter } from "@/v2/data/chapters";
+import { ACCOUNT_LINK, LOGIN_LINK } from "./nav/links";
 import { LogoDie } from "./nav/LogoDice";
-import { useIsAdmin } from "./nav/useIsAdmin";
+import { useAccountStatus } from "./nav/useAccountStatus";
 import { Button } from "./ui/button";
 import { DISPLAY } from "./styles";
+
+// The links after the chapters, quieter than them.
+const AFTER_CHAPTERS =
+  "rounded-md px-1.5 py-1.5 font-space-mono text-[11px] font-bold tracking-[0.06em] whitespace-nowrap text-ink/60 uppercase hover:bg-sky";
 
 // A rulebook page's sticky header, in place of the corner die nav: the brand,
 // the page's chapters (scrolling sideways on phones, the one in view lit),
 // and tickets.
 export default function RulebookHeader({ chapters }: { chapters: Chapter[] }) {
-  const admin = useIsAdmin();
+  // Null until /api/admin-status answers, so neither account link flashes.
+  const account = useAccountStatus();
+  const accountLink = account && (account.signedIn ? ACCOUNT_LINK : LOGIN_LINK);
   const current = useCurrentChapter(chapters);
   return (
     <header className="sticky top-0 z-40 border-b-2 border-navy bg-background">
@@ -45,12 +52,16 @@ export default function RulebookHeader({ chapters }: { chapters: Chapter[] }) {
               <b className="text-meeple">§{c.num}</b> {c.short}
             </a>
           ))}
-          {admin && (
-            <Link
-              href="/admin"
-              className="rounded-md px-1.5 py-1.5 font-space-mono text-[11px] font-bold tracking-[0.06em] whitespace-nowrap text-ink/60 uppercase hover:bg-sky"
-            >
+          {account?.admin && (
+            <Link href="/admin" className={AFTER_CHAPTERS}>
               Admin
+            </Link>
+          )}
+          {/* Always last: sign in when signed out, the account page once
+              signed in. */}
+          {accountLink && (
+            <Link href={accountLink.href} className={AFTER_CHAPTERS}>
+              {accountLink.label}
             </Link>
           )}
         </nav>

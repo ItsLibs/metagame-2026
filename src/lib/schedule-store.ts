@@ -15,6 +15,7 @@ import {
 import { getDb, schema } from "@/db";
 import { can } from "./access";
 import { getAuth } from "./auth";
+import type { HostSessionFields } from "./schedule-input";
 import {
   fromPacificWall,
   movedTimes,
@@ -88,7 +89,7 @@ export async function loadSchedule(): Promise<Schedule> {
       campusLocation: l.campusLocation,
       description: l.description,
       displayOrder: l.displayOrder,
-      showInSchedule: l.showInSchedule,
+      visibility: l.visibility,
       thumbnailUrl: l.thumbnailUrl,
       imageUrl: l.imageUrl,
     })),
@@ -166,6 +167,66 @@ export async function upsertSession(input: SessionInput): Promise<string> {
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
   return sessionId;
+}
+
+/** The session's hosts as user ids, lead first. */
+export async function sessionHostIds(sessionId: string): Promise<string[]> {
+  const rows = await getDb()
+    .select({ userId: sessionHosts.userId })
+    .from(sessionHosts)
+    .where(eq(sessionHosts.sessionId, sessionId))
+    .orderBy(asc(sessionHosts.position));
+  return rows.map((r) => r.userId);
+}
+
+/** Replaces a session's host list, lead first. Touches nothing else. */
+export async function setSessionHosts(
+  sessionId: string,
+  hostIds: string[],
+): Promise<void> {
+  const db = getDb();
+  const remove = db
+    .delete(sessionHosts)
+    .where(eq(sessionHosts.sessionId, sessionId));
+  if (hostIds.length === 0) {
+    await remove;
+    return;
+  }
+  await db.batch([
+    remove,
+    db
+      .insert(sessionHosts)
+      .values(
+        hostIds.map((userId, position) => ({ sessionId, position, userId })),
+      ),
+  ]);
+}
+
+/**
+ * The columns a session's own host may change. Separate from upsertSession,
+ * which replaces the whole row: this update names no placement or status
+ * column, so nothing here can move a session or publish it even by mistake.
+ */
+export async function updateSessionAsHost(
+  sessionId: string,
+  fields: HostSessionFields,
+): Promise<void> {
+  const [updated] = await getDb()
+    .update(sessions)
+    .set({
+      title: fields.title,
+      description: fields.description,
+      category: fields.category,
+      maxCapacity: fields.maxCapacity,
+      minCapacity: fields.minCapacity,
+      ages: fields.ages,
+      needs: fields.needs,
+    })
+    .where(eq(sessions.id, sessionId))
+    .returning({ id: sessions.id });
+  if (!updated) throw new Error("That session no longer exists.");
+  // A raised capacity frees seats for the waitlist.
+  await promoteWaitlist(sessionId);
 }
 
 /** Moves a session to a room and start time, keeping its length; refuses a clash in that room. */
@@ -858,7 +919,7 @@ export async function insertSample(): Promise<void> {
         SAMPLE_LOCATIONS.map((l) => ({
           ...l,
           name: SAMPLE_ROOM_PREFIX + l.name,
-          showInSchedule: true,
+          visibility: "public" as const,
         })),
       )
       .returning({ id: locations.id });

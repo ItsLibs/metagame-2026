@@ -5,6 +5,7 @@ import {
   KeyIcon,
   LinkIcon,
   type LucideIcon,
+  MailIcon,
   MicIcon,
   TicketIcon,
   UserIcon,
@@ -35,11 +36,18 @@ const TOOLS: {
     perm: "links.manage",
   },
   {
+    href: "/backstage/emails",
+    icon: MailIcon,
+    name: "Sent emails",
+    blurb: "The announcements and other emails we've sent, to read back.",
+    perm: "emails.view",
+  },
+  {
     href: "/backstage/promo",
     icon: DollarSignIcon,
     name: "Promo codes",
     blurb: "Mint comp and discount codes on Stripe or BTC.",
-    perm: "promo.manage",
+    perm: "promo.view",
   },
   {
     href: "/backstage/users",

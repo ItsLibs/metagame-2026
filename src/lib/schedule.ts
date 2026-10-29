@@ -6,10 +6,19 @@
 export const CATEGORIES = ["talk", "workshop", "game", "other"] as const;
 export const AGES = ["all", "kids", "adults"] as const;
 export const STATUSES = ["draft", "published"] as const;
+export const LOCATION_VISIBILITIES = ["public", "volunteer", "hidden"] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Ages = (typeof AGES)[number];
 export type Status = (typeof STATUSES)[number];
+export type LocationVisibility = (typeof LOCATION_VISIBILITIES)[number];
+
+/** Who a room is for, as the backstage room list and form say it. */
+export const VISIBILITY_LABEL: Record<LocationVisibility, string> = {
+  public: "Everyone",
+  volunteer: "Volunteers and team",
+  hidden: "Team only",
+};
 
 export type ScheduleLocation = {
   id: string;
@@ -18,7 +27,7 @@ export type ScheduleLocation = {
   campusLocation: string | null;
   description: string | null;
   displayOrder: number;
-  showInSchedule: boolean;
+  visibility: LocationVisibility;
   /** Public Vercel Blob URL, already thumbnail-sized. */
   thumbnailUrl: string | null;
   /** Public Vercel Blob URL, about 1600px, for detail views. */
@@ -54,6 +63,19 @@ export type ScheduleAccount = {
   name: string;
   email: string;
 };
+
+/**
+ * An account's name as other attendees see it. The loaders read it with
+ * accountName(), which falls back to the email when the name is blank, so
+ * that fallback has to be undone before the name leaves the team's tools.
+ */
+export function publicAccountName(account: {
+  name: string;
+  email: string;
+}): string {
+  const name = account.name.trim();
+  return name && name !== account.email ? name : "Someone";
+}
 
 export const RSVP_STATUSES = ["going", "waitlist"] as const;
 export type RsvpStatus = (typeof RSVP_STATUSES)[number];
@@ -414,18 +436,46 @@ export type PublicLocation = Pick<
   "id" | "name" | "capacity" | "campusLocation" | "thumbnailUrl" | "imageUrl"
 >;
 
+/** How far down the room visibility levels a viewer may see. */
+export type ScheduleViewer = "public" | "volunteer" | "team";
+
 /**
- * The published, placed sessions and the rooms to show them in: every room
- * marked for the schedule, plus any other room a published session uses so
- * nothing published goes missing.
+ * Whether this viewer may see a room at all — the one rule, exported so the
+ * profile pages decide it the same way the schedule does rather than growing
+ * their own copy.
  */
-export function publicSchedule(schedule: {
-  locations: ScheduleLocation[];
-  sessions: ScheduleSession[];
-}): { locations: PublicLocation[]; sessions: PublicSession[] } {
-  const sessions: PublicSession[] = schedule.sessions
+export function roomVisible(
+  location: ScheduleLocation,
+  viewer: ScheduleViewer,
+): boolean {
+  if (viewer === "team") return true;
+  if (location.visibility === "public") return true;
+  if (location.visibility === "volunteer") return viewer === "volunteer";
+  // "hidden" means team only, with no exception for a room that happens to
+  // hold a published session — that exception made every such room public.
+  return false;
+}
+
+/**
+ * The published, placed sessions and the rooms to show them in, as much of
+ * each as this viewer may see (see ScheduleLocation.visibility). A session in
+ * a room the viewer can't see is dropped with it, so nothing leaks through
+ * the list view or a session page.
+ */
+export function publicSchedule(
+  schedule: {
+    locations: ScheduleLocation[];
+    sessions: ScheduleSession[];
+  },
+  viewer: ScheduleViewer = "public",
+): { locations: PublicLocation[]; sessions: PublicSession[] } {
+  const placed = schedule.sessions
     .filter((s) => s.status === "published")
-    .filter(isPlaced)
+    .filter(isPlaced);
+  const rooms = schedule.locations.filter((l) => roomVisible(l, viewer));
+  const shown = new Set(rooms.map((l) => l.id));
+  const sessions: PublicSession[] = placed
+    .filter((s) => s.locationId === null || shown.has(s.locationId))
     .map((s) => ({
       id: s.id,
       slug: s.slug,
@@ -437,19 +487,16 @@ export function publicSchedule(schedule: {
       locationId: s.locationId,
       maxCapacity: s.maxCapacity,
       ages: s.ages,
-      hosts: s.hosts.map((h) => ({ name: h.name })),
+      hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
-  const used = new Set(sessions.map((s) => s.locationId));
-  const locations = schedule.locations
-    .filter((l) => l.showInSchedule || used.has(l.id))
-    .map((l) => ({
-      id: l.id,
-      name: l.name,
-      capacity: l.capacity,
-      campusLocation: l.campusLocation,
-      thumbnailUrl: l.thumbnailUrl,
-      imageUrl: l.imageUrl,
-    }));
+  const locations = rooms.map((l) => ({
+    id: l.id,
+    name: l.name,
+    capacity: l.capacity,
+    campusLocation: l.campusLocation,
+    thumbnailUrl: l.thumbnailUrl,
+    imageUrl: l.imageUrl,
+  }));
   return { locations, sessions };
 }
 

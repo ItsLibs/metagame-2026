@@ -6,6 +6,7 @@ import BtcModal from "@/v2/components/tickets/BtcModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
 import DiscountRateModal from "@/v2/components/tickets/DiscountRateModal";
 import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
+import FriendSwagModal from "@/v2/components/tickets/FriendSwagModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
 import {
@@ -29,32 +30,46 @@ import { DISPLAY, HEADING } from "../styles";
 
 // Two looks for the same tiles. "raised": square tiles, mono uppercase label
 // over a big grotesk price, on the raised Button variant (bordered navy face
-// with a salmon hard-shadow that grows and slides up-left on hover).
+// with a salmon hard-shadow that grows and slides up-left on hover). Their min
+// height matches a three-line tile, so tiles stay even without the row
+// stretching them (it can't: the family tile's swag bubble adds height).
 // "rulebook": the home page's join chapter, a price list on the page. Each
 // ticket is a ruled row (the "tile" Button variant) with its name and a
 // plain-words note on the left and a Bebas price on the right.
 const LOOKS = {
   raised: {
     variant: "raised",
-    row: "flex flex-wrap items-stretch gap-[18px] max-[460px]:*:w-full",
-    tile: "min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full",
+    row: "flex flex-wrap items-start gap-[18px] max-[460px]:*:w-full",
+    tile: "min-h-[112px] min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full",
     main: "",
     label:
       "font-space-mono text-[13px] tracking-[0.18em] uppercase whitespace-nowrap text-cream/85",
     price: `${HEADING} text-[30px] leading-none text-tan`,
     strike: "text-[18px] font-bold text-cream/40 line-through",
     note: "font-space-mono text-[11px] tracking-[0.08em] uppercase whitespace-nowrap text-cream/60",
+    // The bubble straddles the tile's bottom edge and follows its hover lift;
+    // the margin keeps it clear of whatever tile wraps in below.
+    swagRow: "mb-9",
+    swagTile: "",
+    swag: "absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105",
   },
   rulebook: {
     variant: "tile",
     row: "grid w-full gap-x-10 border-t-2 border-navy sm:grid-cols-2",
-    tile: "w-full",
+    // A row stretched to its neighbour's height (the family row, with its
+    // bubble) keeps its lines together at the top.
+    tile: "w-full content-start",
     main: "bg-tan/25 hover:bg-tan/40",
     label:
       "font-space-mono text-xs font-bold tracking-[0.14em] uppercase text-meeple",
     price: `${DISPLAY} text-[40px] leading-none text-navy`,
     strike: "text-lg font-bold text-navy/35 line-through",
     note: "text-[13.5px] font-normal text-ink/60",
+    // The bubble sits in its row, under the note, so the rules stay even:
+    // flat, with no hard shadow.
+    swagRow: "",
+    swagTile: "pb-14",
+    swag: "absolute bottom-4 left-2 z-10 max-w-[calc(100%-1rem)] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1 font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase transition-transform duration-150 hover:scale-105",
   },
 } as const;
 type Look = (typeof LOOKS)[keyof typeof LOOKS];
@@ -119,6 +134,17 @@ function Tile({
   );
 }
 
+const HASH_MODALS = [
+  "supporter",
+  "day-pass",
+  "family-pack",
+  "friend-swag",
+  "discount-rate",
+] as const;
+type HashModal = (typeof HASH_MODALS)[number];
+const isHashModal = (id: string): id is HashModal =>
+  (HASH_MODALS as readonly string[]).includes(id);
+
 export default function TicketsPanel({
   showHeading = true,
   align = "center",
@@ -144,24 +170,24 @@ export default function TicketsPanel({
     () => earlyBird,
   );
   const standard = getTicket("standard");
-  const [supporterOpen, setSupporterOpen] = useState(false);
-  const [dayPassOpen, setDayPassOpen] = useState(false);
-  const [familyPackOpen, setFamilyPackOpen] = useState(false);
-  const [discountOpen, setDiscountOpen] = useState(false);
-  // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
-  // gives the browser its scroll target. Closing drops the hash so a repeat
-  // click on the same link changes the URL again and reopens it.
+  // Each tile that opens a modal (rather than linking straight to Stripe)
+  // deep-links from /#<id>, e.g. /#supporter from /sponsor or /#family-pack
+  // from an email; the tile's id gives the browser its scroll target. Closing
+  // drops the hash so a repeat click on the same link changes the URL again
+  // and reopens it.
+  const [openModal, setOpenModal] = useState<HashModal | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const closeSupporter = () => {
-    setSupporterOpen(false);
-    if (window.location.hash === "#supporter") {
+  const closeModal = () => {
+    setOpenModal(null);
+    if (isHashModal(window.location.hash.slice(1))) {
       router.replace(pathname, { scroll: false });
     }
   };
   useEffect(() => {
     const check = () => {
-      if (window.location.hash === "#supporter") setSupporterOpen(true);
+      const id = window.location.hash.slice(1);
+      if (isHashModal(id)) setOpenModal(id);
     };
     check();
     window.addEventListener("hashchange", check);
@@ -272,7 +298,7 @@ export default function TicketsPanel({
         <Tile
           look={look}
           id="supporter"
-          onClick={() => setSupporterOpen(true)}
+          onClick={() => setOpenModal("supporter")}
           className="scroll-mt-24"
         >
           <span className={look.label}>Supporter</span>
@@ -288,7 +314,8 @@ export default function TicketsPanel({
         {/* Day passes: USD → the modal's Stripe links, BTC → its OpenNode form. */}
         <Tile
           look={look}
-          onClick={() => setDayPassOpen(true)}
+          id="day-pass"
+          onClick={() => setOpenModal("day-pass")}
           // Raised: narrower padding + a 32px line box so the three-price line
           // fits the shared 210px tile at the same height as the others.
           className={rulebook ? undefined : "px-4"}
@@ -324,24 +351,42 @@ export default function TicketsPanel({
             </>
           )}
         </Tile>
+        {/* The swag bubble is a sibling, not a child: a button can't nest in
+            the tile's button. */}
+        <div className={cn("relative flex", look.swagRow)}>
+          <Tile
+            look={look}
+            id="family-pack"
+            onClick={() => setOpenModal("family-pack")}
+            // Raised: narrower padding so the long label fits the shared 210px
+            // tile.
+            className={cn("peer", look.swagTile, !rulebook && "px-4")}
+          >
+            <span className={look.label}>Family &amp; Friends</span>
+            <span className="flex items-baseline gap-2.5 leading-none">
+              <span className={look.strike}>${STANDARD_USD}</span>
+              <span className={look.price}>${FAMILY_PACK.usd}</span>
+            </span>
+            <span className={look.note}>
+              {rulebook
+                ? `Each, in a bundle of ${FAMILY_PACK.min}–${FAMILY_PACK.max}.`
+                : `each · ${FAMILY_PACK.min}–${FAMILY_PACK.max} tickets`}
+            </span>
+          </Tile>
+          <button
+            type="button"
+            id="friend-swag"
+            onClick={() => setOpenModal("friend-swag")}
+            className={look.swag}
+          >
+            Plus special bring‑a‑friend reward swag
+          </button>
+        </div>
         <Tile
           look={look}
-          onClick={() => setFamilyPackOpen(true)}
-          // Raised: narrower padding so the long label fits the shared 210px tile.
-          className={rulebook ? undefined : "px-4"}
+          id="discount-rate"
+          onClick={() => setOpenModal("discount-rate")}
         >
-          <span className={look.label}>Family &amp; Friends</span>
-          <span className="flex items-baseline gap-2.5 leading-none">
-            <span className={look.strike}>${STANDARD_USD}</span>
-            <span className={look.price}>${FAMILY_PACK.usd}</span>
-          </span>
-          <span className={look.note}>
-            {rulebook
-              ? `Each, in a bundle of ${FAMILY_PACK.min}–${FAMILY_PACK.max}.`
-              : `each · ${FAMILY_PACK.min}–${FAMILY_PACK.max} tickets`}
-          </span>
-        </Tile>
-        <Tile look={look} onClick={() => setDiscountOpen(true)}>
           <span className={look.label}>Student / Aid</span>
           <span className={look.price}>50% off</span>
           {rulebook && (
@@ -366,13 +411,17 @@ export default function TicketsPanel({
           </VolunteerFormLink>
         </Button>
       </div>
-      {supporterOpen && <SupporterModal onClose={closeSupporter} />}
-      {dayPassOpen && <DayPassModal onClose={() => setDayPassOpen(false)} />}
-      {discountOpen && (
-        <DiscountRateModal onClose={() => setDiscountOpen(false)} />
+      {openModal === "supporter" && <SupporterModal onClose={closeModal} />}
+      {openModal === "day-pass" && <DayPassModal onClose={closeModal} />}
+      {openModal === "discount-rate" && (
+        <DiscountRateModal onClose={closeModal} />
       )}
-      {familyPackOpen && (
-        <FamilyPackModal onClose={() => setFamilyPackOpen(false)} />
+      {openModal === "family-pack" && <FamilyPackModal onClose={closeModal} />}
+      {openModal === "friend-swag" && (
+        <FriendSwagModal
+          onClose={closeModal}
+          onBuy={() => setOpenModal("family-pack")}
+        />
       )}
       {btcOpen && standard && (
         <BtcModal

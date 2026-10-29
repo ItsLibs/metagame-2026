@@ -1,8 +1,10 @@
 import type { ComponentType } from "react";
 import {
   Award,
+  CircleUserRound,
   HeartHandshake,
   History,
+  LogIn,
   Mail,
   MapPin,
   MessageCircleQuestion,
@@ -44,12 +46,26 @@ export const NAV_LINKS: readonly NavLink[] = [
   { id: "team", label: "Team", href: "/team", icon: Users },
 ] as const;
 
-// Appended for signed-in admins only.
+// Appended for signed-in team members only.
 export const ADMIN_LINK: NavLink = {
   id: "admin",
   label: "Backstage",
   href: "/backstage",
   icon: ShieldCheck,
+};
+
+// Always last: sign in when signed out, the account page once signed in.
+export const LOGIN_LINK: NavLink = {
+  id: "login",
+  label: "Log in",
+  href: "/login",
+  icon: LogIn,
+};
+export const ACCOUNT_LINK: NavLink = {
+  id: "account",
+  label: "Account",
+  href: "/account",
+  icon: CircleUserRound,
 };
 
 // The one-pager's sections, in page order, keyed by their `id`. On "/" the

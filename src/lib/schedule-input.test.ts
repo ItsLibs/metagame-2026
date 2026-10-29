@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  parseHostSessionFields,
   parseLocationFields,
   parseSessionFields,
   type Parsed,
@@ -101,19 +102,19 @@ describe("parseSessionFields", () => {
 });
 
 describe("parseLocationFields", () => {
-  it("reads the checkbox and the boolean alike", () => {
+  it("reads each visibility level, defaulting to hidden", () => {
     expect(
-      parseLocationFields({ name: "Hall", showInSchedule: "on" }),
-    ).toMatchObject({ value: { showInSchedule: true, displayOrder: 100 } });
+      parseLocationFields({ name: "Hall", visibility: "public" }),
+    ).toMatchObject({ value: { visibility: "public", displayOrder: 100 } });
     expect(
-      parseLocationFields({ name: "Hall", showInSchedule: true, capacity: 40 }),
-    ).toMatchObject({ value: { showInSchedule: true, capacity: 40 } });
+      parseLocationFields({ name: "Hall", visibility: "volunteer" }),
+    ).toMatchObject({ value: { visibility: "volunteer" } });
     expect(parseLocationFields({ name: "Hall" })).toMatchObject({
-      value: { showInSchedule: false },
+      value: { visibility: "hidden" },
     });
   });
 
-  it("rejects a missing name and non-integers", () => {
+  it("rejects a missing name, non-integers and an unknown level", () => {
     expect(blamed(parseLocationFields({}))).toBe("name");
     expect(blamed(parseLocationFields({ name: "Hall", capacity: "big" }))).toBe(
       "capacity",
@@ -121,6 +122,9 @@ describe("parseLocationFields", () => {
     expect(
       blamed(parseLocationFields({ name: "Hall", displayOrder: "first" })),
     ).toBe("displayOrder");
+    expect(
+      blamed(parseLocationFields({ name: "Hall", visibility: "on" })),
+    ).toBe("visibility");
   });
 });
 
@@ -162,5 +166,77 @@ describe("shepherdUserId", () => {
   it("rejects a non-string", () => {
     const r = parseSessionFields({ ...base, shepherdUserId: { id: 1 } });
     expect(!r.ok && r.field).toBe("shepherd");
+  });
+});
+
+describe("parseHostSessionFields", () => {
+  it("keeps the descriptive fields", () => {
+    const r = parseHostSessionFields({
+      title: " Dice Night ",
+      description: "Bring dice",
+      category: "game",
+      ages: "all",
+      needs: "A big table",
+      maxCapacity: "20",
+      minCapacity: "4",
+    });
+    expect(r.ok && r.value).toEqual({
+      title: "Dice Night",
+      description: "Bring dice",
+      category: "game",
+      ages: "all",
+      needs: "A big table",
+      maxCapacity: 20,
+      minCapacity: 4,
+    });
+  });
+
+  it("drops placement, status and slug even when they are sent", () => {
+    const r = parseHostSessionFields({
+      title: "Dice Night",
+      slug: "somewhere-else",
+      status: "published",
+      startsAt: "2026-11-06T14:00",
+      endsAt: "2026-11-06T15:00",
+      locationId: "00000000-0000-0000-0000-000000000000",
+      shepherdUserId: "u_1",
+    });
+    expect(r.ok && Object.keys(r.value).sort()).toEqual([
+      "ages",
+      "category",
+      "description",
+      "maxCapacity",
+      "minCapacity",
+      "needs",
+      "title",
+    ]);
+  });
+
+  it("needs a title", () => {
+    expect(blamed(parseHostSessionFields({ title: "  " }))).toBe("title");
+  });
+
+  it("rejects capacities that do not make sense", () => {
+    expect(
+      blamed(parseHostSessionFields({ title: "A", maxCapacity: "0" })),
+    ).toBe("maxCapacity");
+    expect(
+      blamed(
+        parseHostSessionFields({
+          title: "A",
+          minCapacity: "10",
+          maxCapacity: "4",
+        }),
+      ),
+    ).toBe("minCapacity");
+  });
+
+  it("rejects an unknown category or age range", () => {
+    expect(
+      blamed(parseHostSessionFields({ title: "A", category: "banquet" })),
+    ).toBe("category");
+    expect(blamed(parseHostSessionFields({ title: "A", ages: "teens" }))).toBe(
+      "ages",
+    );
   });
 });
