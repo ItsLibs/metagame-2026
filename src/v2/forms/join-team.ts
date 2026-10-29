@@ -7,21 +7,18 @@ import {
 import type { FormDef } from "./engine";
 import { picked } from "./engine";
 
-// The interest form from /team, as the Airtable form asks it. Like the email
-// signups, it writes to Interest Intake.
+// The interest form from /team, on the Interest Intake table the Airtable
+// form wrote to, like the email signups.
 export const joinTeam: FormDef = {
   slug: "join-team",
   path: JOIN_TEAM_FORM_URL,
   tableId: airtableConfig.signupsTableId,
   name: "Get involved",
-  eyebrow: "Get involved · Metagame 2026",
-  title: "Help make Metagame.",
+  eyebrow: "Interest form · Metagame 2026",
+  title: "Get involved with Metagame",
   pitch:
-    "Metagame 2026 is November 6–8 in Berkeley, California. If you'd like to get involved, this is the best place to say so, and we'll follow up with more.",
-  facts: [
-    { label: "Takes", value: "About a minute" },
-    { label: "Then", value: "We follow up" },
-  ],
+    "Tell us how you'd like to help with Metagame 2026, whether that's volunteering, speaking, organizing or sponsoring, and we'll follow up with the next step.",
+  aside: "This should only take about a minute.",
   steps: [
     {
       key: "you",
@@ -34,6 +31,7 @@ export const joinTeam: FormDef = {
           label: "Your name",
           required: true,
           autoComplete: "name",
+          row: "who",
         },
         {
           key: "email",
@@ -42,19 +40,20 @@ export const joinTeam: FormDef = {
           label: "Email",
           required: true,
           autoComplete: "email",
+          row: "who",
         },
       ],
     },
     {
       key: "interest",
       title: "What would you like to do?",
-      intro: "Pick all that apply.",
       items: [
         {
           key: "interests",
           field: "fldmLx6E4fpMxaVHw",
           type: "choices",
-          label: "I'm interested in…",
+          label: "I'm interested in",
+          help: "Select any of these that apply.",
           options: [
             {
               value: "volunteering",
@@ -75,8 +74,8 @@ export const joinTeam: FormDef = {
           key: "skills",
           field: "fldhoOZd0qyAwizuS",
           type: "longtext",
-          label: "Any cool skills that'd help at a conference?",
-          help: "Photography, EMT training, you've run conferences before… Leave it blank if you like: we're thrilled you want to help.",
+          label: "Any skills that would help at a conference?",
+          help: "Photography, EMT training, running events before, that kind of thing.",
           show: (a) =>
             picked(a.interests, "volunteering") ||
             picked(a.interests, "organizing"),
@@ -86,28 +85,23 @@ export const joinTeam: FormDef = {
           field: "fldb4I32HWFaiFWWd",
           type: "text",
           label: "What name would you sponsor as?",
-          help: "Your company, organization, or self, as you'd like it listed.",
+          help: "Your company, organization, or yourself, as you'd like it listed.",
+          autoComplete: "organization",
           show: (a) => picked(a.interests, "sponsoring"),
         },
-      ],
-    },
-    {
-      key: "else",
-      title: "Anything else?",
-      items: [
         {
           key: "notes",
           field: "fldBaSmooUULI2bbe",
           type: "longtext",
-          label: "Anything else you want to share?",
-          help: "Jokes? Insults? Puns?",
+          label: "Anything else?",
+          help: "Questions, ideas, or anything we should know.",
         },
       ],
     },
   ],
   done: {
-    title: "You're in.",
-    body: "Thanks! We'll follow up with more soon. Can't wait? Jump straight in:",
+    title: "Thanks, we'll be in touch.",
+    body: "We'll follow up with the next step. Can't wait? Jump straight in:",
     links: [
       { label: "Apply to volunteer", href: VOLUNTEER_APPLY_PATH },
       { label: "Propose a session", href: RFP_FORM_URL },
