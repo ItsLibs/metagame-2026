@@ -2,26 +2,23 @@ import { airtableConfig } from "@/lib/airtable-config";
 import { NIGHT_MARKET_FORM_URL, NIGHT_PARTIFUL_URL } from "@/v2/lib/links";
 import type { FormDef } from "./engine";
 
-// A Night Market booth application, as the Airtable form asks it.
+// A Night Market booth application, on the table the Airtable form wrote to.
 export const nightMarket: FormDef = {
   slug: "night-market",
   path: NIGHT_MARKET_FORM_URL,
   tableId: airtableConfig.nightMarketBoothsTableId,
   name: "Night Market booth application",
-  eyebrow: "Night Market · Friday, Nov 6, 7–10 pm",
-  title: "Open a booth.",
-  pitch: `Run a booth at the Night Market: Friday night, open to the public, with priority for Metagame sponsors and attendees. Each booth comes with a six-foot table. Going as a visitor? [RSVP on Partiful](${NIGHT_PARTIFUL_URL}).`,
-  facts: [
-    { label: "Takes", value: "About 3 minutes" },
-    { label: "Booth", value: "A six-foot table" },
-    { label: "Costs", value: "Supporter ticket or $250" },
-  ],
+  eyebrow: "Application · Friday, Nov 6, 7–10 pm",
+  title: "Run a Night Market booth",
+  pitch:
+    "The Night Market is Metagame's Friday night, open to the public. Run a booth and you get a six-foot table, with priority for Metagame sponsors and attendees. A booth needs a Supporter ticket, or $250 for the booth on its own.",
+  aside: "This application should only take about 3 minutes.",
   notice:
-    "A booth needs a Metagame Supporter ticket or $250 for the booth only. Applications depend on approval and space: applying, or buying a ticket, doesn't reserve a booth. Agreed something different with the team? Pick that option at the end and describe it; it still has to be confirmed.",
+    "Booths depend on approval and space, so applying or buying a ticket doesn't reserve one yet. We'll be in touch once we've looked at it.",
   steps: [
     {
       key: "you",
-      title: "Who's running it?",
+      title: "Who are you?",
       items: [
         {
           key: "name",
@@ -30,6 +27,7 @@ export const nightMarket: FormDef = {
           label: "Your name",
           required: true,
           autoComplete: "name",
+          row: "contact",
         },
         {
           key: "email",
@@ -38,6 +36,7 @@ export const nightMarket: FormDef = {
           label: "Email",
           required: true,
           autoComplete: "email",
+          row: "contact",
         },
       ],
     },
@@ -58,6 +57,7 @@ export const nightMarket: FormDef = {
           field: "fldpAokik4nK0MSpJ",
           type: "choices",
           label: "Which part of the market does it fit?",
+          help: "Select any that fit.",
           layout: "list",
           options: [
             {
@@ -114,21 +114,8 @@ export const nightMarket: FormDef = {
       ],
     },
     {
-      key: "setup",
-      title: "Setting up",
-      items: [
-        {
-          key: "notes",
-          field: "fldqd3HuyaqfvjRWA",
-          type: "longtext",
-          label: "Anything else we should know?",
-          help: "For the organizing team only: space, seating, power, loading or access needs. Requests are subject to confirmation.",
-        },
-      ],
-    },
-    {
-      key: "table",
-      title: "Claim your table",
+      key: "cost",
+      title: "Cost and setup",
       items: [
         {
           key: "option",
@@ -148,7 +135,7 @@ export const nightMarket: FormDef = {
             },
             {
               value: "Separate arrangement discussed with the team",
-              hint: "Tell us about it in the box that opens.",
+              hint: "Tell us about it in the box that opens. It still has to be confirmed.",
               more: {
                 key: "arrangement",
                 label: "The arrangement",
@@ -157,6 +144,13 @@ export const nightMarket: FormDef = {
               },
             },
           ],
+        },
+        {
+          key: "notes",
+          field: "fldqd3HuyaqfvjRWA",
+          type: "longtext",
+          label: "Anything else we should know?",
+          help: "For the organizing team only: space, seating, power, loading or access needs. Requests depend on confirmation.",
         },
         {
           key: "acknowledged",
@@ -170,7 +164,7 @@ export const nightMarket: FormDef = {
     },
   ],
   done: {
-    title: "Your stall is on the map.",
+    title: "Thanks, we've got it.",
     body: "Booths depend on approval and space, so this doesn't reserve one yet. We'll be in touch.",
     links: [
       { label: "RSVP on Partiful", href: NIGHT_PARTIFUL_URL },
