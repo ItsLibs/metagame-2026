@@ -91,12 +91,20 @@ export const PERMISSIONS = {
     description: "On the admin grid and over the API.",
     implies: ["schedule.preview", "schedule.volunteer_rooms"],
   },
+  "promo.view": {
+    audience: "team",
+    group: "Promo codes",
+    level: "view",
+    label: "View promo codes",
+    description: "The comp and discount codes that exist, with their uses.",
+  },
   "promo.manage": {
     audience: "team",
     group: "Promo codes",
     level: "edit",
-    label: "Promo codes",
-    description: "Comp and discount codes on Stripe or BTC.",
+    label: "Manage promo codes",
+    description: "Mint, archive and restore codes on Stripe or BTC.",
+    implies: ["promo.view"],
   },
   "links.manage": {
     audience: "team",

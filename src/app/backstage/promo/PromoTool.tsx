@@ -28,11 +28,13 @@ export default function PromoTool({
   couponError,
   mode,
   origin,
+  canManage,
 }: {
   coupons: Coupon[];
   couponError: string | null;
   mode: PromoMode;
   origin: string;
+  canManage: boolean;
 }) {
   const [state, setState] = useState<MintState>(initial);
   const [pending, startTransition] = useTransition();
@@ -80,210 +82,215 @@ export default function PromoTool({
 
   return (
     <div className="space-y-10">
-      <section className="relative rounded-xl border border-line bg-white p-6 shadow-sm">
-        <ModeBadge mode={mode} />
-        <h1 className="font-bebas mb-4 text-2xl tracking-wide text-navy">
-          New code
-        </h1>
+      {canManage && (
+        <section className="relative rounded-xl border border-line bg-white p-6 shadow-sm">
+          <ModeBadge mode={mode} />
+          <h1 className="font-bebas mb-4 text-2xl tracking-wide text-navy">
+            New code
+          </h1>
 
-        <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
-          <Field
-            label="Coupon"
-            required
-            className="md:col-span-2"
-            hint="The discount tier the code attaches to. Defaults to the 100%-off comp coupon."
-            error={couponError}
-          >
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <select
-                name="couponId"
-                defaultValue={defaultCoupon?.id ?? ""}
-                disabled={!stripeReady}
-                className={`${selectClass} flex-1`}
-                style={selectStyle}
-              >
-                {!stripeReady && <option value="">No coupons available</option>}
-                {(
-                  [
-                    ["amount", "Dollar amount off"],
-                    ["percent", "Percent off"],
-                  ] as const
-                ).map(([kind, title]) => {
-                  const group = coupons.filter((c) => c.kind === kind);
-                  return (
-                    group.length > 0 && (
-                      <optgroup key={kind} label={title}>
-                        {group.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )
-                  );
-                })}
-              </select>
-              <a
-                href={`https://dashboard.stripe.com/${STRIPE_ACCOUNT}/${mode === "live" ? "" : "test/"}coupons`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${smallButtonClass} self-start py-2 whitespace-nowrap`}
-              >
-                Create new coupon ↗
-              </a>
-            </div>
-          </Field>
-
-          <Field
-            label="Name"
-            required
-            hint="Who this is for — a person, pseudonym, or group."
-            error={err("name")}
-          >
-            <input
-              name="name"
+          <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
+            <Field
+              label="Coupon"
               required
-              maxLength={120}
-              className={fieldClass}
-            />
-          </Field>
-          <Field
-            label="Email"
-            hint="Optional. The code is hashed from the email when given, otherwise from the name."
-            error={err("email")}
-          >
-            <input
-              name="email"
-              type="email"
-              autoComplete="off"
-              className={fieldClass}
-            />
-          </Field>
-
-          <Field
-            label="Purpose"
-            required
-            hint="Recorded in the Purpose column of the “Discount Codes” table."
-            error={err("purpose")}
-            className="md:col-span-2"
-          >
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <select
-                name="purpose"
-                required
-                value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-                className={`${selectClass} w-full sm:w-64`}
-                style={selectStyle}
-              >
-                <option value="">Select…</option>
-                {PURPOSES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-                <option value={CUSTOM}>Custom…</option>
-              </select>
-              {purpose === CUSTOM && (
-                <input
-                  name="customPurpose"
-                  required
-                  autoFocus
-                  placeholder="e.g. Contest winner"
-                  maxLength={60}
-                  className={fieldClass}
-                />
-              )}
-            </div>
-            {purpose === CUSTOM && (
-              <p className="mt-2 rounded-lg border border-tan bg-peach/40 px-3 py-2 text-xs text-ink/80">
-                A custom purpose becomes a <strong>permanent</strong> option in
-                Airtable, offered for every future code. Make sure it’s a
-                genuinely distinct category, not a variant of an existing one.
-              </p>
-            )}
-          </Field>
-
-          <Field
-            label="Custom code"
-            hint="Leave blank for a deterministic COMP-XXXXX code."
-            error={err("customCode")}
-          >
-            <input
-              name="customCode"
-              value={customCode}
-              onChange={(e) => setCustomCode(e.target.value.toUpperCase())}
-              className={`${fieldClass} font-mono`}
-            />
-          </Field>
-          <Field
-            label="Uses"
-            hint={
-              unlimited
-                ? "Redeemable unlimited times (no max_redemptions on the promo)."
-                : "How many times it can be redeemed. Default 1 (single guest); enforced by Stripe via max_redemptions."
-            }
-          >
-            <div className="flex items-center gap-4">
-              <input
-                name="uses"
-                type="number"
-                min={1}
-                step={1}
-                defaultValue={1}
-                disabled={unlimited}
-                className={`${fieldClass} w-28 disabled:bg-cream disabled:text-ink/40`}
-              />
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  name="unlimited"
-                  type="checkbox"
-                  checked={unlimited}
-                  onChange={(e) => setUnlimited(e.target.checked)}
-                />
-                Unlimited
-              </label>
-            </div>
-          </Field>
-
-          <Field label="Notes" className="md:col-span-2">
-            <textarea
-              name="notes"
-              rows={2}
-              maxLength={500}
-              placeholder="Anything worth remembering about this code"
-              className={`${fieldClass} resize-y`}
-            />
-          </Field>
-
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={pending || !stripeReady}
-              className={buttonClass}
+              className="md:col-span-2"
+              hint="The discount tier the code attaches to. Defaults to the 100%-off comp coupon."
+              error={couponError}
             >
-              {pending ? "Minting…" : "Generate code"}
-            </button>
-            <p aria-live="polite" className="min-h-5 text-sm text-meeple">
-              {state.error && !state.field ? state.error : null}
-            </p>
-          </div>
-        </form>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <select
+                  name="couponId"
+                  defaultValue={defaultCoupon?.id ?? ""}
+                  disabled={!stripeReady}
+                  className={`${selectClass} flex-1`}
+                  style={selectStyle}
+                >
+                  {!stripeReady && (
+                    <option value="">No coupons available</option>
+                  )}
+                  {(
+                    [
+                      ["amount", "Dollar amount off"],
+                      ["percent", "Percent off"],
+                    ] as const
+                  ).map(([kind, title]) => {
+                    const group = coupons.filter((c) => c.kind === kind);
+                    return (
+                      group.length > 0 && (
+                        <optgroup key={kind} label={title}>
+                          {group.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )
+                    );
+                  })}
+                </select>
+                <a
+                  href={`https://dashboard.stripe.com/${STRIPE_ACCOUNT}/${mode === "live" ? "" : "test/"}coupons`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${smallButtonClass} self-start py-2 whitespace-nowrap`}
+                >
+                  Create new coupon ↗
+                </a>
+              </div>
+            </Field>
 
-        {state.minted && (
-          <Result
-            key={state.minted.code}
-            minted={state.minted}
-            origin={origin}
-          />
-        )}
-      </section>
+            <Field
+              label="Name"
+              required
+              hint="Who this is for — a person, pseudonym, or group."
+              error={err("name")}
+            >
+              <input
+                name="name"
+                required
+                maxLength={120}
+                className={fieldClass}
+              />
+            </Field>
+            <Field
+              label="Email"
+              hint="Optional. The code is hashed from the email when given, otherwise from the name."
+              error={err("email")}
+            >
+              <input
+                name="email"
+                type="email"
+                autoComplete="off"
+                className={fieldClass}
+              />
+            </Field>
+
+            <Field
+              label="Purpose"
+              required
+              hint="Recorded in the Purpose column of the “Discount Codes” table."
+              error={err("purpose")}
+              className="md:col-span-2"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <select
+                  name="purpose"
+                  required
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  className={`${selectClass} w-full sm:w-64`}
+                  style={selectStyle}
+                >
+                  <option value="">Select…</option>
+                  {PURPOSES.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                  <option value={CUSTOM}>Custom…</option>
+                </select>
+                {purpose === CUSTOM && (
+                  <input
+                    name="customPurpose"
+                    required
+                    autoFocus
+                    placeholder="e.g. Contest winner"
+                    maxLength={60}
+                    className={fieldClass}
+                  />
+                )}
+              </div>
+              {purpose === CUSTOM && (
+                <p className="mt-2 rounded-lg border border-tan bg-peach/40 px-3 py-2 text-xs text-ink/80">
+                  A custom purpose becomes a <strong>permanent</strong> option
+                  in Airtable, offered for every future code. Make sure it’s a
+                  genuinely distinct category, not a variant of an existing one.
+                </p>
+              )}
+            </Field>
+
+            <Field
+              label="Custom code"
+              hint="Leave blank for a deterministic COMP-XXXXX code."
+              error={err("customCode")}
+            >
+              <input
+                name="customCode"
+                value={customCode}
+                onChange={(e) => setCustomCode(e.target.value.toUpperCase())}
+                className={`${fieldClass} font-mono`}
+              />
+            </Field>
+            <Field
+              label="Uses"
+              hint={
+                unlimited
+                  ? "Redeemable unlimited times (no max_redemptions on the promo)."
+                  : "How many times it can be redeemed. Default 1 (single guest); enforced by Stripe via max_redemptions."
+              }
+            >
+              <div className="flex items-center gap-4">
+                <input
+                  name="uses"
+                  type="number"
+                  min={1}
+                  step={1}
+                  defaultValue={1}
+                  disabled={unlimited}
+                  className={`${fieldClass} w-28 disabled:bg-cream disabled:text-ink/40`}
+                />
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    name="unlimited"
+                    type="checkbox"
+                    checked={unlimited}
+                    onChange={(e) => setUnlimited(e.target.checked)}
+                  />
+                  Unlimited
+                </label>
+              </div>
+            </Field>
+
+            <Field label="Notes" className="md:col-span-2">
+              <textarea
+                name="notes"
+                rows={2}
+                maxLength={500}
+                placeholder="Anything worth remembering about this code"
+                className={`${fieldClass} resize-y`}
+              />
+            </Field>
+
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                disabled={pending || !stripeReady}
+                className={buttonClass}
+              >
+                {pending ? "Minting…" : "Generate code"}
+              </button>
+              <p aria-live="polite" className="min-h-5 text-sm text-meeple">
+                {state.error && !state.field ? state.error : null}
+              </p>
+            </div>
+          </form>
+
+          {state.minted && (
+            <Result
+              key={state.minted.code}
+              minted={state.minted}
+              origin={origin}
+            />
+          )}
+        </section>
+      )}
 
       <Existing
         lists={lists}
         busy={listsBusy}
         error={listsError}
         origin={origin}
+        canManage={canManage}
         onLoad={loadLists}
       />
     </div>
@@ -427,12 +434,14 @@ function Existing({
   busy,
   error,
   origin,
+  canManage,
   onLoad,
 }: {
   lists: StripeCode[] | null;
   busy: boolean;
   error: string | null;
   origin: string;
+  canManage: boolean;
   onLoad: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -534,7 +543,7 @@ function Existing({
                   code={c}
                   url={redeemUrl(origin, c.code)}
                   acting={acting === c.id}
-                  onToggle={() => toggle(c)}
+                  onToggle={canManage ? () => toggle(c) : undefined}
                 />
               ))}
             </ul>
@@ -556,7 +565,7 @@ function Existing({
                         code={c}
                         url={redeemUrl(origin, c.code)}
                         acting={acting === c.id}
-                        onToggle={() => toggle(c)}
+                        onToggle={canManage ? () => toggle(c) : undefined}
                       />
                     ))}
                   </ul>
@@ -579,7 +588,8 @@ function StripeRow({
   code: StripeCode;
   url: string;
   acting: boolean;
-  onToggle: () => void;
+  /** Absent for view-only users, who get no archive control. */
+  onToggle?: () => void;
 }) {
   return (
     <li className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -605,14 +615,16 @@ function StripeRow({
       </div>
       <div className="flex flex-wrap gap-2">
         <CopyButtons code={c.code} url={url} />
-        <button
-          type="button"
-          onClick={onToggle}
-          disabled={acting}
-          className={smallButtonClass}
-        >
-          {c.active ? "Archive" : "Restore"}
-        </button>
+        {onToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            disabled={acting}
+            className={smallButtonClass}
+          >
+            {c.active ? "Archive" : "Restore"}
+          </button>
+        )}
       </div>
     </li>
   );

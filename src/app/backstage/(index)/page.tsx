@@ -47,7 +47,7 @@ const TOOLS: {
     icon: DollarSignIcon,
     name: "Promo codes",
     blurb: "Mint comp and discount codes on Stripe or BTC.",
-    perm: "promo.manage",
+    perm: "promo.view",
   },
   {
     href: "/backstage/users",

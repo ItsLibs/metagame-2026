@@ -1007,6 +1007,7 @@ const roleRows = await Promise.all(
       permissions: [
         "links.manage",
         "promo.manage",
+        "promo.view",
         "schedule.manage",
         "schedule.preview",
         "schedule.rsvps",
