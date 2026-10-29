@@ -192,6 +192,20 @@ it.each([
   expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
 });
 
+it("refuses to mint without a coupon rather than defaulting to the comp one", async () => {
+  // A misspelled amountOffUsd used to fall through to COMP_COUPON_ID.
+  const { amountOffUsd, ...rest } = flyer;
+  for (const body of [rest, { ...rest, amountOffUSD: amountOffUsd }]) {
+    const response = await send(body);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "Send couponId or amountOffUsd.",
+      field: "couponId",
+    });
+  }
+  expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
+});
+
 it("refuses an amount no coupon, or more than one, takes off", async () => {
   const none = await send({ ...flyer, amountOffUsd: 75 });
   expect(none.status).toBe(400);
@@ -220,6 +234,7 @@ it("409s a custom code that already exists, archived or not", async () => {
   expect(await taken.json()).toEqual({
     error: "Code ELYSIAN already exists.",
     field: "customCode",
+    existing: { id: "promo_1", active: true, couponId: "flyer100" },
   });
   expect(stripe.promotionCodes.list).toHaveBeenCalledWith({
     code: "ELYSIAN",
@@ -281,11 +296,15 @@ it("answers whether a code exists, in any case", async () => {
   );
   expect(await (await check("?code=ELYSIAN")).json()).toEqual({
     exists: true,
+    id: "promo_2",
     active: true,
+    couponId: "flyer100",
   });
-  const bad = await check("?code=ELYSIAN%20FIELDS");
-  expect(bad.status).toBe(400);
-  expect((await bad.json()).field).toBe("code");
+  for (const query of ["?code=ELYSIAN%20FIELDS", "?code="]) {
+    const bad = await check(query);
+    expect(bad.status).toBe(400);
+    expect((await bad.json()).field).toBe("code");
+  }
 });
 
 it("lists only the codes the promo tool minted", async () => {

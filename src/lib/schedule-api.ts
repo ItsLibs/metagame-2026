@@ -1,12 +1,9 @@
-// Plumbing for the JSON API under /api/admin: the permission gate, body
-// parsing, host resolution and error responses. The schedule routes are
-// thin wrappers over schedule-store.
+// Schedule-specific plumbing for the JSON API: host resolution and DB-error
+// responses. The permission gate and body parsing live in admin-api and are
+// re-exported for the schedule routes.
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { requireAccess, type Access } from "./admin-auth";
-import { API_KEY_HEADER, getAuth } from "./auth";
-import type { Permission } from "./permissions";
+import { error } from "./admin-api";
 import {
   toPacificWall,
   type ScheduleAccount,
@@ -20,41 +17,7 @@ import {
   loadSchedule,
 } from "./schedule-store";
 
-export const json = (data: unknown, status = 200) =>
-  Response.json(data, { status });
-
-export const error = (message: string, status: number, field?: string) =>
-  json({ error: message, ...(field && { field }) }, status);
-
-/**
- * The caller when they hold `permission`, else the 401/403 to send. Accepts
- * a browser session too, so a team member can hit GET from the address bar.
- */
-export async function authorize(
-  permission: Permission = "schedule.manage",
-): Promise<Access | Response> {
-  const access = await requireAccess(permission);
-  if (access) return access;
-  const key = (await headers()).get(API_KEY_HEADER);
-  if (!key) return error(`Send an API key in ${API_KEY_HEADER}.`, 401);
-  const { valid } = await getAuth().api.verifyApiKey({ body: { key } });
-  return valid
-    ? error(`That key's account doesn't hold ${permission}.`, 403)
-    : error("Invalid API key.", 401);
-}
-
-export async function readBody(request: Request): Promise<Raw | Response> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return error("Body must be JSON.", 400);
-  }
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return error("Body must be a JSON object.", 400);
-  }
-  return body as Raw;
-}
+export { authorize, error, json, readBody } from "./admin-api";
 
 /** `explainDbError` as a response: a constraint is the caller's fault. */
 export function failed(err: unknown): Response {

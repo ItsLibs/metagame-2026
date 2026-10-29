@@ -118,19 +118,21 @@ export async function amountOffCoupons(cents: number): Promise<string[]> {
     .map((c) => c.id);
 }
 
+export type FoundCode = { id: string; active: boolean; couponId?: string };
+
 /**
  * The promotion code spelled `code` (Stripe matches any case), preferring an
  * active one when an archived one shares it; null when there's none.
  */
-export async function findStripeCode(
-  code: string,
-): Promise<{ id: string; active: boolean } | null> {
+export async function findStripeCode(code: string): Promise<FoundCode | null> {
   const { data } = await stripeOrThrow().promotionCodes.list({
     code,
     limit: 10,
   });
   const promo = data.find((p) => p.active) ?? data[0];
-  return promo ? { id: promo.id, active: promo.active } : null;
+  return promo
+    ? { id: promo.id, active: promo.active, couponId: couponIdOf(promo) }
+    : null;
 }
 
 type Probe =

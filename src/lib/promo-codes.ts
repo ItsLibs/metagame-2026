@@ -15,6 +15,9 @@ export const PURPOSES = [
 
 export const PROMO_SOURCE = "comp-tool";
 
+/** What a custom code may be spelled with. */
+export const CUSTOM_CODE_RE = /^[A-Za-z0-9-]+$/;
+
 export type MintInput = {
   name: string;
   email?: string;

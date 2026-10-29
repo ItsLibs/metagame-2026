@@ -1,6 +1,6 @@
 import { PromoError } from "@/lib/promo-codes";
 import { listCoupons } from "@/lib/promo-codes-stripe";
-import { authorize, error, json } from "@/lib/schedule-api";
+import { authorize, error, json, message } from "@/lib/admin-api";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,6 @@ export async function GET() {
     if (err instanceof PromoError && err.code === "config")
       return error(err.message, 503);
     console.error("[promo api] Stripe call failed:", err);
-    return error(err instanceof Error ? err.message : String(err), 502);
+    return error(message(err), 502);
   }
 }

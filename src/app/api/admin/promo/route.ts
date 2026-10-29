@@ -1,4 +1,13 @@
 import {
+  authorize,
+  error,
+  json,
+  message,
+  readBody,
+  str,
+} from "@/lib/admin-api";
+import {
+  CUSTOM_CODE_RE,
   normalizeCustomCode,
   PromoError,
   PURPOSES,
@@ -10,50 +19,38 @@ import {
   listStripeCodes,
   mintStripeCode,
 } from "@/lib/promo-codes-stripe";
-import { authorize, error, json, readBody } from "@/lib/schedule-api";
-import type { Raw } from "@/lib/schedule-input";
 
 export const dynamic = "force-dynamic";
 
-const CODE = /^[A-Za-z0-9-]+$/;
-
-const str = (body: Raw, key: string) => {
-  const value = body[key];
-  return typeof value === "string" ? value.trim() : "";
-};
-
-const message = (err: unknown) =>
-  err instanceof Error ? err.message : String(err);
-
 /**
- * `?code=`: whether that code exists on Stripe, `{exists, active?}`, so a
- * caller can check before minting. Without it, every code /backstage/promo
- * minted, newest first.
+ * `?code=`: whether that code exists on Stripe, `{exists, id?, active?,
+ * couponId?}`, so a caller can check before minting or recover one it minted.
+ * Without `code`, every code /backstage/promo minted, newest first.
  */
 export async function GET(request: Request) {
   const access = await authorize("promo.manage");
   if (access instanceof Response) return access;
-  const code = new URL(request.url).searchParams.get("code")?.trim();
+  const raw = new URL(request.url).searchParams.get("code");
   try {
-    if (code === undefined) return json({ codes: await listStripeCodes() });
-    if (!CODE.test(code))
+    if (raw === null) return json({ codes: await listStripeCodes() });
+    const code = normalizeCustomCode(raw);
+    if (!code) return error("Required.", 400, "code");
+    if (!CUSTOM_CODE_RE.test(code))
       return error("Letters, digits, and dashes only.", 400, "code");
-    const found = await findStripeCode(normalizeCustomCode(code));
-    return json(
-      found ? { exists: true, active: found.active } : { exists: false },
-    );
+    const found = await findStripeCode(code);
+    return json(found ? { exists: true, ...found } : { exists: false });
   } catch (err) {
-    return failed(err);
+    return stripeFailed(err);
   }
 }
 
 /**
  * Mints one code, checked as the /backstage/promo form checks it:
  * `{name, purpose, customCode?, maxUses?, email?, notes?}` plus the coupon as
- * `couponId` or `amountOffUsd`. `purpose` must be one of the form's dropdown
- * options. `maxUses` left out or null is unlimited, since a poster's code is
- * shared; a number caps it. A custom code that already exists on Stripe is a
- * 409.
+ * `couponId` or `amountOffUsd`, one of which is required. `purpose` must be
+ * one of the form's dropdown options. `maxUses` left out or null is unlimited,
+ * since a poster's code is shared; a number caps it. A custom code that
+ * already exists on Stripe is a 409 carrying the `existing` code.
  */
 export async function POST(request: Request) {
   const access = await authorize("promo.manage");
@@ -71,7 +68,7 @@ export async function POST(request: Request) {
   if (maxUses !== null && !(Number.isInteger(maxUses) && Number(maxUses) >= 1))
     return error("A whole number, at least 1, or null.", 400, "maxUses");
   const customCode = normalizeCustomCode(str(body, "customCode"));
-  if (customCode && !CODE.test(customCode))
+  if (customCode && !CUSTOM_CODE_RE.test(customCode))
     return error("Letters, digits, and dashes only.", 400, "customCode");
   let couponId = str(body, "couponId");
   const { amountOffUsd } = body;
@@ -85,32 +82,41 @@ export async function POST(request: Request) {
     if (typeof amountOffUsd !== "number" || !(amountOffUsd > 0))
       return error("A dollar amount above 0.", 400, "amountOffUsd");
   }
+  // Never fall through to the default (comp) coupon: a dropped field would
+  // otherwise mint a free ticket.
+  if (!couponId && amountOffUsd === undefined)
+    return error("Send couponId or amountOffUsd.", 400, "couponId");
 
   try {
-    if (customCode) {
-      const existing = await findStripeCode(customCode);
-      if (existing) {
-        const archived = existing.active ? "" : " (archived)";
-        return error(
-          `Code ${customCode} already exists${archived}.`,
-          409,
-          "customCode",
-        );
-      }
+    const [existing, coupons] = await Promise.all([
+      customCode ? findStripeCode(customCode) : null,
+      typeof amountOffUsd === "number"
+        ? amountOffCoupons(Math.round(amountOffUsd * 100))
+        : null,
+    ]);
+    if (existing) {
+      const archived = existing.active ? "" : " (archived)";
+      return json(
+        {
+          error: `Code ${customCode} already exists${archived}.`,
+          field: "customCode",
+          existing,
+        },
+        409,
+      );
     }
-    if (typeof amountOffUsd === "number") {
-      const ids = await amountOffCoupons(Math.round(amountOffUsd * 100));
-      if (ids.length !== 1) {
+    if (coupons) {
+      if (coupons.length !== 1) {
         const usd = `$${amountOffUsd}`;
         return error(
-          ids.length
-            ? `${ids.length} active coupons take ${usd} off (${ids.join(", ")}); send couponId.`
+          coupons.length
+            ? `${coupons.length} active coupons take ${usd} off (${coupons.join(", ")}); send couponId.`
             : `No active coupon takes ${usd} off.`,
           400,
           "amountOffUsd",
         );
       }
-      couponId = ids[0];
+      couponId = coupons[0];
     }
 
     const minted = await mintStripeCode({
@@ -120,12 +126,12 @@ export async function POST(request: Request) {
       maxUses: maxUses as number | null,
       purpose,
       notes: str(body, "notes"),
-      couponId: couponId || undefined,
+      couponId,
       issuedBy: access.name,
     });
     return json(summary(minted), minted.reused ? 200 : 201);
   } catch (err) {
-    return failed(err);
+    return stripeFailed(err);
   }
 }
 
@@ -139,7 +145,7 @@ const summary = (m: MintResult) => ({
   ...(m.reused && { reused: true }),
 });
 
-function failed(err: unknown): Response {
+function stripeFailed(err: unknown): Response {
   if (err instanceof PromoError) {
     if (err.code === "config") return error(err.message, 503);
     const field = err.code === "collision" ? "customCode" : undefined;
