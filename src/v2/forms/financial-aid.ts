@@ -14,7 +14,8 @@ import {
   howFound,
   questions,
   reference,
-  teams,
+  skills,
+  teamLists,
   ticketStatus,
   VOLUNTEER_UTM_FIELDS,
 } from "./shared";
@@ -33,38 +34,26 @@ const instant100 = (a: Answers) =>
 const canVolunteer = (a: Answers) =>
   a.volunteer === "Yes" || a.volunteer === "Unsure";
 
-// The financial aid application, as the Airtable form asks it. It shares the
-// volunteer table, and asks the volunteer questions of anyone who could help.
+// The financial aid application, on the volunteer table. Anyone who could
+// volunteer gets the volunteer questions too, as their own steps.
 export const financialAid: FormDef = {
   slug: "financial-aid",
   path: FINANCIAL_AID_FORM_URL,
   tableId: airtableConfig.volunteersTableId,
   name: "Financial aid application",
-  eyebrow: "Financial aid · Metagame 2026",
-  title: "Make it affordable.",
+  eyebrow: "Application · Metagame 2026",
+  title: "Apply for financial aid",
   pitch:
-    "There's a scholarship fund with a limited number of free and reduced-price tickets, for anyone for whom Metagame would be a financial hardship. Applications are processed in the order they arrive, so apply as soon as you can.",
-  facts: [
-    { label: "Takes", value: "About 5 minutes" },
-    { label: "Due", value: "Oct 19" },
-    { label: "Full price", value: "$425" },
-  ],
-  notice: `Several people on the Metagame team will see your answers. For anything you'd rather keep more private, email ricki@metagame.games. You can also [apply to volunteer](${VOLUNTEER_APPLY_PATH}), which is how most reduced-price tickets are earned.`,
+    "Metagame has a scholarship fund with a limited number of free and reduced-price tickets, for anyone for whom the full price would be a hardship. Tell us the highest price that would work for you and a little about your situation, and we'll email you once we've reviewed it.",
+  aside: "This application should only take about 5 minutes.",
+  notice:
+    "Your application will be visible to the Metagame team. If you'd rather tell us something privately, email ricki@metagame.games.",
   utmFields: VOLUNTEER_UTM_FIELDS,
   steps: [
     {
       key: "you",
-      title: "Who's applying?",
+      title: "Who are you?",
       items: basicFacts("Leave it blank if it's the same."),
-    },
-    {
-      key: "ticket",
-      title: "Your ticket",
-      items: [
-        ticketStatus(
-          "Already have one? Carry on with the ticket you'd like instead, and we'll work out the reimbursement when we review your application.",
-        ),
-      ],
     },
     {
       key: "price",
@@ -72,6 +61,9 @@ export const financialAid: FormDef = {
       intro:
         "A full-price ticket is $425. Pick the highest price that would still let you come.",
       items: [
+        ticketStatus(
+          "Already have one? Pick the price you'd like anyway, and we'll work out the difference when we review your application.",
+        ),
         {
           key: "price",
           field: "fldBdxOA9RX6B8OEl",
@@ -160,15 +152,34 @@ export const financialAid: FormDef = {
           field: "fldZjtgeJ9rcvMlUf",
           type: "choice",
           label: "Are you able to volunteer at or in the lead-up to Metagame?",
+          required: true,
           options: [{ value: "Yes" }, { value: "No" }, { value: "Unsure" }],
         },
-        ...teams(
-          "What kind of work are you most excited about? You'll likely be slotted onto at most two teams.",
-          canVolunteer,
-        ),
-        ...availability((day) => `${day}: when could you help?`, canVolunteer),
-        ...aboutYou(canVolunteer),
       ],
+    },
+    {
+      key: "shifts",
+      title: "When are you available?",
+      intro:
+        "Select any times you could be available. These are not hard commitments, and you are not committing to work during every slot you select.",
+      view: "schedule",
+      items: availability((day) => day),
+      show: canVolunteer,
+    },
+    {
+      key: "teams",
+      title: "Pick your teams",
+      intro:
+        "You'd likely end up on one or two teams, and every volunteer attends a 1–2 hour orientation before the event.",
+      view: "teams",
+      items: teamLists("What kind of work are you most excited about?"),
+      show: canVolunteer,
+    },
+    {
+      key: "skills",
+      title: "Skills and details",
+      items: [skills(), ...aboutYou()],
+      show: canVolunteer,
     },
     {
       key: "more",
