@@ -21,40 +21,6 @@ const DOT: Record<string, string> = {
   other: "bg-peach",
 };
 
-const FRIDAY = CONFERENCE_DAYS[0].key;
-const SUNDAY = CONFERENCE_DAYS[2].key;
-
-// Without the schedule (no database here), the weekend's fixed moments.
-const MOMENTS: ClockSession[] = [
-  ...CONFERENCE_DAYS.map((d) => ({
-    id: `megagame-${d.key}`,
-    title: "The Megagame",
-    category: "game",
-    day: d.key,
-    start: opensAt(d.key),
-    end: d.key === SUNDAY ? 21 * 60 : MIDNIGHT,
-    location: null,
-  })),
-  {
-    id: "gates",
-    title: "Gates open",
-    category: "other",
-    day: FRIDAY,
-    start: 14 * 60,
-    end: 15 * 60,
-    location: null,
-  },
-  {
-    id: "night-market",
-    title: "Night Market",
-    category: "other",
-    day: FRIDAY,
-    start: 19 * 60,
-    end: 22 * 60,
-    location: null,
-  },
-];
-
 type State = { day: number; t: number; playing: boolean };
 type Action =
   | { type: "tick" | "toggle" | "pause" }
@@ -121,15 +87,14 @@ function Face({ t }: { t: number }) {
 // §1's clock: the 2026 weekend replayed fifteen minutes at a time, like
 // /last-year's instant replay but with a clock in place of its bars. It runs
 // on the team's draft schedule (loadClockSessions) and lists what's on at
-// each moment; without the schedule it runs on the weekend's fixed moments.
+// each moment.
 export default function ScheduleClock({
   sessions,
 }: {
   sessions: ClockSession[];
 }) {
-  const all = sessions.length ? sessions : MOMENTS;
   const days = CONFERENCE_DAYS.map((d) => {
-    const here = all.filter((s) => s.day === d.key);
+    const here = sessions.filter((s) => s.day === d.key);
     const end = Math.max(MIDNIGHT, ...here.map((s) => s.end));
     return { ...d, start: opensAt(d.key), end, here };
   });
@@ -189,9 +154,7 @@ export default function ScheduleClock({
           The weekend, on the clock
         </span>
         <span className="font-space-mono text-[11px] tracking-[0.12em] text-ink/55 uppercase">
-          {sessions.length
-            ? "The 2026 draft schedule · times may move"
-            : "The fixed moments, until the program is scheduled"}
+          The 2026 draft schedule · times may move
         </span>
       </p>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-4 border-t-2 border-navy pt-4">
