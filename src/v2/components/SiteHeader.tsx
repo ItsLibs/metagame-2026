@@ -17,14 +17,30 @@ const AFTER_SECTIONS = `${SECTION_LINK} text-ink/60`;
 
 // A long page's sticky header, in place of the corner die nav: the brand,
 // the page's sections (scrolling sideways on phones, the one in view lit),
-// and tickets.
-export default function SiteHeader({ sections }: { sections: Section[] }) {
+// and tickets. With hideAtTop it floats over the page instead, out of sight
+// until the reader scrolls past the first screen.
+export default function SiteHeader({
+  sections,
+  hideAtTop = false,
+}: {
+  sections: Section[];
+  hideAtTop?: boolean;
+}) {
   // Null until /api/admin-status answers, so neither account link flashes.
   const account = useAccountStatus();
   const accountLink = account && (account.signedIn ? ACCOUNT_LINK : LOGIN_LINK);
   const current = useCurrentSection(sections);
+  const scrolled = useScrolledPastFirstScreen(hideAtTop);
+  const hidden = hideAtTop && !scrolled;
   return (
-    <header className="sticky top-0 z-40 border-b-2 border-navy bg-background">
+    <header
+      inert={hidden}
+      className={`top-0 z-40 border-b-2 border-navy bg-background ${
+        hideAtTop
+          ? `fixed inset-x-0 transition-transform duration-300 motion-reduce:transition-none ${hidden ? "-translate-y-[calc(100%+3px)]" : ""}`
+          : "sticky"
+      }`}
+    >
       {/* How far down the page you are. */}
       <span
         aria-hidden
@@ -71,6 +87,23 @@ export default function SiteHeader({ sections }: { sections: Section[] }) {
       </div>
     </header>
   );
+}
+
+// Whether the page is scrolled most of a screen down, past the landing hero.
+function useScrolledPastFirstScreen(enabled: boolean) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    const check = () => setScrolled(window.scrollY > window.innerHeight * 0.6);
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => {
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, [enabled]);
+  return scrolled;
 }
 
 // The section crossing the upper middle of the screen, for the nav highlight.

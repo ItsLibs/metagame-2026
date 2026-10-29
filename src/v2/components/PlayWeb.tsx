@@ -8,7 +8,7 @@ const KINDS: { name: GlyphName; bg: string; fg: string }[] = [
   { name: "puzzles", bg: "bg-navy", fg: "text-cream" },
   { name: "video-games", bg: "bg-brand-blue", fg: "text-navy" },
   { name: "larps", bg: "bg-meeple", fg: "text-cream" },
-  { name: "talks", bg: "bg-sky", fg: "text-navy" },
+  { name: "dance", bg: "bg-sky", fg: "text-navy" },
   { name: "megagame", bg: "bg-tan", fg: "text-navy" },
   { name: "party-games", bg: "bg-moss", fg: "text-cream" },
   { name: "card-games", bg: "bg-peach", fg: "text-navy" },
@@ -79,7 +79,7 @@ const CAMERA = 9;
 const HEX_CLIP = "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)";
 
 const DRAG = 0.008;
-const IDLE_SPIN = 0.0035;
+const IDLE_SPIN = 0.00175;
 const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {

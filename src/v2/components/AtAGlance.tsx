@@ -1,5 +1,4 @@
 import PlayWeb from "./PlayWeb";
-import ShelfFigure from "./ShelfFigure";
 import { DISPLAY, KICKER } from "./styles";
 
 // The weekend's facts. Same facts as the FAQ.
@@ -10,13 +9,12 @@ const FACTS = [
   { label: "Who", value: "Everyone who shows up" },
 ];
 
-// The weekend at a glance, beside the hero: the game library photo (the
-// cover puzzle), the facts, and the kinds of play as a web to spin.
+// The weekend at a glance, beside the hero: the facts, and the kinds of play
+// as a web to spin. The cover puzzle's photo is behind the dice above it.
 export default function AtAGlance() {
   return (
     <aside aria-label="At a glance">
-      <ShelfFigure />
-      <dl className="mt-5 grid grid-cols-2 gap-x-6 border-t-2 border-navy">
+      <dl className="grid grid-cols-2 gap-x-6 border-t-2 border-navy">
         {FACTS.map(({ label, value }) => (
           <div key={label} className="border-b border-navy/15 py-3">
             <dt className={`${KICKER} text-[10.5px] text-meeple`}>{label}</dt>

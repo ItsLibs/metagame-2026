@@ -76,6 +76,13 @@ const PATHS = {
       <path d="M12 22 a12 12 0 0 0 24 0 M24 34 v7 M17 41 h14" />
     </>
   ),
+  // Not in the brand guide's set: drawn to match it, for the hero's web.
+  dance: (
+    <>
+      <circle cx="27" cy="9" r="4" />
+      <path d="M26 15 L22 28 M25 18 L16 13 L11 6 M25 18 L33 21 L38 15 M22 28 L15 34 L17 42 M22 28 L30 33 L36 40" />
+    </>
+  ),
   workshops: (
     <path d="M11 37 l3 -10 L31 10 l7 7 L21 34 z M27 14 l7 7 M11 37 l10 -3" />
   ),
@@ -117,6 +124,7 @@ export const GLYPH_LABELS: Record<GlyphName, string> = {
   crosswords: "Crosswords",
   larps: "LARPs",
   talks: "Talks",
+  dance: "Dance",
   workshops: "Workshops",
   "escape-rooms": "Escape rooms",
   megagame: "The Megagame",
