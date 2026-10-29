@@ -1,17 +1,17 @@
 import { airtableConfig } from "@/lib/airtable-config";
 import { CHILD_REGISTRATION_FORM_URL } from "@/v2/lib/links";
-import type { Answers, FormDef, Step } from "./engine";
+import { SOCIAL_LINKS } from "@/v2/lib/urls";
+import type { Answers, FormDef, Option, Step } from "./engine";
 import { opts } from "./shared";
 
 const kids = (a: Answers) => Number(a.count) || 0;
 
-const TIMES = opts(
+const SESSIONS = opts(
   "Friday afternoon (3pm-7pm, includes dinner)",
   "Saturday morning (9:45am-2:45pm, includes lunch)",
   "Saturday afternoon (5pm-7:30pm, includes dinner)",
   "Sunday morning (9:45am-3pm, includes lunch)",
   "Sunday afternoon (5pm-7:30pm, includes dinner)",
-  "Other",
 );
 
 // Airtable has five fields for each of the first four children.
@@ -50,11 +50,19 @@ const ORDINAL = ["first", "second", "third", "fourth"];
 const childStep = (i: number): Step => {
   const [name, age, times, medical, other] = CHILD_FIELDS[i];
   const n = i + 1;
+  // "Other" opens a box; what's typed there joins the child's notes.
+  const otherTimes: Option = {
+    value: "Other",
+    more: {
+      key: `child${n}OtherTimes`,
+      label: "Other times",
+      into: `child${n}Other`,
+      placeholder: "Which times would you need?",
+    },
+  };
   return {
     key: `child${n}`,
-    title: `Child ${n}`,
-    intro:
-      n === 1 ? "Tell us about your first child." : `And your ${ORDINAL[i]}.`,
+    title: `Your ${ORDINAL[i]} child`,
     show: (a) => kids(a) >= n,
     items: [
       {
@@ -63,6 +71,7 @@ const childStep = (i: number): Step => {
         type: "text",
         label: "Name",
         required: true,
+        row: "child",
       },
       {
         key: `child${n}Age`,
@@ -73,14 +82,15 @@ const childStep = (i: number): Step => {
         decimals: 1,
         max: 17.9,
         required: true,
+        row: "child",
       },
       {
         key: `child${n}Times`,
         field: times,
         type: "choices",
-        label: "Which childcare sessions?",
-        help: "Childcare is free for ages 5–12. Skip this if you won't need it.",
-        options: TIMES,
+        label: "Childcare sessions",
+        help: "Free for ages 5–12. Leave it blank if they won't need childcare.",
+        options: [...SESSIONS, otherTimes],
       },
       {
         key: `child${n}Medical`,
@@ -98,29 +108,26 @@ const childStep = (i: number): Step => {
   };
 };
 
-// Children at Metagame: the Airtable form asks for every child under 18 who's
-// coming, childcare or not. Each child gets a step of their own.
+// Children at Metagame: every child under 18 who's coming, childcare or not,
+// on the table the Airtable form wrote to. Each child gets a step of their
+// own.
 export const children: FormDef = {
   slug: "children",
   path: CHILD_REGISTRATION_FORM_URL,
   tableId: airtableConfig.childrenTableId,
   name: "Child registration",
   eyebrow: "Childcare · Metagame 2026",
-  title: "Bring the kids.",
+  title: "Register your children",
   pitch:
-    "Bringing anyone under 18? Register them here. Children under 13 come free, and there's free childcare for ages 5–12 on Friday afternoon and Saturday and Sunday, mornings and late afternoons. Outside 5–12 but want childcare? Mention it and we'll do our best.",
-  facts: [
-    { label: "Takes", value: "About 3 minutes" },
-    { label: "Due", value: "Oct 15" },
-    { label: "Under 13", value: "Free" },
-  ],
+    "Every child under 18 who's coming to Metagame needs to be registered here, whether or not they'll use childcare. Children under 13 come free, and childcare is free for ages 5–12. If yours is outside that range and you'd like childcare, say so and we'll do our best.",
+  aside: "This should only take about 3 minutes.",
   notice:
-    "Childcare hours: Friday 3–7 pm (drop-off and pick-up flexible); Saturday and Sunday 9:45 am–3 pm (drop-off 9:45–10, pick-up 2:45–3) and 5–7:30 pm (drop-off 5–5:15, pick-up 7:15–7:30).",
+    "Childcare runs Friday 3–7 pm, and Saturday and Sunday 9:45 am–3 pm and 5–7:30 pm, with drop-off in the first 15 minutes and pick-up in the last 15.",
   steps: [
     {
       key: "contact",
-      title: "Emergency contact",
-      intro: "Who should we reach if we need you during the weekend?",
+      title: "Who are you?",
+      intro: "You're who we'll reach during the weekend if we need to.",
       items: [
         {
           key: "name",
@@ -129,14 +136,24 @@ export const children: FormDef = {
           label: "Name",
           required: true,
           autoComplete: "name",
+          row: "name",
+        },
+        {
+          key: "relationship",
+          field: "fld0o0mWZeGE2bbqT",
+          type: "text",
+          label: "Relationship to the children",
+          placeholder: "Parent, aunt, guardian…",
+          row: "name",
         },
         {
           key: "email",
           field: "fldC3WWHFqQsm1FSl",
           type: "email",
-          label: "Email",
+          label: "Email address",
           required: true,
           autoComplete: "email",
+          row: "contact",
         },
         {
           key: "phone",
@@ -145,20 +162,16 @@ export const children: FormDef = {
           label: "Phone number",
           required: true,
           autoComplete: "tel",
-        },
-        {
-          key: "relationship",
-          field: "fld0o0mWZeGE2bbqT",
-          type: "text",
-          label: "Relationship to the child(ren)",
-          placeholder: "Parent, aunt, guardian…",
+          row: "contact",
         },
         {
           key: "discord",
           field: "fld2rv0eiORYjCylO",
           type: "text",
           label: "Discord handle",
+          aside: `[join our Discord](${SOCIAL_LINKS.DISCORD})`,
           placeholder: "@yourname",
+          row: "discord",
         },
       ],
     },
@@ -171,6 +184,7 @@ export const children: FormDef = {
           field: "fld6tSDSTGDIzfYIO",
           type: "number",
           label: "Children you're bringing",
+          help: "Anyone under 18, whether or not they'll use childcare.",
           min: 1,
           max: 20,
           required: true,
@@ -180,9 +194,8 @@ export const children: FormDef = {
     ...[0, 1, 2, 3].map(childStep),
     {
       key: "more",
-      title: "Children five and up",
-      intro:
-        "The form has room for four in detail. Tell us about the rest here.",
+      title: "Your other children",
+      intro: "There's room for four in detail. Tell us about the rest here.",
       show: (a) => kids(a) >= 5,
       items: [
         {
@@ -209,8 +222,8 @@ export const children: FormDef = {
     },
   ],
   done: {
-    title: "They're on the list.",
-    body: "Thanks for registering them. We'll be in touch with childcare details before the weekend.",
+    title: "Thanks, they're registered.",
+    body: "We'll be in touch with childcare details before the weekend.",
     links: [
       { label: "Read about childcare", href: "/childcare" },
       { label: "Back to the rulebook", href: "/" },
