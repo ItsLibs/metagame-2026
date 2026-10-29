@@ -27,6 +27,11 @@ export type Coupon = {
   label: string;
   isDefault: boolean;
   kind: "percent" | "amount";
+  /** Whole-currency amount off (80 for $80), for amount coupons. */
+  amountOff?: number;
+  /** Lowercase ISO code, e.g. "usd", for amount coupons. */
+  currency?: string;
+  percentOff?: number;
 };
 
 export type StripeCode = {
@@ -44,6 +49,11 @@ export type StripeCode = {
 };
 
 const meta = (p: Stripe.PromotionCode): Stripe.Metadata => p.metadata ?? {};
+
+const couponIdOf = (p: Stripe.PromotionCode): string | undefined => {
+  const coupon = p.promotion?.coupon;
+  return typeof coupon === "string" ? coupon : coupon?.id;
+};
 
 function stripeOrThrow(): Stripe {
   const stripe = getPromoStripe();
@@ -67,18 +77,19 @@ function couponLabel(c: Stripe.Coupon | null | undefined): string {
   return c.name && c.name !== discount ? `${c.name} — ${discount}` : discount;
 }
 
+const validCoupons = async (stripe: Stripe) =>
+  (
+    await stripe.coupons.list({ limit: 100 }).autoPagingToArray({ limit: 300 })
+  ).filter((c) => c.valid);
+
 /** Usable dashboard coupons for the tier dropdown, grouped by kind and sorted ascending. */
 export async function listCoupons(): Promise<Coupon[]> {
-  const stripe = stripeOrThrow();
-  const coupons = await stripe.coupons
-    .list({ limit: 100 })
-    .autoPagingToArray({ limit: 300 });
+  const coupons = await validCoupons(stripeOrThrow());
   const magnitude = (c: Stripe.Coupon) =>
     c.percent_off ?? (c.amount_off ?? 0) / 100;
   const kind = (c: Stripe.Coupon) =>
     c.percent_off != null ? ("percent" as const) : ("amount" as const);
   return coupons
-    .filter((c) => c.valid)
     .sort(
       (a, b) =>
         kind(a).localeCompare(kind(b)) ||
@@ -90,7 +101,38 @@ export async function listCoupons(): Promise<Coupon[]> {
       label: couponLabel(c),
       isDefault: c.id === env.COMP_COUPON_ID,
       kind: kind(c),
+      ...(c.percent_off != null
+        ? { percentOff: c.percent_off }
+        : {
+            amountOff: (c.amount_off ?? 0) / 100,
+            currency: c.currency ?? undefined,
+          }),
     }));
+}
+
+/** Ids of the usable coupons taking exactly `cents` off in USD. */
+export async function amountOffCoupons(cents: number): Promise<string[]> {
+  const coupons = await validCoupons(stripeOrThrow());
+  return coupons
+    .filter((c) => c.amount_off === cents && c.currency === "usd")
+    .map((c) => c.id);
+}
+
+export type FoundCode = { id: string; active: boolean; couponId?: string };
+
+/**
+ * The promotion code spelled `code` (Stripe matches any case), preferring an
+ * active one when an archived one shares it; null when there's none.
+ */
+export async function findStripeCode(code: string): Promise<FoundCode | null> {
+  const { data } = await stripeOrThrow().promotionCodes.list({
+    code,
+    limit: 10,
+  });
+  const promo = data.find((p) => p.active) ?? data[0];
+  return promo
+    ? { id: promo.id, active: promo.active, couponId: couponIdOf(promo) }
+    : null;
 }
 
 type Probe =
@@ -189,7 +231,10 @@ export async function mintStripeCode(
   };
 
   const result = (r: Probe): MintResult => ({
+    id: r.promo.id,
     code: r.promo.code,
+    active: r.promo.active,
+    couponId: couponIdOf(r.promo) ?? coupon,
     name,
     email,
     reused: r.status === "reused",

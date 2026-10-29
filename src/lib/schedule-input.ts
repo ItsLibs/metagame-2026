@@ -16,7 +16,8 @@ import {
   type Status,
 } from "./schedule";
 
-export type Raw = Record<string, unknown>;
+import type { Raw } from "./admin-api";
+export type { Raw };
 
 export type Invalid = { field: string; error: string };
 export type Parsed<T> = { ok: true; value: T } | ({ ok: false } & Invalid);
