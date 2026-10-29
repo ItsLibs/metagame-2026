@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
  * `?code=`: whether that code exists on Stripe, `{exists, id?, active?,
  * couponId?}`, so a caller can check before minting or recover one it minted.
  * Without `code`, every code /backstage/promo minted, newest first. Reading
- * takes `promo.view`; minting below takes `promo.manage`.
+ * takes `promo.view`; minting below takes `promo.create`.
  */
 export async function GET(request: Request) {
   const access = await authorize("promo.view");
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
  * already exists on Stripe is a 409 carrying the `existing` code.
  */
 export async function POST(request: Request) {
-  const access = await authorize("promo.manage");
+  const access = await authorize("promo.create");
   if (access instanceof Response) return access;
   const body = await readBody(request);
   if (body instanceof Response) return body;
