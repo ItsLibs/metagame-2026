@@ -5,7 +5,6 @@ import {
 } from "next/constants";
 import { buildErd } from "./scripts/build-erd.mjs";
 import { validateEnv } from "./src/env";
-import { RFP_FORM_URL } from "./src/v2/lib/links";
 
 // Warn (don't fail) on missing required env vars at build / dev start.
 validateEnv();
@@ -53,8 +52,7 @@ const nextConfig: NextConfig = {
     },
     // Key dates used to be its own page.
     { source: "/key-dates", destination: "/#key-dates", permanent: true },
-    // Short link to the session-proposal (RFP) Airtable form.
-    { source: "/propose", destination: RFP_FORM_URL, permanent: false },
+    // /propose, the session proposal's short link, is its journey page now.
     // Short links into Standard checkout; /buy/<code> pre-applies a promo code.
     {
       source: "/buy",
