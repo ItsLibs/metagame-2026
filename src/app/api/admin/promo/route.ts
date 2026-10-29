@@ -1,6 +1,7 @@
 import {
   normalizeCustomCode,
   PromoError,
+  PURPOSES,
   type MintResult,
 } from "@/lib/promo-codes";
 import {
@@ -49,8 +50,10 @@ export async function GET(request: Request) {
 /**
  * Mints one code, checked as the /backstage/promo form checks it:
  * `{name, purpose, customCode?, maxUses?, email?, notes?}` plus the coupon as
- * `couponId` or `amountOffUsd`. `maxUses` null is unlimited; left out, 1.
- * A custom code that already exists on Stripe is a 409.
+ * `couponId` or `amountOffUsd`. `purpose` must be one of the form's dropdown
+ * options. `maxUses` left out or null is unlimited, since a poster's code is
+ * shared; a number caps it. A custom code that already exists on Stripe is a
+ * 409.
  */
 export async function POST(request: Request) {
   const access = await authorize("promo.manage");
@@ -62,7 +65,9 @@ export async function POST(request: Request) {
   if (!name) return error("Required.", 400, "name");
   const purpose = str(body, "purpose");
   if (!purpose) return error("Required.", 400, "purpose");
-  const { maxUses = 1 } = body;
+  if (!(PURPOSES as readonly string[]).includes(purpose))
+    return error(`One of: ${PURPOSES.join(", ")}.`, 400, "purpose");
+  const { maxUses = null } = body;
   if (maxUses !== null && !(Number.isInteger(maxUses) && Number(maxUses) >= 1))
     return error("A whole number, at least 1, or null.", 400, "maxUses");
   const customCode = normalizeCustomCode(str(body, "customCode"));

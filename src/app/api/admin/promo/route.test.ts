@@ -49,7 +49,7 @@ const KEY = "mg_promo";
 const flyer = {
   customCode: "ELYSIAN",
   name: "Elysian flyer",
-  purpose: "Location flyer",
+  purpose: "Flyer",
   notes: "Location flyer · elysian",
   maxUses: null,
   amountOffUsd: 100,
@@ -147,7 +147,7 @@ it("mints an unlimited code on the one active $100-off coupon", async () => {
     promotion: { type: "coupon", coupon: "flyer100" },
     metadata: {
       name: "Elysian flyer",
-      purpose: "Location flyer",
+      purpose: "Flyer",
       notes: "Location flyer · elysian",
       issued_by: "Libi",
     },
@@ -155,7 +155,7 @@ it("mints an unlimited code on the one active $100-off coupon", async () => {
   expect(params).not.toHaveProperty("max_redemptions");
 });
 
-it("takes a couponId instead, and caps uses at 1 unless told otherwise", async () => {
+it("takes a couponId instead, and leaves uses unlimited unless told otherwise", async () => {
   // undefined drops out of the JSON, as if never sent.
   await send({
     ...flyer,
@@ -164,10 +164,9 @@ it("takes a couponId instead, and caps uses at 1 unless told otherwise", async (
     couponId: "flyer100",
   });
   expect(stripe.coupons.list).not.toHaveBeenCalled();
-  expect(stripe.promotionCodes.create.mock.calls[0][0]).toMatchObject({
-    promotion: { coupon: "flyer100" },
-    max_redemptions: 1,
-  });
+  const params = stripe.promotionCodes.create.mock.calls[0][0];
+  expect(params).toMatchObject({ promotion: { coupon: "flyer100" } });
+  expect(params).not.toHaveProperty("max_redemptions");
   await send({ ...flyer, maxUses: 25 });
   expect(stripe.promotionCodes.create.mock.calls[1][0].max_redemptions).toBe(
     25,
@@ -177,6 +176,7 @@ it("takes a couponId instead, and caps uses at 1 unless told otherwise", async (
 it.each([
   ["a blank name", { name: " " }],
   ["a missing purpose", { purpose: undefined }],
+  ["a purpose not in the dropdown", { purpose: "Location flyer" }],
   ["a custom code with a space", { customCode: "ELYSIAN FIELDS" }],
   ["zero maxUses", { maxUses: 0 }],
   ["maxUses that aren't a number", { maxUses: "many" }],

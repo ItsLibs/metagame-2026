@@ -10,6 +10,7 @@ export const PURPOSES = [
   "Financial aid",
   "Friend/Family",
   "Easter Egg",
+  "Flyer",
 ] as const;
 
 export const PROMO_SOURCE = "comp-tool";
