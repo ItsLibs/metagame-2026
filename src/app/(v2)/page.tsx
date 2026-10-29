@@ -51,6 +51,7 @@ export const metadata: Metadata = {
 };
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
+const EXT = { target: "_blank", rel: "noopener noreferrer" } as const;
 // The ghost button, outlined in navy for the page.
 const OUTLINE =
   "border-2 border-navy text-navy hover:border-navy hover:bg-navy/5";
@@ -177,7 +178,12 @@ const FAQS: Rule[] = [
     answer: (
       <>
         Please do! Fill out our proposal form{" "}
-        <a href={RFP_FORM_URL} className={BODY_LINK}>
+        <a
+          href={RFP_FORM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={BODY_LINK}
+        >
           here
         </a>{" "}
         to run a game, event, or session.
@@ -333,7 +339,9 @@ export default async function Home() {
               <Link href="/volunteer">Apply to volunteer</Link>
             </Button>
             <Button asChild variant="ghost" className={OUTLINE}>
-              <Link href={RFP_FORM_URL}>Propose a session</Link>
+              <a href={RFP_FORM_URL} {...EXT}>
+                Propose a session
+              </a>
             </Button>
           </div>
         </div>

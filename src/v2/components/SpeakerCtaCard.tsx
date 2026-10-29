@@ -23,10 +23,6 @@ export default function SpeakerCtaCard({
   // The factions and the Crown are listed by name; the rest just counted.
   const named = worn.filter((h) => FACTION_HATS.includes(h.id) || h.requires);
   const others = worn.length - named.length;
-  // The proposal form is a page on the site now; only an outside link opens a tab.
-  const newTab = href.startsWith("/")
-    ? {}
-    : { target: "_blank", rel: "noopener noreferrer" };
 
   if (compact)
     return (
@@ -50,7 +46,8 @@ export default function SpeakerCtaCard({
           {/* The link covers the seat; the score's button sits above it. */}
           <a
             href={href}
-            {...newTab}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex flex-col gap-1 after:absolute after:inset-0"
           >
             <h3
@@ -130,7 +127,8 @@ export default function SpeakerCtaCard({
     <div className="relative h-full">
       <a
         href={href}
-        {...newTab}
+        target="_blank"
+        rel="noopener noreferrer"
         className="group flex h-full flex-col overflow-hidden rounded-2xl border border-dashed border-navy/40 bg-white shadow-[0_8px_24px_rgba(23,48,89,0.08)] transition-[border-color,box-shadow] hover:border-navy hover:shadow-[0_12px_28px_rgba(23,48,89,0.16)]"
       >
         <div
