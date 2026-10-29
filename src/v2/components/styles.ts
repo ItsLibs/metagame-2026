@@ -22,10 +22,5 @@ export const SECTION = `${SECTION_ANCHOR} py-8`;
 export const FIELD_LIGHT =
   "border-navy/20 bg-white text-ink placeholder:text-ink/40 focus:border-meeple";
 
-// The display face (Bebas Neue): section heads, big numbers, card titles.
+// The display face (Bebas Neue): big titles, clock readouts, toggles.
 export const DISPLAY = "font-[family-name:var(--font-bebas)] font-normal";
-
-// Pages laid out on the page itself, not in boxes: rules and hairlines set
-// things apart, and colour comes in tokens, round game pieces that hold a
-// glyph or an icon. Size and colour are the caller's.
-export const TOKEN = "grid shrink-0 place-items-center rounded-full";
