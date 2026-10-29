@@ -279,14 +279,14 @@ export default async function Home() {
       {/* The dice stay above the tickets' Monopoly rule: they roll for its
           race, and they're one of the cover puzzle's seven games. */}
       <PageSection section={SECTIONS.speakers} rule={<DiceDivider />}>
-        <ul className="grid gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-6">
           {SPEAKERS.map((speaker) => (
             <li key={speaker.name}>
               <SpeakerCard {...speaker} sessions={sessionsFor(speaker.name)} />
             </li>
           ))}
           <li>
-            <SpeakerCtaCard href={RFP_FORM_URL} compact />
+            <SpeakerCtaCard href={RFP_FORM_URL} />
           </li>
         </ul>
         <p className="mt-8 border-t border-navy/15 pt-4 text-base text-ink/70">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   Accessibility,
   ArrowLeftRight,
@@ -15,7 +15,6 @@ import {
   MessagesSquare,
   Plus,
   RotateCcw,
-  Search,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
@@ -49,79 +48,12 @@ export type FaqItem = {
 
 const BODY_LINK = "font-semibold text-navy underline underline-offset-2";
 
-// A d12's outline: a decagon around a pentagon face, joined at the corners.
-const ring = (n: number, r: number) =>
-  Array.from({ length: n }, (_, k) => {
-    const a = ((-90 + (360 / n) * k) * Math.PI) / 180;
-    return [24 + r * Math.cos(a), 24 + r * Math.sin(a)] as const;
-  });
-const OUTER = ring(10, 22);
-const FACE = ring(5, 12);
-const pts = (p: readonly (readonly [number, number])[]) =>
-  p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-
-function D12({ face, spinning }: { face: string; spinning: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 48 48"
-      aria-hidden
-      className={`size-10 shrink-0 ${spinning ? "motion-safe:animate-[spin_0.4s_linear_infinite]" : "transition-transform duration-300 group-hover:rotate-[36deg]"}`}
-    >
-      <polygon
-        points={pts(OUTER)}
-        className="fill-background stroke-navy"
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-      {FACE.map(([x, y], k) => (
-        <line
-          key={k}
-          x1={x}
-          y1={y}
-          x2={OUTER[2 * k][0]}
-          y2={OUTER[2 * k][1]}
-          className="stroke-navy"
-          strokeWidth={1.5}
-        />
-      ))}
-      <polygon
-        points={pts(FACE)}
-        className="fill-tan stroke-navy"
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
-      <text
-        x="24"
-        y="25"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        className="fill-navy font-[family-name:var(--font-bebas)]"
-        fontSize="13"
-      >
-        {face}
-      </text>
-    </svg>
-  );
-}
-
-const words = (q: string) => q.toLowerCase().split(/\s+/).filter(Boolean);
-
 // The FAQ: the questions in two ruled columns on the page, each opening to
-// its answer. Two ways in: roll the d12 to open a question at random (there
-// are twelve), or search, which opens every question that mentions what you
-// typed and dims the rest. Under the list, the cryptic-clue bonus round and
-// the team's email.
+// its answer. Under the list, the team's email, and the 2025 cryptic
+// crossword board: just a photo, unlabelled, that opens the clue form.
 export default function Faq({ items }: { items: FaqItem[] }) {
   const uid = useId();
-  const rows = useRef<(HTMLLIElement | null)[]>([]);
-  const texts = useRef<string[] | null>(null);
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set());
-  const [query, setQuery] = useState("");
-  // Which questions mention every word typed; null while the box is empty.
-  const [matches, setMatches] = useState<boolean[] | null>(null);
-  const [face, setFace] = useState("?");
-  const [rolling, setRolling] = useState(false);
-  const [lit, setLit] = useState<number | null>(null);
 
   const toggle = (i: number) =>
     setOpen((o) => {
@@ -130,55 +62,6 @@ export default function Faq({ items }: { items: FaqItem[] }) {
       return next;
     });
 
-  const search = (q: string) => {
-    setQuery(q);
-    setLit(null);
-    const terms = words(q);
-    if (!terms.length) {
-      setMatches(null);
-      setOpen(new Set());
-      return;
-    }
-    // The answers are rich text, so search what's on the page.
-    texts.current ??= rows.current.map(
-      (el) => el?.textContent?.toLowerCase() ?? "",
-    );
-    const t = texts.current;
-    const hits = items.map((_, i) => terms.every((w) => t[i].includes(w)));
-    setMatches(hits);
-    setOpen(new Set(hits.flatMap((hit, i) => (hit ? [i] : []))));
-  };
-  const hits = matches ? matches.filter(Boolean).length : items.length;
-
-  const roll = () => {
-    if (rolling) return;
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const n = Math.floor(Math.random() * items.length);
-    const land = () => {
-      setFace(String(n + 1));
-      setRolling(false);
-      setQuery("");
-      setMatches(null);
-      setOpen(new Set([n]));
-      setLit(n);
-      rows.current[n]?.scrollIntoView({
-        behavior: still ? "auto" : "smooth",
-        block: "center",
-      });
-      window.setTimeout(() => setLit((l) => (l === n ? null : l)), 2600);
-    };
-    if (still) return land();
-    setRolling(true);
-    const tick = window.setInterval(
-      () => setFace(String(1 + Math.floor(Math.random() * items.length))),
-      70,
-    );
-    window.setTimeout(() => {
-      window.clearInterval(tick);
-      land();
-    }, 700);
-  };
-
   // Two columns of questions, each its own stack so opening one never moves
   // the other column.
   const half = Math.ceil(items.length / 2);
@@ -186,48 +69,6 @@ export default function Faq({ items }: { items: FaqItem[] }) {
 
   return (
     <div>
-      <div className="mb-7 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <button
-          type="button"
-          onClick={roll}
-          className="group flex items-center gap-2.5 text-navy outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-        >
-          <D12 face={face} spinning={rolling} />
-          <span
-            className={`${DISPLAY} text-[24px] leading-none decoration-meeple decoration-2 underline-offset-4 group-hover:underline`}
-          >
-            Roll for a question
-          </span>
-        </button>
-        <label className="flex min-w-[220px] flex-1 items-center gap-2 border-b-2 border-navy py-2 transition-colors focus-within:border-meeple">
-          <Search aria-hidden className="size-5 shrink-0 text-meeple" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => search(e.target.value)}
-            placeholder="Search: parking, kids, refunds…"
-            aria-label="Search the FAQ"
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink/45"
-          />
-        </label>
-        <span
-          aria-live="polite"
-          className="font-space-mono text-xs tracking-[0.1em] text-ink/60 uppercase"
-        >
-          {lit !== null
-            ? `Rolled ${lit + 1 === 8 || lit + 1 === 11 ? "an" : "a"} ${lit + 1}`
-            : matches
-              ? `${hits} of ${items.length} questions`
-              : `${items.length} questions`}
-        </span>
-      </div>
-
-      {matches && hits === 0 && (
-        <p className="mb-5 text-ink/70 italic">
-          Nothing on that yet. Ask the team (below) and we&apos;ll add it.
-        </p>
-      )}
-
       <div className="grid gap-x-10 md:grid-cols-2 md:items-start">
         {columns.map((column, c) => (
           <ul
@@ -241,16 +82,7 @@ export default function Faq({ items }: { items: FaqItem[] }) {
               const { Icon, tile } = TOPICS[topic];
               const isOpen = open.has(i);
               return (
-                <li
-                  key={question}
-                  id={id}
-                  ref={(el) => {
-                    rows.current[i] = el;
-                  }}
-                  className={`scroll-mt-28 transition-[background-color,opacity] duration-500 ${
-                    matches && !matches[i] ? "opacity-35" : ""
-                  } ${lit === i ? "bg-peach/70" : ""}`}
-                >
+                <li key={question} id={id} className="scroll-mt-28">
                   <h3>
                     <button
                       type="button"
@@ -297,24 +129,7 @@ export default function Faq({ items }: { items: FaqItem[] }) {
         ))}
       </div>
 
-      <div className="mt-9 grid gap-x-10 gap-y-7 md:grid-cols-2">
-        <div className="flex items-center gap-4">
-          <CrypticsLightbox className="block w-24 shrink-0" />
-          <div className="min-w-0">
-            <p className={`${KICKER} text-[10.5px] text-meeple`}>
-              <span aria-hidden>★ </span>Bonus round
-            </p>
-            <h3
-              className={`${DISPLAY} mt-1 text-[26px] leading-none text-navy`}
-            >
-              Write a clue for META
-            </h3>
-            <p className="mt-1.5 text-[14px] leading-snug text-ink/75">
-              Every clue on the 2025 cryptic crossword board resolves to META.
-              Click the board to add yours.
-            </p>
-          </div>
-        </div>
+      <div className="mt-9 flex flex-wrap items-center justify-between gap-x-10 gap-y-7">
         <div className="flex items-center gap-4">
           <span className={`${TOKEN} size-14 bg-peach`}>
             <Mail aria-hidden className="size-6 text-navy" />
@@ -333,6 +148,8 @@ export default function Faq({ items }: { items: FaqItem[] }) {
             </p>
           </div>
         </div>
+        {/* Deliberately unlabelled: the board is its own invitation. */}
+        <CrypticsLightbox className="block w-36 sm:w-44" />
       </div>
     </div>
   );

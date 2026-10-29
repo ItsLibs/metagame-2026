@@ -84,21 +84,13 @@ export default function NightAndMegagame() {
               ))}
             </div>
             <p className="mt-5 max-w-[34em]">
-              Friday, Nov 6, 7–10 pm. The night the whole weekend opens its
-              doors: booths of things to play, experience and savor, and the
-              people who made them. Free and open to the public.
+              Friday, November 6, 7–10 pm. The Metagame Night Market is open to
+              the public: booths of things to play, experience and savor, and
+              the people who made them.
             </p>
-            <ul className="mt-4 grid max-w-[34em] gap-x-4 gap-y-1.5 text-[14.5px] sm:grid-cols-2">
+            <ul className="mt-4 grid max-w-[34em] list-disc gap-x-8 gap-y-1.5 pl-5 text-[14.5px] marker:text-[#ff8a3d] sm:grid-cols-2">
               {BOOTHS.map((b) => (
-                <li key={b}>
-                  <span
-                    aria-hidden
-                    className={`${pixel.className} text-[11px] text-[#ff8a3d]`}
-                  >
-                    ►{" "}
-                  </span>
-                  {b}
-                </li>
+                <li key={b}>{b}</li>
               ))}
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">

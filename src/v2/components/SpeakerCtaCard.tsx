@@ -129,7 +129,7 @@ export default function SpeakerCtaCard({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-dashed border-navy/40 bg-white shadow-[0_8px_24px_rgba(23,48,89,0.08)] transition-[border-color,box-shadow] hover:border-navy hover:shadow-[0_12px_28px_rgba(23,48,89,0.16)]"
+        className="group flex h-full flex-col overflow-hidden rounded-xl border-2 border-dashed border-navy/40 bg-white transition-[border-color] hover:border-navy"
       >
         <div
           aria-hidden
