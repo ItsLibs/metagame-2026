@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * amountOff?, currency?, percentOff?, isDefault}]}`.
  */
 export async function GET() {
-  const access = await authorize("promo.manage");
+  const access = await authorize("promo.view");
   if (access instanceof Response) return access;
   try {
     return json({ coupons: await listCoupons() });

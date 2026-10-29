@@ -25,10 +25,11 @@ export const dynamic = "force-dynamic";
 /**
  * `?code=`: whether that code exists on Stripe, `{exists, id?, active?,
  * couponId?}`, so a caller can check before minting or recover one it minted.
- * Without `code`, every code /backstage/promo minted, newest first.
+ * Without `code`, every code /backstage/promo minted, newest first. Reading
+ * takes `promo.view`; minting below takes `promo.manage`.
  */
 export async function GET(request: Request) {
-  const access = await authorize("promo.manage");
+  const access = await authorize("promo.view");
   if (access instanceof Response) return access;
   const raw = new URL(request.url).searchParams.get("code");
   try {

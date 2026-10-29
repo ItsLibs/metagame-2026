@@ -95,7 +95,11 @@ const check = (query: string) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  auth.keys = { [KEY]: ["promo.manage"], mg_links: ["links.manage"] };
+  auth.keys = {
+    [KEY]: ["promo.manage"],
+    mg_viewer: ["promo.view"],
+    mg_links: ["links.manage"],
+  };
   stripe.coupons.list.mockReturnValue({
     autoPagingToArray: async () => [
       coupon(),
@@ -128,6 +132,19 @@ it("needs a key whose account holds promo.manage", async () => {
     (await GET(new Request("https://metagame.games/api/admin/promo"))).status,
   ).toBe(401);
   expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
+});
+
+it("lets a promo.view key read codes but not mint them", async () => {
+  const minted = await send(flyer, "mg_viewer");
+  expect(minted.status).toBe(403);
+  expect((await minted.json()).error).toContain("promo.manage");
+  expect(stripe.promotionCodes.create).not.toHaveBeenCalled();
+  auth.headers = new Headers({ "x-api-key": "mg_viewer" });
+  const listed = await GET(
+    new Request("https://metagame.games/api/admin/promo?code=elysian"),
+  );
+  expect(listed.status).toBe(200);
+  expect(await listed.json()).toEqual({ exists: false });
 });
 
 it("mints an unlimited code on the one active $100-off coupon", async () => {

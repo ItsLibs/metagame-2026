@@ -74,12 +74,12 @@ beforeEach(() => {
   });
 });
 
-it("needs a key whose account holds promo.manage", async () => {
+it("needs a key whose account holds promo.view", async () => {
   expect((await get(null)).status).toBe(401);
   expect((await get("mg_revoked")).status).toBe(401);
   const other = await get("mg_links");
   expect(other.status).toBe(403);
-  expect((await other.json()).error).toContain("promo.manage");
+  expect((await other.json()).error).toContain("promo.view");
   expect(stripe.coupons.list).not.toHaveBeenCalled();
 });
 
