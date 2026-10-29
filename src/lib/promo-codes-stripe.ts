@@ -27,6 +27,11 @@ export type Coupon = {
   label: string;
   isDefault: boolean;
   kind: "percent" | "amount";
+  /** Whole-currency amount off (80 for $80), for amount coupons. */
+  amountOff?: number;
+  /** Lowercase ISO code, e.g. "usd", for amount coupons. */
+  currency?: string;
+  percentOff?: number;
 };
 
 export type StripeCode = {
@@ -96,6 +101,12 @@ export async function listCoupons(): Promise<Coupon[]> {
       label: couponLabel(c),
       isDefault: c.id === env.COMP_COUPON_ID,
       kind: kind(c),
+      ...(c.percent_off != null
+        ? { percentOff: c.percent_off }
+        : {
+            amountOff: (c.amount_off ?? 0) / 100,
+            currency: c.currency ?? undefined,
+          }),
     }));
 }
 
