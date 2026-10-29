@@ -1,5 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import { RFP_AIRTABLE_FORM, RFP_FORM_URL } from "@/v2/lib/links";
+import { RFP_FORM_URL } from "@/v2/lib/links";
 import type { FormDef } from "./engine";
 import { opts } from "./shared";
 
@@ -10,7 +10,6 @@ export const propose: FormDef = {
   slug: "propose",
   path: RFP_FORM_URL,
   tableId: airtableConfig.rfpSubmissionsTableId,
-  airtableForm: RFP_AIRTABLE_FORM,
   name: "Session proposal",
   eyebrow: "Request for proposals · Metagame 2026",
   title: "Run something at Metagame.",
@@ -23,8 +22,6 @@ export const propose: FormDef = {
   ],
   notice:
     "The proposal deadline has passed. You can still submit, and we may consider it, but we're less committed to doing so. Need an answer quickly? Say so in the last step.",
-  glyph: "talks",
-  token: "bg-sky text-navy",
   steps: [
     {
       key: "host",

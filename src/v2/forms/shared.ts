@@ -1,3 +1,4 @@
+import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import type { Answers, Option, Question } from "./engine";
 import { picked } from "./engine";
 
@@ -16,6 +17,7 @@ export const basicFacts = (preferredHelp: string): Question[] => [
     label: "Full legal name",
     required: true,
     autoComplete: "name",
+    row: "name",
   },
   {
     key: "preferredName",
@@ -24,6 +26,14 @@ export const basicFacts = (preferredHelp: string): Question[] => [
     label: "Preferred name",
     help: `What you'd like us to call you, and put on your badge. ${preferredHelp}`,
     autoComplete: "nickname",
+    row: "name",
+  },
+  {
+    key: "pronouns",
+    field: "fldjo23IzCU37RHdn",
+    type: "text",
+    label: "Your pronouns",
+    row: "pronouns",
   },
   {
     key: "email",
@@ -32,6 +42,7 @@ export const basicFacts = (preferredHelp: string): Question[] => [
     label: "Email address",
     required: true,
     autoComplete: "email",
+    row: "contact",
   },
   {
     key: "phone",
@@ -40,21 +51,16 @@ export const basicFacts = (preferredHelp: string): Question[] => [
     label: "Phone number",
     required: true,
     autoComplete: "tel",
+    row: "contact",
   },
   {
     key: "discord",
     field: "fldOWbALma2y4KsWj",
     type: "text",
     label: "Discord handle",
-    required: true,
+    aside: `[join our Discord](${SOCIAL_LINKS.DISCORD})`,
     placeholder: "@yourname",
-  },
-  {
-    key: "pronouns",
-    field: "fldjo23IzCU37RHdn",
-    type: "text",
-    label: "Your pronouns",
-    help: "Optional.",
+    row: "discord",
   },
 ];
 
@@ -73,6 +79,32 @@ export const ticketStatus = (help: string): Question => ({
     "I'm not sure / none of the above",
   ),
 });
+
+// The volunteer form's version: yes or no, with a box for the ticket's email
+// when it isn't the one above. Airtable's options name the ticket type, so
+// typecast adds a plain "Yes" the first time someone picks it.
+export const hasTicket: Question = {
+  key: "ticket",
+  field: "fldhK2vXDqnEMr9oV",
+  type: "choice",
+  asList: true,
+  label: "Do you already have a ticket?",
+  help: "So we can sort out a refund if you end up with a volunteer ticket.",
+  required: true,
+  options: [
+    {
+      value: "Yes",
+      more: {
+        key: "ticketEmail",
+        label: "Ticket email, if different",
+        into: "questions",
+        input: "email",
+        placeholder: "Only if you bought it with another email",
+      },
+    },
+    { value: "No" },
+  ],
+};
 
 const SHIFTS = opts("9am-1pm", "1pm-5pm", "5pm-9pm", "9pm-1am");
 
@@ -121,7 +153,11 @@ export const availability = (
   },
 ];
 
-// The three team lists differ slightly, as they do in Airtable.
+// The three team lists differ slightly, as they do in Airtable. Web
+// development and running the Megagame aren't in Airtable's "sounds fun"
+// list, nor is MCing in its "lead" list; typecast adds each the first time
+// someone picks it, so the volunteer board can offer every mark on every
+// team.
 const TEAMS_WANTED = opts(
   "Registration desk",
   "Info desk",
@@ -129,8 +165,10 @@ const TEAMS_WANTED = opts(
   "Physical labor",
   "Childcare",
   "AV support (e.g. setting up projectors)",
+  "Web development (e.g. programming mini games)",
   "Marketing (requires advance work)",
   "Megagame design (requires advance work)",
+  "Helping run the megagame (during the conference)",
   "Set design / physical fabrication / hardware / construction",
   "Generalist (putting out fires as needed)",
   "Community health and safety",
@@ -156,9 +194,10 @@ const TEAMS_AVOIDED = opts(
   "MCing sessions",
   "Indifferent: Slot me in anywhere, coach!",
 );
-const TEAMS_LED = TEAMS_AVOIDED.filter((o) => o.value !== "MCing sessions");
+const TEAMS_LED = TEAMS_AVOIDED;
 
-export const teams = (
+/** The three team lists: which sound fun, which to skip, which to lead. */
+export const teamLists = (
   wantedHelp: string,
   show?: (a: Answers) => boolean,
 ): Question[] => [
@@ -189,15 +228,21 @@ export const teams = (
     options: TEAMS_LED,
     show,
   },
-  {
-    key: "skills",
-    field: "fldKE9LJgDSGvID8c",
-    type: "longtext",
-    label: "Special skills",
-    help: "Any expertise that might be useful? For example: photography, graphic design, building physical sets, marketing, food coordination, childcare experience.",
-    show,
-  },
 ];
+
+export const skills = (show?: (a: Answers) => boolean): Question => ({
+  key: "skills",
+  field: "fldKE9LJgDSGvID8c",
+  type: "longtext",
+  label: "Special skills",
+  help: "Any expertise that might be useful? For example: photography, graphic design, building physical sets, marketing, food coordination, childcare experience.",
+  show,
+});
+
+export const teams = (
+  wantedHelp: string,
+  show?: (a: Answers) => boolean,
+): Question[] => [...teamLists(wantedHelp, show), skills(show)];
 
 const BAY_AREA =
   "I live in the Bay Area or will be there leading up to the event";
@@ -207,7 +252,8 @@ export const aboutYou = (show?: (a: Answers) => boolean): Question[] => [
     key: "facts",
     field: "fld2O5RnKRasHaICM",
     type: "choices",
-    label: "Select all that apply",
+    label: "Other details",
+    help: "Select any of these that apply.",
     options: opts(
       BAY_AREA,
       "I will have a car available before or during the conference",

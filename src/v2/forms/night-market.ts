@@ -1,9 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import {
-  NIGHT_MARKET_AIRTABLE_FORM,
-  NIGHT_MARKET_FORM_URL,
-  NIGHT_PARTIFUL_URL,
-} from "@/v2/lib/links";
+import { NIGHT_MARKET_FORM_URL, NIGHT_PARTIFUL_URL } from "@/v2/lib/links";
 import type { FormDef } from "./engine";
 
 // A Night Market booth application, as the Airtable form asks it.
@@ -11,7 +7,6 @@ export const nightMarket: FormDef = {
   slug: "night-market",
   path: NIGHT_MARKET_FORM_URL,
   tableId: airtableConfig.nightMarketBoothsTableId,
-  airtableForm: NIGHT_MARKET_AIRTABLE_FORM,
   name: "Night Market booth application",
   eyebrow: "Night Market · Friday, Nov 6, 7–10 pm",
   title: "Open a booth.",
@@ -23,8 +18,6 @@ export const nightMarket: FormDef = {
   ],
   notice:
     "A booth needs a Metagame Supporter ticket or $250 for the booth only. Applications depend on approval and space: applying, or buying a ticket, doesn't reserve a booth. Agreed something different with the team? Pick that option at the end and describe it; it still has to be confirmed.",
-  glyph: "card-games",
-  token: "bg-navy text-cream",
   steps: [
     {
       key: "you",

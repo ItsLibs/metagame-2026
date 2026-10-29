@@ -128,6 +128,59 @@ describe("financial aid", () => {
   });
 });
 
+describe("volunteer", () => {
+  const def = FORMS.volunteer;
+  const options = (key: string) => {
+    const q = allQuestions(def).find((x) => x.key === key)!;
+    return q.type === "choice" || q.type === "choices"
+      ? q.options.map((o) => o.value)
+      : [];
+  };
+
+  it("marks teams with the option names Airtable has, or typecast adds", () => {
+    for (const t of TEAMS) {
+      expect(options("teams"), t.name).toContain(t.want);
+      expect(options("notTeams"), t.name).toContain(t.avoid);
+      expect(options("leadTeams"), t.name).toContain(t.lead);
+    }
+  });
+
+  it("asks the questions its boards hold", () => {
+    const keys = (view: string) =>
+      def.steps
+        .filter((s) => s.view === view)
+        .flatMap((s) => s.items.map((i) => i.key));
+    expect(keys("schedule")).toEqual(expect.arrayContaining(SCHEDULE_KEYS));
+    expect(keys("teams")).toEqual(expect.arrayContaining(TEAM_KEYS));
+  });
+
+  it("doesn't insist on a Discord handle", () => {
+    expect(checkForm(def, {})).not.toHaveProperty("discord");
+  });
+
+  it("asks about the ticket last, as yes or no", () => {
+    const keys = def.steps[def.steps.length - 1].items.map((i) => i.key);
+    expect(keys[keys.length - 1]).toBe("ticket");
+    expect(options("ticket")).toEqual(["Yes", "No"]);
+  });
+
+  it("keeps the ticket's other email with the questions, when it's one", () => {
+    const a = { ticket: "Yes", ticketEmail: "pat@example.com" };
+    expect(checkForm(def, a)).not.toHaveProperty("ticketEmail");
+    expect(checkForm(def, { ...a, ticketEmail: "pat" })).toHaveProperty(
+      "ticketEmail",
+    );
+    const fields = airtableFields(def, a);
+    expect(fields.fldhK2vXDqnEMr9oV).toEqual(["Yes"]);
+    expect(fields.fldPS7frcgeKU7nBL).toBe(
+      "Ticket email, if different: pat@example.com",
+    );
+    expect(
+      airtableFields(def, { ...a, ticket: "No" }).fldPS7frcgeKU7nBL,
+    ).toBeUndefined();
+  });
+});
+
 describe("children", () => {
   const def = FORMS.children;
 
@@ -239,30 +292,5 @@ describe("text boxes under options", () => {
       ageOther: "Grandparents",
     });
     expect(fields.fldCdTcIyzpR20bJG).toBeUndefined();
-  });
-});
-
-describe("volunteer boards", () => {
-  const def = FORMS.volunteer;
-  const options = (key: string) => {
-    const q = allQuestions(def).find((x) => x.key === key)!;
-    return q.type === "choices" ? q.options.map((o) => o.value) : [];
-  };
-
-  it("mark teams with the option names Airtable has", () => {
-    for (const t of TEAMS) {
-      if (t.want) expect(options("teams"), t.name).toContain(t.want);
-      if (t.avoid) expect(options("notTeams"), t.name).toContain(t.avoid);
-      if (t.lead) expect(options("leadTeams"), t.name).toContain(t.lead);
-    }
-  });
-
-  it("ask the questions their steps hold", () => {
-    const keys = (view: string) =>
-      def.steps
-        .filter((s) => s.view === view)
-        .flatMap((s) => s.items.map((i) => i.key));
-    expect(keys("schedule")).toEqual(expect.arrayContaining(SCHEDULE_KEYS));
-    expect(keys("teams")).toEqual(expect.arrayContaining(TEAM_KEYS));
   });
 });

@@ -1,9 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import {
-  MEGAGAME_AIRTABLE_FORM,
-  MEGAGAME_PROPOSAL_FORM_URL,
-  RFP_FORM_URL,
-} from "@/v2/lib/links";
+import { MEGAGAME_PROPOSAL_FORM_URL, RFP_FORM_URL } from "@/v2/lib/links";
 import type { FormDef } from "./engine";
 import { opts } from "./shared";
 
@@ -14,7 +10,6 @@ export const megagame: FormDef = {
   slug: "megagame",
   path: MEGAGAME_PROPOSAL_FORM_URL,
   tableId: airtableConfig.megagameSubmissionsTableId,
-  airtableForm: MEGAGAME_AIRTABLE_FORM,
   name: "Megagame puzzle or game",
   eyebrow: "The Megagame · puzzles & games",
   title: "Build part of the Megagame.",
@@ -26,8 +21,6 @@ export const megagame: FormDef = {
     { label: "Attending?", value: "Not required" },
   ],
   notice: `On difficulty: as a crossword, a Friday or Saturday NYT. The late MIT Mystery Hunt is too hard, the early rounds about right, and we'll want plenty of easier 15-minute puzzles too. Got a session and want the Megagame in it? Say so on the [session proposal](${RFP_FORM_URL}).`,
-  glyph: "megagame",
-  token: "bg-tan text-navy",
   steps: [
     {
       key: "game",

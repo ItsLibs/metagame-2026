@@ -1,5 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import { SPONSOR_AIRTABLE_FORM, SPONSOR_FORM_URL } from "@/v2/lib/links";
+import { SPONSOR_FORM_URL } from "@/v2/lib/links";
 import type { FormDef } from "./engine";
 import { opts } from "./shared";
 
@@ -9,7 +9,6 @@ export const sponsor: FormDef = {
   slug: "sponsor",
   path: SPONSOR_FORM_URL,
   tableId: airtableConfig.signupsTableId,
-  airtableForm: SPONSOR_AIRTABLE_FORM,
   name: "Sponsor interest",
   eyebrow: "Sponsor Metagame 2026",
   title: "Back the game.",
@@ -19,8 +18,6 @@ export const sponsor: FormDef = {
     { label: "Takes", value: "About a minute" },
     { label: "Then", value: "We reach out" },
   ],
-  glyph: "megagame",
-  token: "bg-tan text-navy",
   steps: [
     {
       key: "you",

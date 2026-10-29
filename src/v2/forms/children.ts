@@ -1,8 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import {
-  CHILD_REGISTRATION_AIRTABLE_FORM,
-  CHILD_REGISTRATION_FORM_URL,
-} from "@/v2/lib/links";
+import { CHILD_REGISTRATION_FORM_URL } from "@/v2/lib/links";
 import type { Answers, FormDef, Step } from "./engine";
 import { opts } from "./shared";
 
@@ -107,7 +104,6 @@ export const children: FormDef = {
   slug: "children",
   path: CHILD_REGISTRATION_FORM_URL,
   tableId: airtableConfig.childrenTableId,
-  airtableForm: CHILD_REGISTRATION_AIRTABLE_FORM,
   name: "Child registration",
   eyebrow: "Childcare · Metagame 2026",
   title: "Bring the kids.",
@@ -120,8 +116,6 @@ export const children: FormDef = {
   ],
   notice:
     "Childcare hours: Friday 3–7 pm (drop-off and pick-up flexible); Saturday and Sunday 9:45 am–3 pm (drop-off 9:45–10, pick-up 2:45–3) and 5–7:30 pm (drop-off 5–5:15, pick-up 7:15–7:30).",
-  glyph: "board-games",
-  token: "bg-peach text-navy",
   steps: [
     {
       key: "contact",

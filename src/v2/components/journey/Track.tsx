@@ -11,11 +11,11 @@ export default function Track({
   onJump,
 }: {
   titles: string[];
-  /** The step you're on; titles.length is the last look before sending. */
+  /** The step you're on; titles.length is the finish, before sending. */
   current: number;
   onJump: (index: number) => void;
 }) {
-  const spaces = [...titles, "Last look"];
+  const spaces = [...titles, "All done"];
   return (
     <nav aria-label="Your progress" className="mt-8">
       <ol className="flex items-center">

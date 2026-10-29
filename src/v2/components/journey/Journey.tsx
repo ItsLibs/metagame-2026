@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 import { readUtm } from "@/lib/utm";
@@ -12,26 +12,27 @@ import {
   checkStep,
   isEmpty,
   isQuestion,
+  optionBoxes,
   visibleItems,
   visibleSteps,
   type Answer,
   type Answers,
+  type Item,
   type Note,
   type Step,
 } from "@/v2/forms/engine";
+import { TEAM_EMAIL } from "@/v2/lib/links";
 import { cn } from "@/v2/lib/utils";
-import Glyph from "../Glyph";
 import Mg2Die from "../nav/Mg2Die";
 import { Button } from "../ui/button";
 import { Field } from "./Fields";
-import { DISPLAY, TOKEN } from "./look";
+import { DISPLAY } from "./look";
 import Rich from "./Rich";
 import ScheduleBoard, { SCHEDULE_KEYS } from "./ScheduleBoard";
 import TeamBoard, { TEAM_KEYS } from "./TeamBoard";
 import Track from "./Track";
 
 type Phase =
-  | { at: "cover" }
   | { at: "step"; index: number }
   | { at: "review" }
   | { at: "sending" }
@@ -46,8 +47,23 @@ const BOARD_KEYS: Record<NonNullable<Step["view"]>, readonly string[]> = {
 };
 const onBoard = (step: Step, key: string) =>
   !!step.view && BOARD_KEYS[step.view].includes(key);
+
+// Questions that share a row sit side by side; the rest take the width.
+function rows(items: Item[]) {
+  const out: Item[][] = [];
+  for (const item of items) {
+    const last = out[out.length - 1];
+    const row = isQuestion(item) ? item.row : undefined;
+    if (row && last && isQuestion(last[0]) && last[0].row === row)
+      last.push(item);
+    else out.push([item]);
+  }
+  return out;
+}
+
 const EYEBROW =
-  "font-space-mono text-xs font-bold tracking-[0.14em] text-meeple uppercase";
+  "font-space-mono text-[11px] font-bold tracking-[0.14em] text-ink/55 uppercase";
+const HEADING = `${DISPLAY} text-[clamp(36px,5vw,56px)] leading-[0.95] text-navy outline-none`;
 
 // The tokens that pile up when you finish, in the brand's colours.
 const CONFETTI = [
@@ -60,25 +76,29 @@ const CONFETTI = [
   "bg-navy",
 ];
 
-// One of the site's forms as a journey (src/v2/forms): a cover, then a step
-// at a time along a board of spaces, a last look at every answer, and a
-// finish. Answers are kept in this browser as you go (pictures aside), so a
-// refresh picks up where you left off. The finished answers go to
-// /api/forms/<slug>, which writes them to the same Airtable table the old
-// form did.
+// One of the site's forms as a journey (src/v2/forms): the first step under
+// a short introduction, then a step at a time along a board of spaces, and a
+// finish with the send button and every answer to look over. Answers are
+// kept in this browser as you go (pictures aside), so a refresh picks up
+// where you left off. The finished answers go to /api/forms/<slug>, which
+// writes them to the Airtable table the old form did.
 export default function Journey({ slug }: { slug: string }) {
   const def = FORMS[slug];
   const [answers, setAnswers] = useState<Answers>({});
-  const [phase, setPhase] = useState<Phase>({ at: "cover" });
+  const [phase, setPhase] = useState<Phase>({ at: "step", index: 0 });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [back, setBack] = useState(false);
-  const [resume, setResume] = useState<number | null>(null);
+  const [resumed, setResumed] = useState(false);
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const honeypot = useRef<HTMLInputElement>(null);
 
   const steps = visibleSteps(def, answers);
+  const index =
+    phase.at === "step" ? Math.min(phase.index, steps.length - 1) : -1;
+  const step = index >= 0 ? steps[index] : undefined;
+  const sending = phase.at === "sending";
 
   // A saved draft, read once mounted (the timer keeps setState out of the
   // effect body).
@@ -90,7 +110,11 @@ export default function Journey({ slug }: { slug: string }) {
         );
         if (saved?.answers && Object.keys(saved.answers).length) {
           setAnswers(saved.answers);
-          setResume(typeof saved.step === "number" ? saved.step : 0);
+          setPhase({
+            at: "step",
+            index: typeof saved.step === "number" ? saved.step : 0,
+          });
+          setResumed(true);
         }
       } catch {}
     }, 0);
@@ -100,7 +124,7 @@ export default function Journey({ slug }: { slug: string }) {
   // Keep the draft as they go. Pictures are too big for storage.
   const stepIndex = phase.at === "step" ? phase.index : null;
   useEffect(() => {
-    if (phase.at === "done" || phase.at === "cover") return;
+    if (phase.at === "done" || !Object.keys(answers).length) return;
     const t = setTimeout(() => {
       try {
         const kept = Object.fromEntries(
@@ -118,8 +142,7 @@ export default function Journey({ slug }: { slug: string }) {
   }, [answers, phase.at, stepIndex, slug]);
 
   const go = (next: Phase, keep: Record<string, string> = {}) => {
-    const order = (p: Phase) =>
-      p.at === "cover" ? -1 : p.at === "step" ? p.index : 999;
+    const order = (p: Phase) => (p.at === "step" ? p.index : 999);
     setBack(order(next) < order(phase));
     setPhase(next);
     setErrors(keep);
@@ -153,32 +176,33 @@ export default function Journey({ slug }: { slug: string }) {
     });
 
   const forward = () => {
-    if (phase.at !== "step") return;
-    const e = checkStep(steps[phase.index], answers);
+    if (!step) return;
+    const e = checkStep(step, answers);
     if (Object.keys(e).length) {
       setErrors(e);
       focusFirst(e);
       return;
     }
     go(
-      phase.index + 1 < steps.length
-        ? { at: "step", index: phase.index + 1 }
+      index + 1 < steps.length
+        ? { at: "step", index: index + 1 }
         : { at: "review" },
     );
   };
 
   const backward = () => {
-    if (phase.at === "step")
-      go(
-        phase.index ? { at: "step", index: phase.index - 1 } : { at: "cover" },
-      );
+    if (step && index > 0) go({ at: "step", index: index - 1 });
     else if (phase.at === "review") go({ at: "step", index: steps.length - 1 });
   };
 
   // Back to the first step with a problem, showing what's wrong.
   const showProblems = (e: Record<string, string>) => {
     const i = steps.findIndex((s) =>
-      visibleItems(s, answers).some((it) => isQuestion(it) && e[it.key]),
+      visibleItems(s, answers).some(
+        (it) =>
+          isQuestion(it) &&
+          (e[it.key] || optionBoxes(it, answers).some((b) => e[b.key])),
+      ),
     );
     go({ at: "step", index: Math.max(0, i) }, e);
     focusFirst(e);
@@ -227,95 +251,48 @@ export default function Journey({ slug }: { slug: string }) {
       localStorage.removeItem(draftKey(slug));
     } catch {}
     setAnswers({});
-    setResume(null);
+    setResumed(false);
     go({ at: "step", index: 0 });
   };
 
-  const titles = steps.map((s) => s.title);
-  const position =
-    phase.at === "step"
-      ? phase.index
-      : phase.at === "cover"
-        ? -1
-        : steps.length;
-  // Sending stays on the last look, so it doesn't replay the entrance.
+  const position = phase.at === "step" ? index : steps.length;
+  // Sending stays on the finish, so it doesn't replay the entrance.
   const view =
-    phase.at === "step"
-      ? `step-${steps[phase.index]?.key}`
-      : phase.at === "sending"
-        ? "review"
-        : phase.at;
+    phase.at === "step" ? `step-${step?.key}` : sending ? "review" : phase.at;
+  const send = (
+    <Button onClick={submit} size="lg" disabled={sending} className="gap-3">
+      <Mg2Die size={22} className={sending ? "motion-safe:animate-spin" : ""} />
+      {sending ? "Sending…" : "Send it in"}
+    </Button>
+  );
 
   return (
     <div
       ref={top}
       className="mx-auto w-full max-w-[880px] scroll-mt-6 px-4 pt-24 pb-20 sm:px-8 md:pt-28"
     >
-      <header className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <p className={EYEBROW}>{def.eyebrow}</p>
-          <h1
-            className={`${DISPLAY} mt-2 text-[clamp(46px,7.5vw,88px)] leading-[0.88] text-balance text-navy`}
-          >
-            {def.title}
-          </h1>
-        </div>
-        <span
-          aria-hidden
-          className={cn(
-            TOKEN,
-            "mt-1 size-14 -rotate-6 sm:size-20",
-            def.token,
-            phase.at === "sending" && "motion-safe:animate-spin",
-          )}
-          // The card-games glyph's front card fills with the token's colour.
-          style={
-            {
-              "--glyph-bg": `var(--color-${/bg-([a-z-]+)/.exec(def.token)?.[1] ?? "navy"})`,
-            } as CSSProperties
-          }
+      <header>
+        <p className={EYEBROW}>{def.eyebrow}</p>
+        <h1
+          className={`${DISPLAY} mt-2 text-[clamp(42px,6.5vw,76px)] leading-[0.9] text-balance text-navy`}
         >
-          <Glyph name={def.glyph} className="size-9 sm:size-12" />
-        </span>
+          {def.title}
+        </h1>
       </header>
 
-      {(phase.at === "step" ||
-        phase.at === "review" ||
-        phase.at === "sending") && (
-        <Track
-          titles={titles}
-          current={position}
-          onJump={(i) =>
-            go(i < steps.length ? { at: "step", index: i } : { at: "review" })
-          }
-        />
-      )}
-
-      <div
-        key={view}
-        className={cn(
-          "mt-9 animate-in duration-300 fade-in",
-          back ? "slide-in-from-left-4" : "slide-in-from-right-4",
-        )}
-      >
-        {phase.at === "cover" && (
-          <section aria-labelledby="journey-heading">
-            <h2
-              id="journey-heading"
-              ref={heading}
-              tabIndex={-1}
-              className="sr-only"
-            >
-              Before you start
-            </h2>
-            <p className="max-w-[38em] text-lg leading-relaxed text-ink/80 sm:text-xl">
-              <Rich text={def.pitch} />
+      {index === 0 && (
+        <div className="mt-6">
+          <p className="max-w-[38em] text-lg leading-relaxed text-ink/80 sm:text-xl">
+            <Rich text={def.pitch} />
+          </p>
+          {def.aside && (
+            <p className="mt-3 text-[15.5px] font-semibold text-navy">
+              {def.aside}
             </p>
-            <dl className="mt-7 flex flex-wrap gap-x-10 gap-y-4 border-y-2 border-navy py-4">
-              {[
-                ...def.facts,
-                { label: "Steps", value: String(steps.length) },
-              ].map(({ label, value }) => (
+          )}
+          {def.facts?.length ? (
+            <dl className="mt-6 flex flex-wrap gap-x-10 gap-y-4 border-y-2 border-navy py-4">
+              {def.facts.map(({ label, value }) => (
                 <div key={label}>
                   <dt className="font-space-mono text-[10.5px] font-bold tracking-[0.14em] text-meeple uppercase">
                     {label}
@@ -328,77 +305,80 @@ export default function Journey({ slug }: { slug: string }) {
                 </div>
               ))}
             </dl>
-            {def.notice && (
-              <p className="mt-6 max-w-[44em] border-l-2 border-tan pl-4 text-[15px] leading-relaxed text-ink/70">
-                <Rich text={def.notice} />
-              </p>
-            )}
-            <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <Button
-                onClick={() =>
-                  go({
-                    at: "step",
-                    index:
-                      resume != null ? Math.min(resume, steps.length - 1) : 0,
-                  })
-                }
-                size="lg"
-                className="group gap-3"
-              >
-                <Mg2Die
-                  size={22}
-                  className="transition-transform duration-500 group-hover:rotate-[360deg]"
-                />
-                {resume != null ? "Pick up where you left off" : "Let's go"}
-              </Button>
-              {resume != null && (
-                <button
-                  type="button"
-                  onClick={startOver}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/60 underline underline-offset-4 hover:text-meeple"
-                >
-                  <RotateCcw aria-hidden className="size-3.5" />
-                  Start over
-                </button>
-              )}
-            </div>
-          </section>
-        )}
-
-        {phase.at === "step" && steps[phase.index] && (
-          <section aria-labelledby="journey-heading">
-            <p className={EYEBROW}>
-              Step {phase.index + 1} of {steps.length}
+          ) : null}
+          {def.notice && (
+            <p className="mt-5 max-w-[44em] border-l-2 border-tan pl-4 text-[15px] leading-relaxed text-ink/70">
+              <Rich text={def.notice} />
             </p>
+          )}
+        </div>
+      )}
+
+      {phase.at !== "done" && (
+        <Track
+          titles={steps.map((s) => s.title)}
+          current={position}
+          onJump={(i) =>
+            go(i < steps.length ? { at: "step", index: i } : { at: "review" })
+          }
+        />
+      )}
+      {resumed && phase.at === "step" && (
+        <p className="mt-3 text-[13.5px] text-ink/55">
+          Picked up where you left off.{" "}
+          <button
+            type="button"
+            onClick={startOver}
+            className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 hover:text-meeple"
+          >
+            <RotateCcw aria-hidden className="size-3" />
+            Start over
+          </button>
+        </p>
+      )}
+
+      <div
+        key={view}
+        className={cn(
+          "mt-9 animate-in duration-300 fade-in",
+          back ? "slide-in-from-left-4" : "slide-in-from-right-4",
+        )}
+      >
+        {step && (
+          <section aria-labelledby="journey-heading">
             <h2
               id="journey-heading"
               ref={heading}
               tabIndex={-1}
-              className={`${DISPLAY} mt-1 text-[clamp(36px,5vw,56px)] leading-[0.95] text-navy outline-none`}
+              className={HEADING}
             >
-              {steps[phase.index].title}
+              {step.title}
             </h2>
-            {steps[phase.index].intro && (
+            {step.intro && (
               <p className="mt-2 max-w-[40em] text-[16.5px] leading-relaxed text-ink/75">
-                <Rich text={steps[phase.index].intro!} />
+                <Rich text={step.intro} />
               </p>
             )}
             <div className="mt-8 flex flex-col gap-9">
-              {steps[phase.index].view === "schedule" && (
+              {step.view === "schedule" && (
                 <ScheduleBoard answers={answers} update={update} />
               )}
-              {steps[phase.index].view === "teams" && (
+              {step.view === "teams" && (
                 <TeamBoard answers={answers} update={update} />
               )}
-              {visibleItems(steps[phase.index], answers)
-                .filter((item) => !onBoard(steps[phase.index], item.key))
-                .map((item) =>
+              {rows(
+                visibleItems(step, answers).filter(
+                  (item) => !onBoard(step, item.key),
+                ),
+              ).map((row) => {
+                const fields = row.map((item) =>
                   isQuestion(item) ? (
                     <Field
                       key={item.key}
                       q={item}
                       value={answers[item.key]}
                       error={errors[item.key]}
+                      boxErrors={errors}
                       onChange={(v) => set(item.key, v)}
                       onEnter={forward}
                       answers={answers}
@@ -407,14 +387,24 @@ export default function Journey({ slug }: { slug: string }) {
                   ) : (
                     <NoteBlock key={item.key} note={item} />
                   ),
-                )}
+                );
+                return isQuestion(row[0]) && row[0].row ? (
+                  <div
+                    key={row[0].key}
+                    className="grid gap-x-6 gap-y-9 sm:grid-cols-2"
+                  >
+                    {fields}
+                  </div>
+                ) : (
+                  <Fragment key={row[0].key}>{fields}</Fragment>
+                );
+              })}
             </div>
             <Footer
-              onBack={backward}
-              backLabel={phase.index ? "Back" : "The cover"}
+              onBack={index ? backward : undefined}
               next={
                 <Button onClick={forward} size="lg" className="gap-2">
-                  {phase.index + 1 < steps.length ? "Next" : "Last look"}
+                  Next
                   <ArrowRight aria-hidden className="size-4" />
                 </Button>
               }
@@ -427,36 +417,57 @@ export default function Journey({ slug }: { slug: string }) {
           </section>
         )}
 
-        {(phase.at === "review" || phase.at === "sending") && (
+        {(phase.at === "review" || sending) && (
           <section aria-labelledby="journey-heading">
-            <p className={EYEBROW}>Last look</p>
             <h2
               id="journey-heading"
               ref={heading}
               tabIndex={-1}
-              className={`${DISPLAY} mt-1 text-[clamp(36px,5vw,56px)] leading-[0.95] text-navy outline-none`}
+              className={HEADING}
             >
-              Ready to send it?
+              All done.
             </h2>
-            <p className="mt-2 text-[16.5px] text-ink/75">
-              Here&apos;s everything you said. Change any step before it goes.
+            <p className="mt-2 max-w-[40em] text-[16.5px] leading-relaxed text-ink/75">
+              Send it in, or look over your answers below first.
             </p>
+            {failure && (
+              <p
+                role="alert"
+                className="mt-6 border-l-2 border-meeple pl-4 text-[15.5px] text-ink/80"
+              >
+                <b className="text-meeple">That didn&apos;t go through.</b>{" "}
+                {failure} If it keeps happening, email{" "}
+                <a
+                  href={`mailto:${TEAM_EMAIL}`}
+                  className="font-semibold text-navy underline underline-offset-2"
+                >
+                  {TEAM_EMAIL}
+                </a>
+                .
+              </p>
+            )}
+            <div className="mt-6">{send}</div>
+            <h3
+              className={`${DISPLAY} mt-12 text-[30px] leading-none text-navy`}
+            >
+              Your answers
+            </h3>
             {steps.map((s, i) => {
               const said = visibleItems(s, answers)
                 .filter(isQuestion)
                 .filter((q) => !isEmpty(answers[q.key]));
               return (
-                <div key={s.key} className="mt-7 border-t-2 border-navy pt-3">
+                <div key={s.key} className="mt-6 border-t-2 border-navy pt-3">
                   <div className="flex items-baseline justify-between gap-4">
-                    <h3
-                      className={`${DISPLAY} text-[26px] leading-none text-navy`}
+                    <h4
+                      className={`${DISPLAY} text-[24px] leading-none text-navy`}
                     >
                       {s.title}
-                    </h3>
+                    </h4>
                     <button
                       type="button"
                       onClick={() => go({ at: "step", index: i })}
-                      disabled={phase.at === "sending"}
+                      disabled={sending}
                       className="font-space-mono text-[11px] font-bold tracking-[0.12em] text-meeple uppercase hover:underline"
                     >
                       Change
@@ -488,45 +499,7 @@ export default function Journey({ slug }: { slug: string }) {
                 </div>
               );
             })}
-            {failure && (
-              <p
-                role="alert"
-                className="mt-8 border-l-2 border-meeple pl-4 text-[15.5px] text-ink/80"
-              >
-                <b className="text-meeple">That didn&apos;t go through.</b>{" "}
-                {failure} If it keeps happening, the{" "}
-                <a
-                  href={def.airtableForm}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-navy underline underline-offset-2"
-                >
-                  Airtable form
-                </a>{" "}
-                still works.
-              </p>
-            )}
-            <Footer
-              onBack={backward}
-              backLabel="Back"
-              disabled={phase.at === "sending"}
-              next={
-                <Button
-                  onClick={submit}
-                  size="lg"
-                  disabled={phase.at === "sending"}
-                  className="gap-3"
-                >
-                  <Mg2Die
-                    size={22}
-                    className={
-                      phase.at === "sending" ? "motion-safe:animate-spin" : ""
-                    }
-                  />
-                  {phase.at === "sending" ? "Sending…" : "Send it in"}
-                </Button>
-              }
-            />
+            <Footer onBack={backward} disabled={sending} next={send} />
           </section>
         )}
 
@@ -603,49 +576,36 @@ export default function Journey({ slug }: { slug: string }) {
         aria-hidden
         className="absolute -left-[9999px] size-px opacity-0"
       />
-
-      {phase.at !== "done" && (
-        <p className="mt-16 border-t border-navy/15 pt-4 text-[13.5px] text-ink/55">
-          Prefer the old form?{" "}
-          <a
-            href={def.airtableForm}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-navy"
-          >
-            It&apos;s still on Airtable
-          </a>
-          , and its answers land in the same place.
-        </p>
-      )}
     </div>
   );
 }
 
 function Footer({
   onBack,
-  backLabel,
   next,
   hint,
   disabled,
 }: {
-  onBack: () => void;
-  backLabel: string;
+  onBack?: () => void;
   next: React.ReactNode;
   hint?: string;
   disabled?: boolean;
 }) {
   return (
     <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t-2 border-navy pt-5">
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={disabled}
-        className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-navy hover:text-meeple disabled:opacity-40"
-      >
-        <ArrowLeft aria-hidden className="size-4" />
-        {backLabel}
-      </button>
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={disabled}
+          className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-navy hover:text-meeple disabled:opacity-40"
+        >
+          <ArrowLeft aria-hidden className="size-4" />
+          Back
+        </button>
+      ) : (
+        <span />
+      )}
       <div className="flex flex-wrap items-center gap-4">
         {hint && (
           <p role="alert" className="text-sm font-semibold text-meeple">

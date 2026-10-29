@@ -16,25 +16,6 @@ export const JOIN_TEAM_FORM_URL = "/team/join";
 export const SPONSOR_FORM_URL = "/sponsor/interest";
 export const FINANCIAL_AID_FORM_URL = "/financial-aid";
 
-// The Airtable forms the journeys replaced. Each journey still links its
-// form as a fallback, and both write to the same Airtable table.
-export const RFP_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagVuzTEXODlUwoi0/form";
-export const MEGAGAME_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagMOssJPZrZU6YLP/form";
-export const VOLUNTEER_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pag6QeXN6XYI1SwYf/form";
-export const CHILD_REGISTRATION_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagZ9WbXLji0eBqDU/form";
-export const JOIN_TEAM_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagtwwDizijHH6FkB/form";
-export const SPONSOR_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagDpfFbBkxzzdvl7/form";
-export const FINANCIAL_AID_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagNpxewXARLObldc/form";
-export const NIGHT_MARKET_AIRTABLE_FORM =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagWzXdF8eA6PfDXs/form";
-
 // What volunteering on each team involves (linked from the volunteer journey).
 export const VOLUNTEER_TEAMS_DOC_URL =
   "https://docs.google.com/document/d/1AOKulmKhgzZ0ms2wFEzqga7SA76dKB3lsoj2u0bOxWs/edit?usp=sharing";

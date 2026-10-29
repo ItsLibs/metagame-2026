@@ -6,15 +6,15 @@ import type { Answer, Answers } from "@/v2/forms/engine";
 import { cn } from "@/v2/lib/utils";
 import { DISPLAY } from "./look";
 
-// The volunteer application's availability, asked as the weekend's schedule:
-// each window is a block on its day's line, marked by clicking it or by
-// dragging across several. The marks are written to the four Airtable fields
-// the form always had (Friday, Saturday and Sunday by shift; Thursday, Monday
-// and the weeks before as other times), with Airtable's option names.
+// The volunteer application's availability as a calendar: a column per day,
+// the hours down the side, and a block for each window, marked by clicking
+// it or dragging across several. The marks are written to the four Airtable
+// fields the form always had (Friday, Saturday and Sunday by shift; Thursday,
+// Monday and the weeks before as other times), with Airtable's option names.
 
 type Slot = { key: string; value: string };
-type Window = Slot & { from: number; to: number };
-type Day = { name: string; date: string; note?: string; windows: Window[] };
+type Block = Slot & { from: number; to: number };
+type Day = { name: string; date: string; blocks: Block[] };
 
 const SHIFTS: [string, number, number][] = [
   ["9am-1pm", 9, 13],
@@ -22,83 +22,70 @@ const SHIFTS: [string, number, number][] = [
   ["5pm-9pm", 17, 21],
   ["9pm-1am", 21, 25],
 ];
-const shifts = (key: string) =>
+const shifts = (key: string): Block[] =>
   SHIFTS.map(([value, from, to]) => ({ key, value, from, to }));
+const other = (value: string, from: number, to: number): Block => ({
+  key: "otherTimes",
+  value,
+  from,
+  to,
+});
 
-const DAYS: Day[] = [
+const WEEKEND: Day[] = [
+  { name: "Friday", date: "Nov 6", blocks: shifts("friday") },
+  { name: "Saturday", date: "Nov 7", blocks: shifts("saturday") },
+  { name: "Sunday", date: "Nov 8", blocks: shifts("sunday") },
+];
+const AROUND: Day[] = [
   {
     name: "Thursday",
     date: "Nov 5",
-    note: "The day before",
-    windows: [
-      { key: "otherTimes", value: "2pm-6pm Thursday (11/5)", from: 14, to: 18 },
-      {
-        key: "otherTimes",
-        value: "6pm-10pm Thursday (11/5)",
-        from: 18,
-        to: 22,
-      },
+    blocks: [
+      other("2pm-6pm Thursday (11/5)", 14, 18),
+      other("6pm-10pm Thursday (11/5)", 18, 22),
     ],
   },
-  { name: "Friday", date: "Nov 6", windows: shifts("friday") },
-  { name: "Saturday", date: "Nov 7", windows: shifts("saturday") },
-  { name: "Sunday", date: "Nov 8", windows: shifts("sunday") },
   {
     name: "Monday",
     date: "Nov 9",
-    note: "The day after",
-    windows: [
-      { key: "otherTimes", value: "9am-1pm Monday (11/9)", from: 9, to: 13 },
-      { key: "otherTimes", value: "1pm-5pm Monday (11/9)", from: 13, to: 17 },
+    blocks: [
+      other("9am-1pm Monday (11/9)", 9, 13),
+      other("1pm-5pm Monday (11/9)", 13, 17),
     ],
   },
 ];
-const WINDOWS = DAYS.flatMap((d) => d.windows);
-const WEEKEND = DAYS.slice(1, 4).flatMap((d) => d.windows);
-
-// The weekend's fixed moments, drawn under their day's windows for context.
-const MOMENTS: Record<string, { at: number; to?: number; label: string }[]> = {
-  Friday: [
-    { at: 14, label: "Gates open" },
-    { at: 19, to: 22, label: "Night Market" },
-  ],
-  Sunday: [{ at: 21, label: "The end" }],
-};
-
-// The weeks before have no times, just whether.
+// The weeks before have no times, just whether, and how.
 const AHEAD: (Slot & { label: string })[] = [
-  {
-    key: "otherTimes",
-    value: "Further in advance (onsite)",
-    label: "On site, in the weeks before",
-  },
+  { key: "otherTimes", value: "Further in advance (onsite)", label: "On site" },
   {
     key: "otherTimes",
     value: "Further in advance (virtual)",
-    label: "Online, in the weeks before",
+    label: "Virtual",
   },
 ];
+const BLOCKS = [...WEEKEND, ...AROUND].flatMap((d) => d.blocks);
 
 /** The questions this board asks. */
 export const SCHEDULE_KEYS = ["friday", "saturday", "sunday", "otherTimes"];
 
-// Each line runs from 9 am to 1 am.
+// Each column runs from 9 am to 1 am.
 const START = 9;
 const END = 25;
-const pos = (h: number) => ((h - START) / (END - START)) * 100;
-const hour = (h: number, gap = " ") => {
+const HOUR = 14;
+const y = (h: number) => (h - START) * HOUR;
+const hour = (h: number) => {
   const x = h % 24;
-  return `${x % 12 || 12}${gap}${x < 12 ? "am" : "pm"}`;
+  return `${x % 12 || 12}${x < 12 ? "am" : "pm"}`;
 };
 
 // Airtable's order, so the row reads tidily.
-const ORDER = [...WINDOWS, ...AHEAD].map((s) => s.value);
+const ORDER = [...BLOCKS, ...AHEAD].map((s) => s.value);
 const list = (v: Answer) => (Array.isArray(v) ? v : []);
 const tidy = (xs: string[]) =>
   [...new Set(xs)].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
 
-const CONTROL =
-  "font-space-mono text-[11px] font-bold tracking-[0.12em] text-meeple uppercase hover:underline disabled:opacity-40 disabled:no-underline";
+const CHIP =
+  "flex items-center gap-2 rounded-full border-2 px-3.5 py-2 text-[15px] font-semibold transition-[background-color,border-color,color,translate] duration-150 select-none active:translate-y-px";
 
 export default function ScheduleBoard({
   answers,
@@ -113,7 +100,7 @@ export default function ScheduleBoard({
       tidy(on ? [...list(v), s.value] : list(v).filter((x) => x !== s.value)),
     );
 
-  // Press a window and drag across others to paint them the same way.
+  // Press a block and drag across others to paint them the same way.
   const paint = useRef<boolean | null>(null);
   useEffect(() => {
     const stop = () => {
@@ -126,215 +113,208 @@ export default function ScheduleBoard({
       window.removeEventListener("pointercancel", stop);
     };
   }, []);
-  const press = (w: Window) => (e: PointerEvent) => {
+  const press = (b: Block) => (e: PointerEvent) => {
     if (e.button !== 0) return;
-    paint.current = !isOn(w);
-    mark(w, paint.current);
+    paint.current = !isOn(b);
+    mark(b, paint.current);
   };
   const drag = (e: PointerEvent) => {
     if (paint.current === null) return;
     const el = document
       .elementFromPoint(e.clientX, e.clientY)
-      ?.closest<HTMLElement>("[data-window]");
-    const w = el && WINDOWS[Number(el.dataset.window)];
-    if (w && isOn(w) !== paint.current) mark(w, paint.current);
+      ?.closest<HTMLElement>("[data-block]");
+    const b = el && BLOCKS[Number(el.dataset.block)];
+    if (b && isOn(b) !== paint.current) mark(b, paint.current);
   };
 
-  const whole = (d: Day) => d.windows.every(isOn);
-  const marked = WINDOWS.filter(isOn);
-  const hours = marked.reduce((n, w) => n + w.to - w.from, 0);
+  const marked = BLOCKS.filter(isOn).length;
+  const ahead = AHEAD.some(isOn);
 
-  return (
-    <div>
-      <p className="text-[14.5px] leading-snug text-ink/60">
-        Click a window, or drag across several. Click a day to mark all of it.
-      </p>
-
-      <div aria-hidden className="mt-4 flex gap-4">
-        <span className="hidden w-28 shrink-0 sm:block" />
-        <div className="relative h-4 flex-1 font-space-mono text-[10.5px] text-ink/50">
-          {[9, 13, 17, 21, 25].map((h, i, all) => (
+  const calendar = (days: Day[]) => (
+    <div
+      onPointerMove={drag}
+      className="grid touch-pan-y pb-3 select-none"
+      style={{
+        gridTemplateColumns: `2.75rem repeat(${days.length}, minmax(0, 1fr))`,
+      }}
+    >
+      <span />
+      {days.map((d) => {
+        const whole = d.blocks.every(isOn);
+        return (
+          <button
+            key={d.name}
+            type="button"
+            onClick={() => d.blocks.forEach((b) => mark(b, !whole))}
+            title={`${whole ? "Clear" : "Mark"} all of ${d.name}`}
+            aria-label={`${whole ? "Clear" : "Mark"} all of ${d.name}`}
+            className="group pb-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-meeple"
+          >
+            <span
+              className={`${DISPLAY} block text-[22px] leading-none text-navy transition-colors group-hover:text-meeple`}
+            >
+              {d.name.slice(0, 3)}
+            </span>
+            <span className="font-space-mono text-[10.5px] tracking-[0.06em] text-ink/50 uppercase">
+              {d.date}
+            </span>
+          </button>
+        );
+      })}
+      <div
+        aria-hidden
+        className="relative border-t border-navy/15"
+        style={{ height: y(END) }}
+      >
+        {[9, 13, 17, 21, 25].map((h) => (
+          <span
+            key={h}
+            className="absolute right-2 -translate-y-1/2 font-space-mono text-[10px] text-ink/50"
+            style={{ top: y(h) }}
+          >
+            {hour(h)}
+          </span>
+        ))}
+      </div>
+      {days.map((d) => (
+        <div
+          key={d.name}
+          className="relative border-t border-l border-navy/15 last:border-r"
+          style={{ height: y(END) }}
+        >
+          {[13, 17, 21].map((h) => (
             <span
               key={h}
-              className={cn(
-                "absolute whitespace-nowrap",
-                i === 0
-                  ? ""
-                  : i === all.length - 1
-                    ? "-translate-x-full"
-                    : "-translate-x-1/2",
-              )}
-              style={{ left: `${pos(h)}%` }}
-            >
-              {hour(h)}
-            </span>
+              aria-hidden
+              className="absolute inset-x-0 h-px bg-navy/10"
+              style={{ top: y(h) }}
+            />
           ))}
-        </div>
-      </div>
-
-      <ul
-        onPointerMove={drag}
-        className="mt-1.5 touch-pan-y border-t-2 border-navy select-none"
-      >
-        {DAYS.map((d) => (
-          <li
-            key={d.name}
-            className="flex flex-col gap-2 border-b border-navy/15 py-3 sm:flex-row sm:items-start sm:gap-4"
-          >
-            <button
-              type="button"
-              onClick={() => d.windows.forEach((w) => mark(w, !whole(d)))}
-              aria-label={`${whole(d) ? "Clear" : "Mark"} all of ${d.name}`}
-              className="group w-28 shrink-0 pt-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-meeple"
-            >
-              <span
-                className={`${DISPLAY} block text-[23px] leading-none text-navy transition-colors group-hover:text-meeple`}
-              >
-                {d.name.slice(0, 3)}{" "}
-                <span className="text-ink/40 group-hover:text-meeple/60">
-                  {d.date}
-                </span>
-              </span>
-              {d.note && (
-                <span className="font-space-mono text-[10px] tracking-[0.08em] text-ink/50 uppercase">
-                  {d.note}
-                </span>
-              )}
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="relative h-11">
-                {[13, 17, 21].map((h) => (
-                  <span
-                    key={h}
-                    aria-hidden
-                    className="absolute inset-y-0 w-px bg-navy/10"
-                    style={{ left: `${pos(h)}%` }}
-                  />
-                ))}
-                {d.windows.map((w) => {
-                  const on = isOn(w);
-                  return (
-                    <button
-                      key={w.value}
-                      type="button"
-                      data-window={WINDOWS.indexOf(w)}
-                      aria-pressed={on}
-                      aria-label={`${d.name}, ${d.date}, ${hour(w.from)} to ${hour(w.to)}`}
-                      onPointerDown={press(w)}
-                      // Keyboard presses only: a pointer has already marked it.
-                      onClick={(e) => {
-                        if (e.detail === 0) mark(w, !on);
-                      }}
-                      className={cn(
-                        "absolute inset-y-0 flex items-center justify-center gap-1 rounded-lg border-2 font-space-mono text-[11px] font-bold transition-[background-color,border-color,color,scale] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2 active:scale-95",
-                        on
-                          ? "border-moss bg-moss text-cream"
-                          : "border-dashed border-navy/30 bg-background text-navy/55 hover:border-navy hover:text-navy",
-                      )}
-                      style={{
-                        left: `calc(${pos(w.from)}% + 2px)`,
-                        width: `calc(${pos(w.to) - pos(w.from)}% - 4px)`,
-                      }}
-                    >
-                      {on && (
-                        <Check
-                          aria-hidden
-                          className="size-3.5 shrink-0"
-                          strokeWidth={3}
-                        />
-                      )}
-                      <span className="truncate">
-                        {hour(w.from, "")}–{hour(w.to, "")}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {MOMENTS[d.name] && (
-                <div
-                  aria-hidden
-                  className="relative mt-1.5 h-5 font-space-mono text-[10px] tracking-[0.06em] text-meeple uppercase"
-                >
-                  {MOMENTS[d.name].map((m) => (
-                    <span key={m.label}>
-                      <span
-                        className={cn(
-                          "absolute top-0 h-1 rounded-full bg-meeple",
-                          !m.to && "w-1",
-                        )}
-                        style={{
-                          left: `${pos(m.at)}%`,
-                          width: m.to ? `${pos(m.to) - pos(m.at)}%` : undefined,
-                        }}
-                      />
-                      <span
-                        className="absolute top-1.5 whitespace-nowrap"
-                        style={{ left: `${pos(m.at)}%` }}
-                      >
-                        {m.label}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-5">
-        <p className="text-[16px] font-semibold text-navy">
-          And in the weeks before?
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {AHEAD.map((a) => {
-            const on = isOn(a);
+          {d.blocks.map((b) => {
+            const on = isOn(b);
             return (
               <button
-                key={a.value}
+                key={b.value}
                 type="button"
+                data-block={BLOCKS.indexOf(b)}
                 aria-pressed={on}
-                onClick={() => mark(a, !on)}
+                aria-label={`${d.name} ${d.date}, ${hour(b.from)} to ${hour(b.to)}`}
+                onPointerDown={press(b)}
+                // Keyboard presses only: a pointer has already marked it.
+                onClick={(e) => {
+                  if (e.detail === 0) mark(b, !on);
+                }}
                 className={cn(
-                  "flex items-center gap-2 rounded-full border-2 px-3.5 py-2 text-[15px] font-semibold transition-[background-color,border-color,color,translate] duration-150 select-none active:translate-y-px",
+                  "absolute inset-x-1 flex flex-col items-center justify-center gap-0.5 rounded-md border-2 font-space-mono text-[10.5px] font-bold transition-[background-color,border-color,color] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
                   on
-                    ? "border-moss bg-moss text-cream"
-                    : "border-navy/20 text-navy hover:-translate-y-0.5 hover:border-navy",
+                    ? "border-moss bg-moss text-white"
+                    : "border-dashed border-navy/30 bg-background text-navy/60 hover:border-navy hover:text-navy",
                 )}
+                style={{
+                  top: y(b.from) + 2,
+                  height: (b.to - b.from) * HOUR - 4,
+                }}
               >
-                {on && <Check aria-hidden className="size-4" strokeWidth={3} />}
-                {a.label}
+                {on && (
+                  <Check aria-hidden className="size-3.5" strokeWidth={3} />
+                )}
+                <span>
+                  {hour(b.from)}–{hour(b.to)}
+                </span>
               </button>
             );
           })}
         </div>
-      </div>
+      ))}
+    </div>
+  );
 
-      <div className="mt-6 flex flex-wrap items-baseline gap-x-5 gap-y-2 border-t border-navy/15 pt-3">
-        <p aria-live="polite" className="text-[15px] text-ink/70">
-          <b className={`${DISPLAY} text-[26px] leading-none text-navy`}>
-            {marked.length}
-          </b>{" "}
-          {marked.length === 1 ? "window" : "windows"} marked
-          {hours > 0 && <>, up to {hours} hours</>}
+  return (
+    <div className="flex flex-col gap-8">
+      <section>
+        <h3 className="text-[18px] font-semibold text-navy">During the con</h3>
+        <p className="mt-1 text-[14.5px] leading-snug text-ink/60">
+          Click a block, or drag across several. Click a day to mark all of it.
         </p>
+        <div className="mt-4">{calendar(WEEKEND)}</div>
+      </section>
+
+      <section>
+        <h3 className="text-[18px] font-semibold text-navy">Around the con</h3>
+        <p className="mt-1 text-[14.5px] leading-snug text-ink/60">
+          The day before, the day after, and the weeks leading up to it.
+        </p>
+        <div className="mt-4">{calendar(AROUND)}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <button
+            type="button"
+            aria-pressed={ahead}
+            onClick={() => AHEAD.forEach((a) => mark(a, !ahead))}
+            className={cn(
+              CHIP,
+              ahead
+                ? "border-moss bg-moss text-white"
+                : "border-navy/20 text-navy hover:-translate-y-0.5 hover:border-navy",
+            )}
+          >
+            {ahead && <Check aria-hidden className="size-4" strokeWidth={3} />}
+            Further in advance
+          </button>
+          {ahead && (
+            <div className="flex animate-in flex-wrap gap-x-5 gap-y-2 duration-300 fade-in slide-in-from-left-1">
+              {AHEAD.map((a) => {
+                const on = isOn(a);
+                return (
+                  <label
+                    key={a.value}
+                    className="group flex cursor-pointer items-center gap-2 text-[15px] font-semibold text-navy has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-meeple has-[:focus-visible]:ring-offset-4"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => mark(a, !on)}
+                      className="sr-only"
+                    />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "grid size-6 place-items-center rounded-md border-2 transition-colors",
+                        on
+                          ? "border-navy bg-navy text-cream"
+                          : "border-navy/35 group-hover:border-navy",
+                      )}
+                    >
+                      {on && <Check className="size-3.5" strokeWidth={3} />}
+                    </span>
+                    {a.label}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <p
+        aria-live="polite"
+        className="flex flex-wrap items-baseline gap-x-5 gap-y-2 border-t border-navy/15 pt-3 text-[15px] text-ink/70"
+      >
+        <span>
+          <b className={`${DISPLAY} text-[24px] leading-none text-navy`}>
+            {marked}
+          </b>{" "}
+          {marked === 1 ? "block" : "blocks"} marked
+          {ahead && ", plus the weeks before"}
+        </span>
         <button
           type="button"
-          onClick={() => WEEKEND.forEach((w) => mark(w, true))}
-          disabled={WEEKEND.every(isOn)}
-          className={CONTROL}
-        >
-          Mark all of Fri–Sun
-        </button>
-        <button
-          type="button"
-          onClick={() => [...WINDOWS, ...AHEAD].forEach((s) => mark(s, false))}
-          disabled={!marked.length && !AHEAD.some(isOn)}
-          className={CONTROL}
+          onClick={() => [...BLOCKS, ...AHEAD].forEach((s) => mark(s, false))}
+          disabled={!marked && !ahead}
+          className="font-space-mono text-[11px] font-bold tracking-[0.12em] text-meeple uppercase hover:underline disabled:no-underline disabled:opacity-40"
         >
           Clear
         </button>
-      </div>
+      </p>
     </div>
   );
 }

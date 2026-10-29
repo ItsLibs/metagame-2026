@@ -1,6 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
 import {
-  FINANCIAL_AID_AIRTABLE_FORM,
   FINANCIAL_AID_FORM_URL,
   TEAM_EMAIL,
   VOLUNTEER_APPLY_PATH,
@@ -40,7 +39,6 @@ export const financialAid: FormDef = {
   slug: "financial-aid",
   path: FINANCIAL_AID_FORM_URL,
   tableId: airtableConfig.volunteersTableId,
-  airtableForm: FINANCIAL_AID_AIRTABLE_FORM,
   name: "Financial aid application",
   eyebrow: "Financial aid · Metagame 2026",
   title: "Make it affordable.",
@@ -52,8 +50,6 @@ export const financialAid: FormDef = {
     { label: "Full price", value: "$425" },
   ],
   notice: `Several people on the Metagame team will see your answers. For anything you'd rather keep more private, email ricki@metagame.games. You can also [apply to volunteer](${VOLUNTEER_APPLY_PATH}), which is how most reduced-price tickets are earned.`,
-  glyph: "trivia",
-  token: "bg-tan text-navy",
   utmFields: VOLUNTEER_UTM_FIELDS,
   steps: [
     {

@@ -5,6 +5,7 @@ import {
   useId,
   useRef,
   useState,
+  type ChangeEvent,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -40,6 +41,7 @@ export function Field({
   onEnter,
   answers = {},
   onExtra,
+  boxErrors = {},
 }: {
   q: Question;
   value: Answer;
@@ -51,6 +53,8 @@ export function Field({
   answers?: Answers;
   /** Sets one of those boxes' answers. */
   onExtra?: (key: string, v: Answer) => void;
+  /** Problems with those boxes, by box key. */
+  boxErrors?: Record<string, string>;
 }) {
   const id = useId();
   const helpId = `${id}-help`;
@@ -63,6 +67,11 @@ export function Field({
       {q.required && (
         <span aria-hidden className="ml-1 text-meeple">
           *
+        </span>
+      )}
+      {q.aside && (
+        <span className="ml-2 text-[14.5px] font-normal text-ink/55">
+          (<Rich text={q.aside} />)
         </span>
       )}
     </>
@@ -101,9 +110,12 @@ export function Field({
           .map((b) => (
             <MoreBox
               key={b.key}
+              boxKey={b.key}
               label={b.label}
               placeholder={b.placeholder}
+              input={b.input}
               value={answers[b.key]}
+              error={boxErrors[b.key]}
               onChange={(v) => onExtra?.(b.key, v)}
             />
           ))}
@@ -181,8 +193,9 @@ export function Field({
     );
   }
 
+  // A column, so fields sharing a row keep their controls on one line.
   return (
-    <div data-field={q.key}>
+    <div data-field={q.key} className="flex flex-col">
       {q.type === "file" ? (
         <p className="text-[18px] font-semibold text-navy">{title}</p>
       ) : (
@@ -194,7 +207,7 @@ export function Field({
         </label>
       )}
       {help}
-      <div className="mt-3">{control}</div>
+      <div className="mt-auto pt-3">{control}</div>
       {err}
     </div>
   );
@@ -319,39 +332,68 @@ function Options({
   );
 }
 
-// The text box an option like "Other" opens, tucked under the options. A
-// pick that opens it puts the cursor straight in.
+// The box an option like "Other" opens, tucked under the options: a couple
+// of lines, or one line for an email. A pick that opens it puts the cursor
+// straight in.
 function MoreBox({
+  boxKey,
   label,
   placeholder,
+  input,
   value,
+  error,
   onChange,
 }: {
+  boxKey: string;
   label: string;
   placeholder?: string;
+  input?: "email";
   value: Answer;
+  error?: string;
   onChange: (v: Answer) => void;
 }) {
   const id = useId();
-  const box = useRef<HTMLTextAreaElement>(null);
+  const box = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   useEffect(() => {
     if (!box.current?.value) box.current?.focus({ preventScroll: true });
   }, []);
+  const shared = {
+    id,
+    ref: (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+      box.current = el;
+    },
+    value: typeof value === "string" ? value : "",
+    placeholder,
+    maxLength: MORE_MAX,
+    onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      onChange(e.target.value),
+    "aria-invalid": error ? true : undefined,
+  };
   return (
-    <div className="mt-4 animate-in border-l-2 border-tan pl-4 duration-300 fade-in slide-in-from-top-1">
+    <div
+      data-field={boxKey}
+      className="mt-4 animate-in border-l-2 border-tan pl-4 duration-300 fade-in slide-in-from-top-1"
+    >
       <label htmlFor={id} className="block text-[15px] font-semibold text-navy">
         {label}
       </label>
-      <textarea
-        id={id}
-        ref={box}
-        rows={2}
-        maxLength={MORE_MAX}
-        value={typeof value === "string" ? value : ""}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn(INPUT, "mt-2 min-h-16 resize-y leading-relaxed")}
-      />
+      {input === "email" ? (
+        <input
+          type="email"
+          autoComplete="email"
+          className={cn(INPUT, "mt-2")}
+          {...shared}
+        />
+      ) : (
+        <textarea
+          rows={2}
+          className={cn(INPUT, "mt-2 min-h-16 resize-y leading-relaxed")}
+          {...shared}
+        />
+      )}
+      {error && (
+        <p className="mt-2 text-sm font-semibold text-meeple">{error}</p>
+      )}
     </div>
   );
 }

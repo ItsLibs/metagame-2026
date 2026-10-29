@@ -1,6 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
 import {
-  JOIN_TEAM_AIRTABLE_FORM,
   JOIN_TEAM_FORM_URL,
   RFP_FORM_URL,
   VOLUNTEER_APPLY_PATH,
@@ -14,7 +13,6 @@ export const joinTeam: FormDef = {
   slug: "join-team",
   path: JOIN_TEAM_FORM_URL,
   tableId: airtableConfig.signupsTableId,
-  airtableForm: JOIN_TEAM_AIRTABLE_FORM,
   name: "Get involved",
   eyebrow: "Get involved · Metagame 2026",
   title: "Help make Metagame.",
@@ -24,8 +22,6 @@ export const joinTeam: FormDef = {
     { label: "Takes", value: "About a minute" },
     { label: "Then", value: "We follow up" },
   ],
-  glyph: "party-games",
-  token: "bg-sky text-navy",
   steps: [
     {
       key: "you",

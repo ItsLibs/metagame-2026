@@ -34,9 +34,16 @@ export type Option = {
    * Picking this option opens a text box under the question. The table has
    * no field of its own for it, so its answer (kept under `key`) is written
    * into another question's field (`into`, a team-only text question in the
-   * same form) as a line headed `label`.
+   * same form) as a line headed `label`. An "email" box is one line, and is
+   * checked as an address.
    */
-  more?: { key: string; label: string; into: string; placeholder?: string };
+  more?: {
+    key: string;
+    label: string;
+    into: string;
+    placeholder?: string;
+    input?: "email";
+  };
 };
 
 /** The most a text box under an option takes. */
@@ -47,11 +54,15 @@ type Common = {
   /** The Airtable field id the answer is written to. */
   field: string;
   label: string;
+  /** A few words after the label, in parentheses; [words](url) links. */
+  aside?: string;
   /** Plain text; [words](url) becomes a link. */
   help?: string;
   required?: boolean;
   /** Asked only when this returns true. */
   show?: (a: Answers) => boolean;
+  /** Questions that share a row sit side by side on a wide screen. */
+  row?: string;
 };
 
 export type Question =
@@ -103,7 +114,7 @@ export type Step = {
   show?: (a: Answers) => boolean;
   /**
    * A board that asks some of this step's questions in one picture: the
-   * weekend as a schedule to mark, or the volunteer teams to sort. The rest
+   * weekend as a calendar to mark, or the volunteer teams to sort. The rest
    * of the step's questions follow it as usual.
    */
   view?: "schedule" | "teams";
@@ -115,20 +126,17 @@ export type FormDef = {
   /** Where the journey lives on the site. */
   path: string;
   tableId: string;
-  /** The Airtable form this replaces, kept as a fallback link. */
-  airtableForm: string;
   /** What the team calls it, for the backup email if Airtable fails. */
   name: string;
   eyebrow: string;
   title: string;
   pitch: string;
-  /** Small facts on the cover: how long it takes, when it's due. */
-  facts: { label: string; value: string }[];
-  /** A heads-up on the cover, e.g. a passed deadline. */
+  /** One line under the pitch, e.g. how long it takes. */
+  aside?: string;
+  /** Small facts under the pitch: when it's due, what it costs. */
+  facts?: { label: string; value: string }[];
+  /** A heads-up under the pitch, e.g. who sees the answers. */
   notice?: string;
-  glyph: GlyphName;
-  /** The cover token's colours, as Tailwind classes. */
-  token: string;
   steps: Step[];
   done: {
     title: string;
@@ -242,12 +250,26 @@ export function checkAnswer(q: Question, v: Answer): string | null {
   }
 }
 
-/** Problems with the answers on one step, keyed by question. */
+/**
+ * Problems with the answers on one step, keyed by question, or by the box
+ * under an option when an email there isn't one.
+ */
 export function checkStep(step: Step, a: Answers): Record<string, string> {
   const errors: Record<string, string> = {};
   for (const q of visibleItems(step, a).filter(isQuestion)) {
     const e = checkAnswer(q, a[q.key]);
     if (e) errors[q.key] = e;
+    for (const box of optionBoxes(q, a)) {
+      const text = a[box.key];
+      if (
+        box.open &&
+        box.input === "email" &&
+        typeof text === "string" &&
+        text.trim() &&
+        !EMAIL.test(text.trim())
+      )
+        errors[box.key] = "That email doesn't look right.";
+    }
   }
   return errors;
 }
