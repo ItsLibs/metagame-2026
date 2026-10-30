@@ -37,7 +37,7 @@ export default function LastYearPage() {
           rel="noopener noreferrer"
           className="mt-4 inline-block font-space-mono text-sm font-bold tracking-[0.08em] text-navy uppercase underline decoration-2 underline-offset-4 hover:text-meeple"
         >
-          The 2025 site <span aria-hidden="true">&#8599;</span>
+          Full 2025 site <span aria-hidden="true">&#8599;</span>
         </a>
       </header>
 
