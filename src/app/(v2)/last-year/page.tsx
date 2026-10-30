@@ -10,7 +10,7 @@ import megagameMap from "../../../../public/images/last-year/megagame-map-2025.j
 export const metadata: Metadata = {
   title: "Last year — Metagame 2026",
   description:
-    "What was on at Metagame 2025: see any moment of the weekend, or browse the full schedule.",
+    "What was on at Metagame 2025: step through the weekend moment by moment, or browse the full schedule.",
 };
 
 const PAGE = "mx-auto w-full max-w-[1192px] px-4 sm:px-8";
