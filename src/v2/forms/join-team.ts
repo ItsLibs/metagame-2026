@@ -105,6 +105,7 @@ export const joinTeam: FormDef = {
     links: [
       { label: "Apply to volunteer", href: VOLUNTEER_APPLY_PATH },
       { label: "Propose a session", href: RFP_FORM_URL },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };

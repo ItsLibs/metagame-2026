@@ -103,9 +103,7 @@ describe("financial aid", () => {
     const a = { ticket: ["No"], price: "$100 off (ticket price: $325)" };
     expect(visible(a)).toContain("approved");
     expect(visible(a)).not.toContain("details");
-    expect(visible({ ...a, ticket: ["Yes (Standard)"] })).not.toContain(
-      "approved",
-    );
+    expect(visible({ ...a, ticket: ["Yes"] })).not.toContain("approved");
   });
 
   it("asks about travel only when travel help is on the table", () => {

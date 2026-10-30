@@ -307,7 +307,7 @@ export default function Journey({ slug }: { slug: string }) {
           )}
           {def.notice && (
             <p className="mt-5 max-w-[44em] border-l-2 border-tan pl-4 text-[15px] leading-relaxed text-ink/70">
-              <Rich text={def.notice} />
+              <Rich text={def.notice} contactSubject={def.name} />
             </p>
           )}
         </div>

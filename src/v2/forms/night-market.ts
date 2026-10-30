@@ -169,6 +169,7 @@ export const nightMarket: FormDef = {
     links: [
       { label: "RSVP on Partiful", href: NIGHT_PARTIFUL_URL },
       { label: "See the Supporter ticket", href: "/#tickets" },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };

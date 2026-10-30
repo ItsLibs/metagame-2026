@@ -31,13 +31,13 @@ export const volunteer: FormDef = {
     "Join the team and help make Metagame happen. We need volunteers both in the lead-up to the conference and during the weekend itself, and volunteers get a discounted or free ticket depending on how much they can take on.",
   aside: "This application should only take about 5 minutes.",
   notice:
-    "Your application will be visible to the Metagame team. If you'd rather tell us something privately, email ricki@metagame.games.",
+    "Your application will be visible to the Metagame team. If you'd rather tell us something privately, [contact Ricki](contact:ricki).",
   utmFields: VOLUNTEER_UTM_FIELDS,
   steps: [
     {
       key: "you",
       title: "Who are you?",
-      items: basicFacts("Leave it blank if it's the same."),
+      items: basicFacts(),
     },
     {
       key: "shifts",
@@ -92,6 +92,7 @@ export const volunteer: FormDef = {
         label: "Make a puzzle for the Megagame",
         href: MEGAGAME_PROPOSAL_FORM_URL,
       },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };

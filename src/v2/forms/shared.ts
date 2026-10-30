@@ -9,7 +9,7 @@ export const opts = (...values: string[]): Option[] =>
 // The volunteer and financial aid applications are two forms on one table,
 // so they share these fields (and their ids).
 
-export const basicFacts = (preferredHelp: string): Question[] => [
+export const basicFacts = (): Question[] => [
   {
     key: "legalName",
     field: "fldx0ZAFnlvro2cYE",
@@ -24,7 +24,6 @@ export const basicFacts = (preferredHelp: string): Question[] => [
     field: "fldSfrVxG4ztueh5s",
     type: "text",
     label: "Preferred name",
-    help: `What you'd like us to call you, and put on your badge. ${preferredHelp}`,
     autoComplete: "nickname",
     row: "name",
   },
@@ -32,7 +31,7 @@ export const basicFacts = (preferredHelp: string): Question[] => [
     key: "pronouns",
     field: "fldjo23IzCU37RHdn",
     type: "text",
-    label: "Your pronouns",
+    label: "Pronouns",
     row: "pronouns",
   },
   {
@@ -63,22 +62,6 @@ export const basicFacts = (preferredHelp: string): Question[] => [
     row: "discord",
   },
 ];
-
-export const ticketStatus = (help: string): Question => ({
-  key: "ticket",
-  field: "fldhK2vXDqnEMr9oV",
-  type: "choice",
-  asList: true,
-  label: "Do you already have a ticket?",
-  help,
-  required: true,
-  options: opts(
-    "Yes (Early bird)",
-    "Yes (Standard)",
-    "No",
-    "I'm not sure / none of the above",
-  ),
-});
 
 // The volunteer form's version: yes or no, with a box for the ticket's email
 // when it isn't the one above. Airtable's options name the ticket type, so

@@ -82,7 +82,7 @@ export const sponsor: FormDef = {
     body: "Thanks for backing Metagame. Someone from the team will reach out soon.",
     links: [
       { label: "See the sponsor tiers", href: "/sponsor" },
-      { label: "Back to the rulebook", href: "/" },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };

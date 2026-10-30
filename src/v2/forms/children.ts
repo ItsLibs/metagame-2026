@@ -226,7 +226,7 @@ export const children: FormDef = {
     body: "We'll be in touch with childcare details before the weekend.",
     links: [
       { label: "Read about childcare", href: "/childcare" },
-      { label: "Back to the rulebook", href: "/" },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };

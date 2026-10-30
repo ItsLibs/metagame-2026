@@ -1,9 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import {
-  FINANCIAL_AID_FORM_URL,
-  TEAM_EMAIL,
-  VOLUNTEER_APPLY_PATH,
-} from "@/v2/lib/links";
+import { FINANCIAL_AID_FORM_URL, VOLUNTEER_APPLY_PATH } from "@/v2/lib/links";
 import type { Answers, FormDef } from "./engine";
 import { isEmpty, picked } from "./engine";
 import {
@@ -14,9 +10,9 @@ import {
   howFound,
   questions,
   reference,
+  opts,
   skills,
   teamLists,
-  ticketStatus,
   VOLUNTEER_UTM_FIELDS,
 } from "./shared";
 
@@ -28,11 +24,13 @@ const OTHER = "Other";
 const price = (a: Answers) => a.price;
 // $100 off is honor-system: without a ticket yet, it's a coupon code away.
 const instant100 = (a: Answers) =>
-  price(a) === OFF_100 &&
-  (picked(a.ticket, "No") ||
-    picked(a.ticket, "I'm not sure / none of the above"));
+  price(a) === OFF_100 && picked(a.ticket, "No");
 const canVolunteer = (a: Answers) =>
   a.volunteer === "Yes" || a.volunteer === "Unsure";
+// Someone who has already applied to volunteer has answered the volunteer
+// questions there, so they get no second copy here.
+const needsVolunteerSteps = (a: Answers) =>
+  canVolunteer(a) && a.applied !== "Yes";
 
 // The financial aid application, on the volunteer table. Anyone who could
 // volunteer gets the volunteer questions too, as their own steps.
@@ -47,13 +45,13 @@ export const financialAid: FormDef = {
     "Metagame has a scholarship fund with a limited number of free and reduced-price tickets, for anyone for whom the full price would be a hardship. Tell us the highest price that would work for you and a little about your situation, and we'll email you once we've reviewed it.",
   aside: "This application should only take about 5 minutes.",
   notice:
-    "Your application will be visible to the Metagame team. If you'd rather tell us something privately, email ricki@metagame.games.",
+    "Your application will be visible to the Metagame team. If you'd rather tell us something privately, [contact Ricki](contact:ricki).",
   utmFields: VOLUNTEER_UTM_FIELDS,
   steps: [
     {
       key: "you",
       title: "Who are you?",
-      items: basicFacts("Leave it blank if it's the same."),
+      items: basicFacts(),
     },
     {
       key: "price",
@@ -61,9 +59,18 @@ export const financialAid: FormDef = {
       intro:
         "A full-price ticket is $425. Pick the highest price that would still let you come.",
       items: [
-        ticketStatus(
-          "Already have one? Pick the price you'd like anyway, and we'll work out the difference when we review your application.",
-        ),
+        {
+          key: "ticket",
+          field: "fldhK2vXDqnEMr9oV",
+          type: "choice",
+          asList: true,
+          label: "Do you already have a ticket?",
+          help: "Already have one and looking for a refund? Pick your target net price and we'll work out the difference.",
+          required: true,
+          // Airtable's options name the ticket type; typecast adds a plain
+          // "Yes" the first time someone picks it, as on the volunteer form.
+          options: opts("Yes", "No"),
+        },
         {
           key: "price",
           field: "fldBdxOA9RX6B8OEl",
@@ -104,7 +111,7 @@ export const financialAid: FormDef = {
           key: "approved",
           tone: "win",
           title: "Approved. Your $325 ticket is waiting.",
-          body: `Use the coupon code DEFAULTDISCOUNT at checkout; the button applies it for you. No need to finish this application. Already have a ticket and want the $100 back? Email ${TEAM_EMAIL}.`,
+          body: "Use the coupon code DEFAULTDISCOUNT at checkout; the button applies it for you. No need to finish this application.",
           cta: { label: "Get my $325 ticket", href: "/buy/DEFAULTDISCOUNT" },
           show: instant100,
         },
@@ -155,6 +162,15 @@ export const financialAid: FormDef = {
           required: true,
           options: [{ value: "Yes" }, { value: "No" }, { value: "Unsure" }],
         },
+        {
+          key: "applied",
+          type: "choice",
+          label: "Have you already filled out the volunteer application?",
+          help: "If so, we'll skip the volunteer questions here; we have your answers from that one.",
+          required: true,
+          options: opts("Yes", "No"),
+          show: canVolunteer,
+        },
       ],
     },
     {
@@ -164,7 +180,7 @@ export const financialAid: FormDef = {
         "Select any times you could be available. These are not hard commitments, and you are not committing to work during every slot you select.",
       view: "schedule",
       items: availability((day) => day),
-      show: canVolunteer,
+      show: needsVolunteerSteps,
     },
     {
       key: "teams",
@@ -173,13 +189,13 @@ export const financialAid: FormDef = {
         "You'd likely end up on one or two teams, and every volunteer attends a 1–2 hour orientation before the event.",
       view: "teams",
       items: teamLists("What kind of work are you most excited about?"),
-      show: canVolunteer,
+      show: needsVolunteerSteps,
     },
     {
       key: "skills",
       title: "Skills and details",
       items: [skills(), ...aboutYou()],
-      show: canVolunteer,
+      show: needsVolunteerSteps,
     },
     {
       key: "more",
@@ -199,7 +215,7 @@ export const financialAid: FormDef = {
     body: "Applications are processed in the order they arrive. We'll email you once we've reviewed yours.",
     links: [
       { label: "Apply to volunteer too", href: VOLUNTEER_APPLY_PATH },
-      { label: "Back to the tickets", href: "/#tickets" },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };

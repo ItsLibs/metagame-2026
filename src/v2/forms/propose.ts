@@ -272,7 +272,7 @@ export const propose: FormDef = {
     body: "The speaker committee reads every proposal and will get back to you.",
     links: [
       { label: "See what happened last year", href: "/last-year" },
-      { label: "Back to the home page", href: "/" },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };

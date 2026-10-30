@@ -314,6 +314,7 @@ export const megagame: FormDef = {
     links: [
       { label: "Read about the Megagame", href: "/#megagame" },
       { label: "Propose a session too", href: RFP_FORM_URL },
+      { label: "Back to the homepage", href: "/" },
     ],
   },
 };
