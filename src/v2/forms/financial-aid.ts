@@ -25,12 +25,10 @@ const price = (a: Answers) => a.price;
 // $100 off is honor-system: without a ticket yet, it's a coupon code away.
 const instant100 = (a: Answers) =>
   price(a) === OFF_100 && picked(a.ticket, "No");
+// Someone who has already applied to volunteer answered the volunteer
+// questions there, so only a fresh yes (or an unsure) gets them here.
 const canVolunteer = (a: Answers) =>
   a.volunteer === "Yes" || a.volunteer === "Unsure";
-// Someone who has already applied to volunteer has answered the volunteer
-// questions there, so they get no second copy here.
-const needsVolunteerSteps = (a: Answers) =>
-  canVolunteer(a) && a.applied !== "Yes";
 
 // The financial aid application, on the volunteer table. Anyone who could
 // volunteer gets the volunteer questions too, as their own steps.
@@ -160,16 +158,17 @@ export const financialAid: FormDef = {
           type: "choice",
           label: "Are you able to volunteer at or in the lead-up to Metagame?",
           required: true,
-          options: [{ value: "Yes" }, { value: "No" }, { value: "Unsure" }],
-        },
-        {
-          key: "applied",
-          type: "choice",
-          label: "Have you already filled out the volunteer application?",
-          help: "If so, we'll skip the volunteer questions here; we have your answers from that one.",
-          required: true,
-          options: opts("Yes", "No"),
-          show: canVolunteer,
+          // Airtable has Yes, No and Unsure; typecast adds the fourth the
+          // first time someone picks it.
+          options: [
+            { value: "Yes" },
+            {
+              value: "Yes, and I've already applied",
+              hint: "Then we'll skip the volunteer questions here.",
+            },
+            { value: "No" },
+            { value: "Unsure" },
+          ],
         },
       ],
     },
@@ -180,7 +179,7 @@ export const financialAid: FormDef = {
         "Select any times you could be available. These are not hard commitments, and you are not committing to work during every slot you select.",
       view: "schedule",
       items: availability((day) => day),
-      show: needsVolunteerSteps,
+      show: canVolunteer,
     },
     {
       key: "teams",
@@ -189,13 +188,13 @@ export const financialAid: FormDef = {
         "You'd likely end up on one or two teams, and every volunteer attends a 1–2 hour orientation before the event.",
       view: "teams",
       items: teamLists("What kind of work are you most excited about?"),
-      show: needsVolunteerSteps,
+      show: canVolunteer,
     },
     {
       key: "skills",
       title: "Skills and details",
       items: [skills(), ...aboutYou()],
-      show: needsVolunteerSteps,
+      show: canVolunteer,
     },
     {
       key: "more",
