@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import LastYearViews from "@/v2/components/last-year/LastYearViews";
 import { DISPLAY } from "@/v2/components/styles";
 import { Button } from "@/v2/components/ui/button";
 import { LAST_YEAR_SITE_URL } from "@/v2/lib/links";
+import megagameMap from "../../../../public/images/last-year/megagame-map-2025.jpg";
 
 export const metadata: Metadata = {
   title: "Last year — Metagame 2026",
@@ -40,6 +42,18 @@ export default function LastYearPage() {
           Full 2025 site <span aria-hidden="true">&#8599;</span>
         </a>
       </header>
+
+      <figure className="mt-10 w-full max-w-[640px]">
+        <Image
+          src={megagameMap}
+          alt="Aerial map of Lighthaven with each Megagame territory shaded orange or purple by the faction holding it"
+          sizes="(min-width: 704px) 640px, 100vw"
+          className="h-auto w-full"
+        />
+        <figcaption className="mt-3 text-sm text-ink/70 italic">
+          End state of the Metagame 2025 Megagame territory map
+        </figcaption>
+      </figure>
 
       <div className="mt-10 border-t-2 border-navy pt-8">
         <LastYearViews />
