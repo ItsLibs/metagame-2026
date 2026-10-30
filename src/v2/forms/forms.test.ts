@@ -20,19 +20,19 @@ describe("journey definitions", () => {
   for (const def of Object.values(FORMS)) {
     describe(def.slug, () => {
       const questions = allQuestions(def);
+      // Those written to Airtable; a tick that only opens another has none.
+      const written = questions.filter((q) => q.field);
 
       it("points at a real-looking table and fields", () => {
         expect(def.tableId).toMatch(TABLE_ID);
-        for (const q of questions) expect(q.field, q.key).toMatch(FIELD_ID);
+        for (const q of written) expect(q.field, q.key).toMatch(FIELD_ID);
       });
 
       it("asks each field once, under its own key", () => {
         expect(new Set(questions.map((q) => q.key)).size).toBe(
           questions.length,
         );
-        expect(new Set(questions.map((q) => q.field)).size).toBe(
-          questions.length,
-        );
+        expect(new Set(written.map((q) => q.field)).size).toBe(written.length);
       });
 
       it("gives every choice question options", () => {
@@ -292,5 +292,47 @@ describe("text boxes under options", () => {
       ageOther: "Grandparents",
     });
     expect(fields.fldCdTcIyzpR20bJG).toBeUndefined();
+  });
+});
+
+describe("megagame", () => {
+  const def = FORMS.megagame;
+  const you = { name: "Pat", email: "pat@example.com" };
+
+  it("starts with who you are, and asks about 2025 only of those who were there", () => {
+    expect(visibleSteps(def, {})[0].key).toBe("contact");
+    const asked = (a: Record<string, unknown>) =>
+      visibleItems(def.steps[0], a as never).some((i) => i.key === "lastYear");
+    expect(asked({})).toBe(false);
+    expect(asked({ attended: true })).toBe(true);
+  });
+
+  it("needs your part in 2025 once you say you were there", () => {
+    expect(checkForm(def, { ...you, attended: true }).lastYear).toMatch(
+      /untick/,
+    );
+    expect(
+      checkForm(def, {
+        ...you,
+        attended: true,
+        lastYear: ["Attended (but not the others)"],
+      }).lastYear,
+    ).toBeUndefined();
+  });
+
+  it("writes Did not attend for everyone else", () => {
+    const FIELD = "fldCHYyOzYiMqkeXX";
+    expect(airtableFields(def, you)[FIELD]).toEqual(["Did not attend"]);
+    expect(
+      airtableFields(def, {
+        ...you,
+        attended: true,
+        lastYear: ["Ran a Megagame Session"],
+      })[FIELD],
+    ).toEqual(["Ran a Megagame Session"]);
+    // The tick itself goes nowhere.
+    expect(
+      Object.keys(airtableFields(def, { ...you, attended: true })),
+    ).not.toContain("undefined");
   });
 });

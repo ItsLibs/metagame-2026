@@ -60,6 +60,7 @@ describe.skipIf(!KEY)("journeys against the live Airtable base", () => {
       for (const id of utm)
         if (!fields.has(id)) problems.push(`UTM field ${id} is missing`);
       for (const q of allQuestions(def)) {
+        if (!q.field) continue;
         const field = fields.get(q.field);
         if (!field) {
           problems.push(`${q.key}: field ${q.field} is missing`);

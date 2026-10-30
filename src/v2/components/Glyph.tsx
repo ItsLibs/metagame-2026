@@ -105,6 +105,24 @@ const PATHS = {
       <circle cx="24" cy="34" r="2" fill="currentColor" stroke="none" />
     </>
   ),
+  // Two more in the same hand, for the Megagame form's kinds.
+  physical: (
+    <>
+      <circle cx="31" cy="9" r="3.2" />
+      <path d="M29 15 L22 24 L30 29 L26 39" />
+      <path d="M22 24 L15 33 L9 31" />
+      <path d="M29 15 L36 19 L41 15" />
+      <path d="M29 15 L22 16 L17 11" />
+    </>
+  ),
+  treasure: (
+    <>
+      <path d="M8 22 V18 a9 9 0 0 1 9 -9 h14 a9 9 0 0 1 9 9 v4 z" />
+      <rect x="8" y="22" width="32" height="17" rx="2" />
+      <rect x="20.5" y="19" width="7" height="7" rx="1.5" />
+      <circle cx="24" cy="22.5" r="1.4" fill="currentColor" stroke="none" />
+    </>
+  ),
 };
 
 export type GlyphName = keyof typeof PATHS;
@@ -122,6 +140,8 @@ export const GLYPH_LABELS: Record<GlyphName, string> = {
   megagame: "The Megagame",
   "party-games": "Party games",
   trivia: "Trivia",
+  physical: "Physical challenges",
+  treasure: "Scavenger hunts",
 };
 
 export default function Glyph({

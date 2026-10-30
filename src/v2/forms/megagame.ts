@@ -1,7 +1,12 @@
 import { airtableConfig } from "@/lib/airtable-config";
 import { MEGAGAME_PROPOSAL_FORM_URL, RFP_FORM_URL } from "@/v2/lib/links";
-import type { FormDef } from "./engine";
+import type { Answers, FormDef } from "./engine";
 import { opts } from "./shared";
+
+// Airtable's option for someone who wasn't at Metagame 2025. The form asks
+// about last year only of those who tick that they were there, and writes
+// this for everyone else.
+const DID_NOT_ATTEND = "Did not attend";
 
 // A puzzle or game for the Megagame, on the table the Airtable form wrote
 // to. The spoilers (the factions and the elements they're after) only show
@@ -17,6 +22,70 @@ export const megagame: FormDef = {
     "The Megagame runs all weekend: a puzzle hunt, a gauntlet of games and a story, threaded through the rest of Metagame and built from puzzles and games people send in. Tell us about yours here. You don't need to be coming to Metagame to contribute, and pieces that touch alliances, maps, alchemy, space travel, gems or stars are especially welcome. Submissions were due October 10, but the form is still open.",
   aside: "This should take about 10 minutes.",
   steps: [
+    {
+      key: "contact",
+      title: "Who are you?",
+      items: [
+        {
+          key: "name",
+          field: "fldTqzxnASesmYX4X",
+          type: "text",
+          label: "Your name",
+          required: true,
+          autoComplete: "name",
+          row: "you",
+        },
+        {
+          key: "email",
+          field: "fldgegcVZpKUTiu7I",
+          type: "email",
+          label: "Email",
+          required: true,
+          autoComplete: "email",
+          row: "you",
+        },
+        {
+          key: "phone",
+          field: "fldrkSLCbbb1gbNVM",
+          type: "phone",
+          label: "Phone",
+          autoComplete: "tel",
+          row: "reach",
+        },
+        {
+          key: "otherContact",
+          field: "fldBuhCqNVLwNhYwE",
+          type: "text",
+          label: "Other contact info",
+          help: "Say which app, like Discord @cool_designer or Signal designer.1337.",
+          row: "reach",
+        },
+        // A tick with no field of its own: it opens the question below, and
+        // leaving it clear writes "Did not attend" (see beforeWrite).
+        {
+          key: "attended",
+          type: "toggle",
+          label: "Metagame 2025",
+          text: "I was at Metagame 2025.",
+        },
+        {
+          key: "lastYear",
+          field: "fldCHYyOzYiMqkeXX",
+          type: "choices",
+          label: "What was your part in it?",
+          help: "Select any of these that apply.",
+          required: true,
+          missing: "Say what you did at Metagame 2025, or untick the box.",
+          options: opts(
+            "Ran a Megagame Session",
+            "Ran a Session/Game, not part of the Megagame",
+            "Contributed Part of the Megagame",
+            "Attended (but not the others)",
+          ),
+          show: (a) => a.attended === true,
+        },
+      ],
+    },
     {
       key: "game",
       title: "What are you making?",
@@ -38,11 +107,11 @@ export const megagame: FormDef = {
             { value: "Video Game", glyph: "video-games" },
             { value: "LARP", glyph: "larps" },
             { value: "Escape Room", glyph: "escape-rooms" },
-            { value: "Scavenger Hunt" },
+            { value: "Scavenger Hunt", glyph: "treasure" },
             { value: "Word Game", glyph: "crosswords" },
             { value: "Trivia", glyph: "trivia" },
             { value: "Party/Social Game", glyph: "party-games" },
-            { value: "Physical Challenge" },
+            { value: "Physical Challenge", glyph: "physical" },
             {
               value: "Other",
               more: {
@@ -99,7 +168,7 @@ export const megagame: FormDef = {
           key: "minPlayers",
           field: "fldE111n1ccDpMr4w",
           type: "number",
-          label: "Fewest players",
+          label: "Minimum players",
           min: 1,
           max: 1000,
           row: "players",
@@ -108,8 +177,7 @@ export const megagame: FormDef = {
           key: "maxPlayers",
           field: "fldJ2mK2mcxm3YDWr",
           type: "number",
-          label: "Most players",
-          help: "No maximum? Say 100, or leave it blank.",
+          label: "Maximum players",
           min: 1,
           max: 1000,
           row: "players",
@@ -235,61 +303,11 @@ export const megagame: FormDef = {
         },
       ],
     },
-    {
-      key: "contact",
-      title: "Who are you?",
-      items: [
-        {
-          key: "name",
-          field: "fldTqzxnASesmYX4X",
-          type: "text",
-          label: "Your name",
-          required: true,
-          autoComplete: "name",
-          row: "you",
-        },
-        {
-          key: "email",
-          field: "fldgegcVZpKUTiu7I",
-          type: "email",
-          label: "Email",
-          required: true,
-          autoComplete: "email",
-          row: "you",
-        },
-        {
-          key: "phone",
-          field: "fldrkSLCbbb1gbNVM",
-          type: "phone",
-          label: "Phone",
-          autoComplete: "tel",
-          row: "reach",
-        },
-        {
-          key: "otherContact",
-          field: "fldBuhCqNVLwNhYwE",
-          type: "text",
-          label: "Other contact info",
-          help: "Say which app, like Discord @cool_designer or Signal designer.1337.",
-          row: "reach",
-        },
-        {
-          key: "lastYear",
-          field: "fldCHYyOzYiMqkeXX",
-          type: "choices",
-          label: "Your part in Metagame 2025",
-          help: "Select any of these that apply.",
-          options: opts(
-            "Ran a Megagame Session",
-            "Ran a Session/Game, not part of the Megagame",
-            "Contributed Part of the Megagame",
-            "Attended (but not the others)",
-            "Did not attend",
-          ),
-        },
-      ],
-    },
   ],
+  beforeWrite: (a: Answers) =>
+    a.attended === true
+      ? a
+      : { ...a, attended: true, lastYear: [DID_NOT_ATTEND] },
   done: {
     title: "Thanks, we've got it.",
     body: "The Megagame team will look it over and be in touch about where it fits.",

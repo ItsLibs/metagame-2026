@@ -111,7 +111,7 @@ export async function POST(
   let attached = true;
   for (const q of files) {
     try {
-      await attachFile(row.id!, q.field, answers[q.key] as FileAnswer);
+      await attachFile(row.id!, q.field!, answers[q.key] as FileAnswer);
     } catch (err) {
       attached = false;
       console.error(`[forms] ${def.slug}: attachment failed:`, err);

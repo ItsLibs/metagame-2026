@@ -51,14 +51,20 @@ export const MORE_MAX = 1000;
 
 type Common = {
   key: string;
-  /** The Airtable field id the answer is written to. */
-  field: string;
+  /**
+   * The Airtable field id the answer is written to. Left out for a question
+   * that only shapes the form (a tick that opens another question) and is
+   * written nowhere.
+   */
+  field?: string;
   label: string;
   /** A few words after the label, in parentheses; [words](url) links. */
   aside?: string;
   /** Plain text; [words](url) becomes a link. */
   help?: string;
   required?: boolean;
+  /** What to say when it's required and left blank. */
+  missing?: string;
   /** Asked only when this returns true. */
   show?: (a: Answers) => boolean;
   /** Questions that share a row sit side by side on a wide screen. */
@@ -147,6 +153,11 @@ export type FormDef = {
   utmFields?: Partial<
     Record<"utm_source" | "utm_medium" | "utm_campaign", string>
   >;
+  /**
+   * Answers to fill in just before the row is written, from the others: an
+   * option the form implies without asking for it.
+   */
+  beforeWrite?: (a: Answers) => Answers;
 };
 
 export const isQuestion = (i: Item): i is Question => i.type !== "note";
@@ -190,9 +201,8 @@ const LONG_MAX = 5000;
 export function checkAnswer(q: Question, v: Answer): string | null {
   if (isEmpty(v))
     return q.required
-      ? q.type === "toggle"
-        ? "Tick this to go on."
-        : "This one's needed."
+      ? (q.missing ??
+          (q.type === "toggle" ? "Tick this to go on." : "This one's needed."))
       : null;
   switch (q.type) {
     case "text":
@@ -289,9 +299,10 @@ export function airtableFields(
   a: Answers,
 ): Record<string, string | number | boolean | string[]> {
   const fields: Record<string, string | number | boolean | string[]> = {};
+  if (def.beforeWrite) a = def.beforeWrite(a);
   for (const q of visibleQuestions(def, a)) {
     const v = a[q.key];
-    if (isEmpty(v) || q.type === "file") continue;
+    if (isEmpty(v) || q.type === "file" || !q.field) continue;
     if (q.type === "number") fields[q.field] = Number(String(v).trim());
     else if (q.type === "toggle") fields[q.field] = true;
     else if (q.type === "choices") fields[q.field] = v as string[];
@@ -304,7 +315,7 @@ export function airtableFields(
     for (const box of optionBoxes(q, a)) {
       const text = a[box.key];
       const into = allQuestions(def).find((t) => t.key === box.into);
-      if (!box.open || !into || typeof text !== "string" || !text.trim())
+      if (!box.open || !into?.field || typeof text !== "string" || !text.trim())
         continue;
       const line = `${box.label}: ${text.trim().slice(0, MORE_MAX)}`;
       const before = fields[into.field];
