@@ -168,7 +168,7 @@ export const financialAid: FormDef = {
     },
     {
       key: "teams",
-      title: "Pick your teams",
+      title: "Team interests",
       intro:
         "You'd likely end up on one or two teams, and every volunteer attends a 1–2 hour orientation before the event.",
       view: "teams",

@@ -32,14 +32,14 @@ const other = (value: string, from: number, to: number): Block => ({
 });
 
 const WEEKEND: Day[] = [
-  { name: "Friday", date: "Nov 6", blocks: shifts("friday") },
-  { name: "Saturday", date: "Nov 7", blocks: shifts("saturday") },
-  { name: "Sunday", date: "Nov 8", blocks: shifts("sunday") },
+  { name: "Friday", date: "11/6", blocks: shifts("friday") },
+  { name: "Saturday", date: "11/7", blocks: shifts("saturday") },
+  { name: "Sunday", date: "11/8", blocks: shifts("sunday") },
 ];
 const AROUND: Day[] = [
   {
     name: "Thursday",
-    date: "Nov 5",
+    date: "11/5",
     blocks: [
       other("2pm-6pm Thursday (11/5)", 14, 18),
       other("6pm-10pm Thursday (11/5)", 18, 22),
@@ -47,7 +47,7 @@ const AROUND: Day[] = [
   },
   {
     name: "Monday",
-    date: "Nov 9",
+    date: "11/9",
     blocks: [
       other("9am-1pm Monday (11/9)", 9, 13),
       other("1pm-5pm Monday (11/9)", 13, 17),
@@ -56,7 +56,11 @@ const AROUND: Day[] = [
 ];
 // The weeks before have no times, just whether, and how.
 const AHEAD: (Slot & { label: string })[] = [
-  { key: "otherTimes", value: "Further in advance (onsite)", label: "On site" },
+  {
+    key: "otherTimes",
+    value: "Further in advance (onsite)",
+    label: "In person",
+  },
   {
     key: "otherTimes",
     value: "Further in advance (virtual)",
@@ -71,7 +75,7 @@ export const SCHEDULE_KEYS = ["friday", "saturday", "sunday", "otherTimes"];
 // Each column runs from 9 am to 1 am.
 const START = 9;
 const END = 25;
-const HOUR = 14;
+const HOUR = 16;
 const y = (h: number) => (h - START) * HOUR;
 const hour = (h: number) => {
   const x = h % 24;
@@ -135,7 +139,7 @@ export default function ScheduleBoard({
       onPointerMove={drag}
       className="grid touch-pan-y pb-3 select-none"
       style={{
-        gridTemplateColumns: `2.75rem repeat(${days.length}, minmax(0, 1fr))`,
+        gridTemplateColumns: `3.25rem repeat(${days.length}, minmax(0, 1fr))`,
       }}
     >
       <span />
@@ -151,12 +155,9 @@ export default function ScheduleBoard({
             className="group pb-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-meeple"
           >
             <span
-              className={`${DISPLAY} block text-[22px] leading-none text-navy transition-colors group-hover:text-meeple`}
+              className={`${DISPLAY} block text-[22px] leading-none text-navy transition-colors group-hover:text-meeple sm:text-[24px]`}
             >
-              {d.name.slice(0, 3)}
-            </span>
-            <span className="font-space-mono text-[10.5px] tracking-[0.06em] text-ink/50 uppercase">
-              {d.date}
+              {d.name} {d.date}
             </span>
           </button>
         );
@@ -169,7 +170,7 @@ export default function ScheduleBoard({
         {[9, 13, 17, 21, 25].map((h) => (
           <span
             key={h}
-            className="absolute right-2 -translate-y-1/2 font-space-mono text-[10px] text-ink/50"
+            className="absolute right-2 -translate-y-1/2 font-space-mono text-[13px] font-bold text-ink/60"
             style={{ top: y(h) }}
           >
             {hour(h)}
@@ -205,7 +206,7 @@ export default function ScheduleBoard({
                   if (e.detail === 0) mark(b, !on);
                 }}
                 className={cn(
-                  "absolute inset-x-1 flex flex-col items-center justify-center gap-0.5 rounded-md border-2 font-space-mono text-[10.5px] font-bold transition-[background-color,border-color,color] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
+                  "absolute inset-x-1 flex flex-col items-center justify-center gap-0.5 rounded-md border-2 font-space-mono text-[14px] font-bold transition-[background-color,border-color,color] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-2",
                   on
                     ? "border-moss bg-moss text-white"
                     : "border-dashed border-navy/30 bg-background text-navy/60 hover:border-navy hover:text-navy",
@@ -232,18 +233,15 @@ export default function ScheduleBoard({
   return (
     <div className="flex flex-col gap-8">
       <section>
-        <h3 className="text-[18px] font-semibold text-navy">During the con</h3>
-        <p className="mt-1 text-[14.5px] leading-snug text-ink/60">
-          Click a block, or drag across several. Click a day to mark all of it.
+        <h3 className="text-[20px] font-semibold text-navy">During the con</h3>
+        <p className="mt-1 text-[16px] leading-snug text-ink/65">
+          Click/drag to select blocks.
         </p>
         <div className="mt-4">{calendar(WEEKEND)}</div>
       </section>
 
       <section>
-        <h3 className="text-[18px] font-semibold text-navy">Around the con</h3>
-        <p className="mt-1 text-[14.5px] leading-snug text-ink/60">
-          The day before, the day after, and the weeks leading up to it.
-        </p>
+        <h3 className="text-[20px] font-semibold text-navy">Around the con</h3>
         <div className="mt-4">{calendar(AROUND)}</div>
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
           <button
@@ -295,22 +293,12 @@ export default function ScheduleBoard({
         </div>
       </section>
 
-      <p
-        aria-live="polite"
-        className="flex flex-wrap items-baseline gap-x-5 gap-y-2 border-t border-navy/15 pt-3 text-[15px] text-ink/70"
-      >
-        <span>
-          <b className={`${DISPLAY} text-[24px] leading-none text-navy`}>
-            {marked}
-          </b>{" "}
-          {marked === 1 ? "block" : "blocks"} marked
-          {ahead && ", plus the weeks before"}
-        </span>
+      <p className="flex justify-end border-t border-navy/15 pt-3">
         <button
           type="button"
           onClick={() => [...BLOCKS, ...AHEAD].forEach((s) => mark(s, false))}
           disabled={!marked && !ahead}
-          className="font-space-mono text-[11px] font-bold tracking-[0.12em] text-meeple uppercase hover:underline disabled:no-underline disabled:opacity-40"
+          className="font-space-mono text-[12px] font-bold tracking-[0.12em] text-meeple uppercase hover:underline disabled:no-underline disabled:opacity-40"
         >
           Clear
         </button>

@@ -49,7 +49,7 @@ export const volunteer: FormDef = {
     },
     {
       key: "teams",
-      title: "Pick your teams",
+      title: "Team interests",
       intro: "Every volunteer attends a 1–2 hour orientation before the event.",
       view: "teams",
       items: teamLists("What kind of work are you most excited about?"),

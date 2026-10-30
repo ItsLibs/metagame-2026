@@ -34,8 +34,6 @@ import Track from "./Track";
 
 type Phase =
   | { at: "step"; index: number }
-  | { at: "review" }
-  | { at: "sending" }
   | { at: "done"; preview?: Record<string, unknown> };
 
 const draftKey = (slug: string) => `journey:${slug}`;
@@ -77,11 +75,11 @@ const CONFETTI = [
 ];
 
 // One of the site's forms as a journey (src/v2/forms): the first step under
-// a short introduction, then a step at a time along a board of spaces, and a
-// finish with the send button and every answer to look over. Answers are
-// kept in this browser as you go (pictures aside), so a refresh picks up
-// where you left off. The finished answers go to /api/forms/<slug>, which
-// writes them to the Airtable table the old form did.
+// a short introduction, then a step at a time along a board of spaces; the
+// last step's button sends it in, and the confirmation shows every answer.
+// Answers are kept in this browser as you go (pictures aside), so a refresh
+// picks up where you left off. The finished answers go to /api/forms/<slug>,
+// which writes them to the Airtable table the old form did.
 export default function Journey({ slug }: { slug: string }) {
   const def = FORMS[slug];
   const [answers, setAnswers] = useState<Answers>({});
@@ -89,7 +87,7 @@ export default function Journey({ slug }: { slug: string }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [back, setBack] = useState(false);
-  const [resumed, setResumed] = useState(false);
+  const [sending, setSending] = useState(false);
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const honeypot = useRef<HTMLInputElement>(null);
@@ -98,7 +96,7 @@ export default function Journey({ slug }: { slug: string }) {
   const index =
     phase.at === "step" ? Math.min(phase.index, steps.length - 1) : -1;
   const step = index >= 0 ? steps[index] : undefined;
-  const sending = phase.at === "sending";
+  const last = index === steps.length - 1;
 
   // A saved draft, read once mounted (the timer keeps setState out of the
   // effect body).
@@ -114,7 +112,6 @@ export default function Journey({ slug }: { slug: string }) {
             at: "step",
             index: typeof saved.step === "number" ? saved.step : 0,
           });
-          setResumed(true);
         }
       } catch {}
     }, 0);
@@ -175,6 +172,7 @@ export default function Journey({ slug }: { slug: string }) {
         ?.focus();
     });
 
+  // Next, or on the last step, send.
   const forward = () => {
     if (!step) return;
     const e = checkStep(step, answers);
@@ -183,16 +181,12 @@ export default function Journey({ slug }: { slug: string }) {
       focusFirst(e);
       return;
     }
-    go(
-      index + 1 < steps.length
-        ? { at: "step", index: index + 1 }
-        : { at: "review" },
-    );
+    if (last) void submit();
+    else go({ at: "step", index: index + 1 });
   };
 
   const backward = () => {
     if (step && index > 0) go({ at: "step", index: index - 1 });
-    else if (phase.at === "review") go({ at: "step", index: steps.length - 1 });
   };
 
   // Back to the first step with a problem, showing what's wrong.
@@ -212,7 +206,7 @@ export default function Journey({ slug }: { slug: string }) {
     const e = checkForm(def, answers);
     if (Object.keys(e).length) return showProblems(e);
     setFailure(null);
-    setPhase({ at: "sending" });
+    setSending(true);
     try {
       const res = await fetch(`/api/forms/${slug}`, {
         method: "POST",
@@ -228,7 +222,6 @@ export default function Journey({ slug }: { slug: string }) {
         if (data.errors && Object.keys(data.errors).length)
           return showProblems(data.errors);
         setFailure(data.error ?? "Something went wrong on our end.");
-        setPhase({ at: "review" });
         return;
       }
       try {
@@ -242,7 +235,8 @@ export default function Journey({ slug }: { slug: string }) {
       setFailure(
         "Couldn't reach the site. Check your connection and try again.",
       );
-      setPhase({ at: "review" });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -251,20 +245,13 @@ export default function Journey({ slug }: { slug: string }) {
       localStorage.removeItem(draftKey(slug));
     } catch {}
     setAnswers({});
-    setResumed(false);
     go({ at: "step", index: 0 });
   };
 
-  const position = phase.at === "step" ? index : steps.length;
-  // Sending stays on the finish, so it doesn't replay the entrance.
-  const view =
-    phase.at === "step" ? `step-${step?.key}` : sending ? "review" : phase.at;
-  const send = (
-    <Button onClick={submit} size="lg" disabled={sending} className="gap-3">
-      <Mg2Die size={22} className={sending ? "motion-safe:animate-spin" : ""} />
-      {sending ? "Sending…" : "Send it in"}
-    </Button>
-  );
+  // Partway through: anything answered, or past the first step.
+  const underway =
+    phase.at === "step" && (index > 0 || Object.keys(answers).length > 0);
+  const view = phase.at === "step" ? `step-${step?.key}` : phase.at;
 
   return (
     <div
@@ -317,19 +304,17 @@ export default function Journey({ slug }: { slug: string }) {
       {phase.at !== "done" && (
         <Track
           titles={steps.map((s) => s.title)}
-          current={position}
-          onJump={(i) =>
-            go(i < steps.length ? { at: "step", index: i } : { at: "review" })
-          }
+          current={index}
+          onJump={(i) => go({ at: "step", index: i })}
         />
       )}
-      {resumed && phase.at === "step" && (
-        <p className="mt-3 text-[13.5px] text-ink/55">
-          Picked up where you left off.{" "}
+      {underway && (
+        <p className="mt-3 text-right text-[14px] text-ink/55">
           <button
             type="button"
             onClick={startOver}
-            className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 hover:text-meeple"
+            disabled={sending}
+            className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 hover:text-meeple disabled:opacity-40"
           >
             <RotateCcw aria-hidden className="size-3" />
             Start over
@@ -400,40 +385,10 @@ export default function Journey({ slug }: { slug: string }) {
                 );
               })}
             </div>
-            <Footer
-              onBack={index ? backward : undefined}
-              next={
-                <Button onClick={forward} size="lg" className="gap-2">
-                  Next
-                  <ArrowRight aria-hidden className="size-4" />
-                </Button>
-              }
-              hint={
-                Object.keys(errors).length
-                  ? "A few answers need another look."
-                  : undefined
-              }
-            />
-          </section>
-        )}
-
-        {(phase.at === "review" || sending) && (
-          <section aria-labelledby="journey-heading">
-            <h2
-              id="journey-heading"
-              ref={heading}
-              tabIndex={-1}
-              className={HEADING}
-            >
-              All done.
-            </h2>
-            <p className="mt-2 max-w-[40em] text-[16.5px] leading-relaxed text-ink/75">
-              Send it in, or look over your answers below first.
-            </p>
             {failure && (
               <p
                 role="alert"
-                className="mt-6 border-l-2 border-meeple pl-4 text-[15.5px] text-ink/80"
+                className="mt-8 border-l-2 border-meeple pl-4 text-[15.5px] text-ink/80"
               >
                 <b className="text-meeple">That didn&apos;t go through.</b>{" "}
                 {failure} If it keeps happening, email{" "}
@@ -446,60 +401,36 @@ export default function Journey({ slug }: { slug: string }) {
                 .
               </p>
             )}
-            <div className="mt-6">{send}</div>
-            <h3
-              className={`${DISPLAY} mt-12 text-[30px] leading-none text-navy`}
-            >
-              Your answers
-            </h3>
-            {steps.map((s, i) => {
-              const said = visibleItems(s, answers)
-                .filter(isQuestion)
-                .filter((q) => !isEmpty(answers[q.key]));
-              return (
-                <div key={s.key} className="mt-6 border-t-2 border-navy pt-3">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <h4
-                      className={`${DISPLAY} text-[24px] leading-none text-navy`}
-                    >
-                      {s.title}
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={() => go({ at: "step", index: i })}
-                      disabled={sending}
-                      className="font-space-mono text-[11px] font-bold tracking-[0.12em] text-meeple uppercase hover:underline"
-                    >
-                      Change
-                    </button>
-                  </div>
-                  {said.length ? (
-                    <dl className="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
-                      {said.map((q) => (
-                        <div key={q.key} className="contents">
-                          <dt className="text-[14.5px] leading-snug text-ink/60">
-                            {q.label}
-                          </dt>
-                          <dd className="text-[15.5px] leading-snug font-medium break-words whitespace-pre-wrap text-navy">
-                            {[
-                              answerWords(q, answers[q.key]),
-                              boxWords(q, answers),
-                            ]
-                              .filter(Boolean)
-                              .join("\n")}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="mt-2 text-[15px] text-ink/45 italic">
-                      Skipped.
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-            <Footer onBack={backward} disabled={sending} next={send} />
+            <Footer
+              onBack={index ? backward : undefined}
+              disabled={sending}
+              next={
+                last ? (
+                  <Button
+                    onClick={forward}
+                    size="lg"
+                    disabled={sending}
+                    className="gap-3"
+                  >
+                    <Mg2Die
+                      size={22}
+                      className={sending ? "motion-safe:animate-spin" : ""}
+                    />
+                    {sending ? "Sending…" : "Send it in"}
+                  </Button>
+                ) : (
+                  <Button onClick={forward} size="lg" className="gap-2">
+                    Next
+                    <ArrowRight aria-hidden className="size-4" />
+                  </Button>
+                )
+              }
+              hint={
+                Object.keys(errors).length
+                  ? "A few answers need another look."
+                  : undefined
+              }
+            />
           </section>
         )}
 
@@ -551,6 +482,48 @@ export default function Journey({ slug }: { slug: string }) {
                 </Button>
               ))}
             </div>
+            <h3
+              className={`${DISPLAY} mt-14 text-[30px] leading-none text-navy`}
+            >
+              Your answers
+            </h3>
+            {steps.map((s) => {
+              const said = visibleItems(s, answers)
+                .filter(isQuestion)
+                .filter((q) => !isEmpty(answers[q.key]));
+              return (
+                <div key={s.key} className="mt-6 border-t-2 border-navy pt-3">
+                  <h4
+                    className={`${DISPLAY} text-[24px] leading-none text-navy`}
+                  >
+                    {s.title}
+                  </h4>
+                  {said.length ? (
+                    <dl className="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
+                      {said.map((q) => (
+                        <div key={q.key} className="contents">
+                          <dt className="text-[15px] leading-snug text-ink/60">
+                            {q.label}
+                          </dt>
+                          <dd className="text-[16px] leading-snug font-medium break-words whitespace-pre-wrap text-navy">
+                            {[
+                              answerWords(q, answers[q.key]),
+                              boxWords(q, answers),
+                            ]
+                              .filter(Boolean)
+                              .join("\n")}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="mt-2 text-[15px] text-ink/45 italic">
+                      Skipped.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
             {phase.preview && (
               <div className="mt-10 border-t border-navy/15 pt-4">
                 <p className="font-space-mono text-[11px] font-bold tracking-[0.12em] text-ink/55 uppercase">

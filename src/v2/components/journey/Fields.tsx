@@ -70,7 +70,7 @@ export function Field({
         </span>
       )}
       {q.aside && (
-        <span className="ml-2 text-[14.5px] font-normal text-ink/55">
+        <span className="ml-2 text-[16px] font-normal text-ink/55">
           (<Rich text={q.aside} />)
         </span>
       )}
@@ -79,7 +79,7 @@ export function Field({
   const help = q.help && (
     <p
       id={helpId}
-      className="mt-1 max-w-[42em] text-[14.5px] leading-snug text-ink/60"
+      className="mt-1.5 max-w-[42em] text-[16px] leading-snug text-ink/65"
     >
       <Rich text={q.help} />
     </p>
@@ -98,7 +98,7 @@ export function Field({
   if (q.type === "choice" || q.type === "choices" || q.type === "toggle") {
     return (
       <fieldset data-field={q.key} aria-describedby={describedBy}>
-        <legend className="text-[18px] font-semibold text-navy">{title}</legend>
+        <legend className="text-[20px] font-semibold text-navy">{title}</legend>
         {help}
         {q.type === "toggle" ? (
           <Toggle text={q.text} on={value === true} onChange={onChange} />
@@ -197,11 +197,11 @@ export function Field({
   return (
     <div data-field={q.key} className="flex flex-col">
       {q.type === "file" ? (
-        <p className="text-[18px] font-semibold text-navy">{title}</p>
+        <p className="text-[20px] font-semibold text-navy">{title}</p>
       ) : (
         <label
           htmlFor={id}
-          className="block text-[18px] font-semibold text-navy"
+          className="block text-[20px] font-semibold text-navy"
         >
           {title}
         </label>
