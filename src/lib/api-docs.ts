@@ -151,7 +151,9 @@ const GRADE_FIELDS: Field[] = [
   { name: "ticketState", type: "string | null" },
   ...GRADER_FIELDS.map((f) => ({
     ...f,
-    note: f.note && `${f.note} Defaults to the key's owner.`,
+    note:
+      f.note &&
+      `${f.note} Defaults to the key's owner; naming anyone else is admin-only.`,
   })),
 ];
 
@@ -386,7 +388,7 @@ export const API_AREAS: Area[] = [
       {
         method: "PUT",
         path: "/api/admin/sessions/{id}/grade",
-        permission: "schedule.manage",
+        permission: "submissions.grade",
         summary:
           "Saves a whole grade, replacing the grader's own: fields left out are cleared. 409 if the session isn't in the pipeline.",
         body: GRADE_FIELDS,
@@ -395,7 +397,7 @@ export const API_AREAS: Area[] = [
       {
         method: "PATCH",
         path: "/api/admin/sessions/{id}/grade",
-        permission: "schedule.manage",
+        permission: "submissions.grade",
         summary:
           "Edits the grader's existing grade: only the fields given change. 404 if they have none yet.",
         body: GRADE_FIELDS,
