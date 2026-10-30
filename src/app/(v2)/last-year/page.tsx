@@ -43,12 +43,12 @@ export default function LastYearPage() {
         </a>
       </header>
 
-      <figure className="mt-10 w-full max-w-[640px]">
+      <figure className="mt-10 w-full max-w-[220px]">
         <Image
           src={megagameMap}
           alt="Aerial map of Lighthaven with each Megagame territory shaded orange or purple by the faction holding it"
-          sizes="(min-width: 704px) 640px, 100vw"
-          className="h-auto w-full"
+          sizes="220px"
+          className="h-auto w-full mix-blend-multiply"
         />
         <figcaption className="mt-3 text-sm text-ink/70 italic">
           End state of the Metagame 2025 Megagame territory map
