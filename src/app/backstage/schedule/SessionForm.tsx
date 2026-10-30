@@ -9,7 +9,7 @@ import {
   useTransition,
   startTransition,
 } from "react";
-import { XIcon } from "lucide-react";
+import { CircleAlertIcon, XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
 import ConfirmDialog from "./ConfirmDialog";
@@ -29,12 +29,15 @@ import {
   CATEGORIES,
   clashDescription,
   EDITOR_DAYS,
-  END_GAP_MINUTES,
+  defaultEnd,
+  endMinutes,
+  movedEnd,
   opensAt,
   STATUSES,
   formatPacificDay,
   minutesToHHMM,
   pacificDayKey,
+  wallAt,
   pacificMinutes,
   type Attendance,
   type ScheduleLocation,
@@ -92,8 +95,6 @@ export type SessionDefaults = {
 
 const DEFAULT_START = 10 * 60;
 const MIDNIGHT = 24 * 60;
-const shortest = (start: number) =>
-  Math.min(start + 30 - END_GAP_MINUTES, MIDNIGHT - 1);
 
 /** Minutes since midnight from an "HH:MM" time input, or null when cleared. */
 function parseHHMM(value: string): number | null {
@@ -132,12 +133,14 @@ export default function SessionForm({
       : (defaults?.startMin ?? null),
   );
   const [end, setEnd] = useState<number | null>(
-    session?.endsAt
-      ? pacificMinutes(session.endsAt)
+    session?.startsAt && session.endsAt
+      ? endMinutes(session.startsAt, session.endsAt)
       : defaults
-        ? shortest(defaults.startMin)
+        ? defaultEnd(defaults.startMin)
         : null,
   );
+  // Set only when moving the start cut the end back to midnight.
+  const [shortened, setShortened] = useState(false);
 
   const dayOptions: { key: string; label: string }[] = EDITOR_DAYS.map((d) => ({
     key: d.key,
@@ -152,18 +155,16 @@ export default function SessionForm({
     if (!key || start !== null) return;
     const first = Math.max(DEFAULT_START, opensAt(key));
     setStart(first);
-    setEnd(shortest(first));
+    setEnd(defaultEnd(first));
   };
 
   // Moving the start keeps the duration, like a calendar drag.
   const pickStart = (next: number | null) => {
     setStart(next);
     if (next === null) return;
-    const moved =
-      start !== null && end !== null && end > start
-        ? next + (end - start)
-        : null;
-    setEnd(moved !== null && moved < MIDNIGHT ? moved : shortest(next));
+    const moved = movedEnd(start, end, next);
+    setEnd(moved.end);
+    setShortened(moved.capped);
   };
 
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -367,23 +368,35 @@ export default function SessionForm({
               <input
                 type="time"
                 step={300}
-                value={day && end !== null ? minutesToHHMM(end) : ""}
+                value={day && end !== null ? minutesToHHMM(end % MIDNIGHT) : ""}
                 disabled={!day}
-                onChange={(e) => setEnd(parseHHMM(e.target.value))}
+                // No session ends at the start of its own day, so 00:00 is midnight.
+                onChange={(e) => {
+                  const next = parseHHMM(e.target.value);
+                  setEnd(next === 0 ? MIDNIGHT : next);
+                  setShortened(false);
+                }}
                 className={fieldClass}
               />
+              {shortened && (
+                <span
+                  role="status"
+                  className="mt-1 flex items-center gap-1 text-xs text-amber-700"
+                >
+                  <CircleAlertIcon aria-hidden className="size-3.5 shrink-0" />
+                  Shortened to end at midnight.
+                </span>
+              )}
             </Field>
             <input
               type="hidden"
               name="startsAt"
-              value={
-                day && start !== null ? `${day}T${minutesToHHMM(start)}` : ""
-              }
+              value={day && start !== null ? wallAt(day, start) : ""}
             />
             <input
               type="hidden"
               name="endsAt"
-              value={day && end !== null ? `${day}T${minutesToHHMM(end)}` : ""}
+              value={day && end !== null ? wallAt(day, end) : ""}
             />
           </div>
 

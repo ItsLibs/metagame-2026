@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDays,
+  capAtMidnight,
   clashDescription,
+  formatLength,
+  defaultEnd,
+  endMinutes,
+  movedEnd,
+  wallAt,
   EDITOR_DAYS,
   findClash,
   fromPacificWall,
   movedTimes,
-  openingDayIndex,
+  openingDayKey,
+  selectedDay,
   outsideHours,
   overlapLanes,
   overlapWarning,
@@ -56,8 +63,8 @@ describe("movedTimes", () => {
 });
 
 const rooms = (visibility: LocationVisibility = "public") => [
-  { id: "room1", visibility },
-  { id: "room2", visibility: "public" as const },
+  { id: "room1", name: "Eigen Hall", visibility },
+  { id: "room2", name: "Annex", visibility: "public" as const },
 ];
 
 describe("findClash", () => {
@@ -68,6 +75,12 @@ describe("findClash", () => {
     startsAt: "2026-11-07T17:00:00.000Z",
     endsAt: "2026-11-07T17:55:00.000Z",
   });
+  const chess = {
+    title: "Chess",
+    room: "Eigen Hall",
+    startsAt: "2026-11-07T17:00:00.000Z",
+    endsAt: "2026-11-07T17:55:00.000Z",
+  };
   const move = (startsAt: string, endsAt: string, over = {}) => ({
     id: "b",
     locationId: "room1",
@@ -83,7 +96,7 @@ describe("findClash", () => {
         move("2026-11-07T17:30:00.000Z", "2026-11-07T18:25:00.000Z"),
         rooms(),
       ),
-    ).toBe(existing);
+    ).toEqual(chess);
   });
 
   it("allows back-to-back sessions", () => {
@@ -135,7 +148,85 @@ describe("findClash", () => {
       "2026-11-07T18:25:00.000Z",
     );
     expect(findClash([existing], overlap, rooms("volunteer"))).toBeNull();
-    expect(findClash([existing], overlap, rooms("hidden"))).toBe(existing);
+    expect(findClash([existing], overlap, rooms("hidden"))).toEqual(chess);
+  });
+});
+
+describe("form end times", () => {
+  const h = (hours: number, minutes = 0) => hours * 60 + minutes;
+  it("reads an end at the next midnight as 24:00", () => {
+    const start = fromPacificWall("2026-11-07T23:00")!.toISOString();
+    const end = fromPacificWall("2026-11-08T00:00")!.toISOString();
+    expect(endMinutes(start, end)).toBe(h(24));
+    expect(
+      endMinutes(start, fromPacificWall("2026-11-07T23:55")!.toISOString()),
+    ).toBe(h(23, 55));
+  });
+  it("writes 24:00 as the next day's 00:00", () => {
+    expect(wallAt("2026-11-07", h(14, 30))).toBe("2026-11-07T14:30");
+    expect(wallAt("2026-11-07", h(24))).toBe("2026-11-08T00:00");
+    expect(wallAt("2026-11-30", h(24))).toBe("2026-12-01T00:00");
+  });
+  it("gives any start before midnight a later default end", () => {
+    expect(defaultEnd(h(10))).toBe(h(10, 25));
+    expect(defaultEnd(h(23, 59))).toBe(h(24));
+    for (let start = 0; start < h(24); start += 7)
+      expect(defaultEnd(start)).toBeGreaterThan(start);
+  });
+  it("keeps the length when the start moves, up to ending at midnight", () => {
+    expect(movedEnd(h(10), h(11), h(23))).toEqual({
+      end: h(24),
+      capped: false,
+    });
+    expect(movedEnd(h(10), h(11), h(22))).toEqual({
+      end: h(23),
+      capped: false,
+    });
+    expect(movedEnd(null, null, h(12))).toEqual({
+      end: h(12, 25),
+      capped: false,
+    });
+  });
+  it("caps a moved end at midnight and says so", () => {
+    expect(movedEnd(h(10), h(11), h(23, 30))).toEqual({
+      end: h(24),
+      capped: true,
+    });
+    expect(movedEnd(h(10), h(12), h(23, 59))).toEqual({
+      end: h(24),
+      capped: true,
+    });
+  });
+});
+
+describe("capAtMidnight", () => {
+  const pt = (wall: string) => fromPacificWall(wall)!;
+  it("cuts a run past midnight back to it, keeping the old length", () => {
+    const capped = capAtMidnight({
+      startsAt: pt("2026-11-07T23:00"),
+      endsAt: pt("2026-11-08T00:30"),
+    });
+    expect(capped.endsAt.toISOString()).toBe(
+      pt("2026-11-08T00:00").toISOString(),
+    );
+    expect(capped.cutFromMinutes).toBe(90);
+    expect(outsideHours(capped.startsAt, capped.endsAt)).toBeNull();
+  });
+  it("leaves times that end by midnight alone", () => {
+    const times = {
+      startsAt: pt("2026-11-07T22:00"),
+      endsAt: pt("2026-11-08T00:00"),
+    };
+    expect(capAtMidnight(times)).toEqual({ ...times, cutFromMinutes: null });
+  });
+});
+
+describe("formatLength", () => {
+  it("reads as hours and minutes", () => {
+    expect(formatLength(90)).toBe("1h 30m");
+    expect(formatLength(120)).toBe("2h");
+    expect(formatLength(45)).toBe("45m");
+    expect(formatLength(0)).toBe("0m");
   });
 });
 
@@ -202,8 +293,25 @@ describe("buildDays", () => {
     ]);
   });
   it("opens on Friday even with an earlier day shown", () => {
-    expect(openingDayIndex(buildDays([], EDITOR_DAYS))).toBe(1);
-    expect(openingDayIndex(buildDays([]))).toBe(0);
+    expect(openingDayKey(buildDays([], EDITOR_DAYS))).toBe("2026-11-06");
+    expect(openingDayKey(buildDays([]))).toBe("2026-11-06");
+  });
+  it("keeps the selected tab when a session lands on an earlier day", () => {
+    const before = buildDays([], EDITOR_DAYS);
+    expect(selectedDay(before, "2026-11-07").name).toBe("Saturday");
+    const early = session({
+      id: "early",
+      startsAt: fromPacificWall("2026-11-03T10:00")!.toISOString(),
+      endsAt: fromPacificWall("2026-11-03T11:00")!.toISOString(),
+    });
+    const after = buildDays([early], EDITOR_DAYS);
+    expect(after[0].key).toBe("2026-11-03");
+    expect(selectedDay(after, "2026-11-07").name).toBe("Saturday");
+  });
+  it("falls back to the opening day when the selected day is gone", () => {
+    expect(selectedDay(buildDays([], EDITOR_DAYS), "2026-11-03").key).toBe(
+      "2026-11-06",
+    );
   });
 });
 

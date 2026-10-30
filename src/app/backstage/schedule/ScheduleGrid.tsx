@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
+  capAtMidnight,
   findClash,
   formatPacificTime,
   fromPacificWall,
@@ -17,13 +18,15 @@ import {
   outsideHours,
   overlapLanes,
   NO_ROOM,
-  openingDayIndex,
+  openingDayKey,
+  selectedDay,
   slotLabel,
   SLOT_MINUTES,
   SLOT_PX,
   type Day,
   type Lane,
   type PlacedSession,
+  type RoomClash,
   type ScheduleLocation,
   type ScheduleSession,
 } from "@/lib/schedule";
@@ -39,11 +42,18 @@ type View = "grid" | "list";
 type OpenFn = (s: ScheduleSession) => void;
 type CreateFn = (defaults: SessionDefaults) => void;
 type GrabFn = (s: ScheduleSession) => void;
-/** `clash` is the session it would overlap, for a parent that confirms such drops. */
+/** Where a drop that ran past midnight was cut back to, and how long it was. */
+export type MidnightCut = { endsAt: Date; fromMinutes: number };
+
+/**
+ * `clash` is what it would overlap and `cut` set when it was shortened to end
+ * at midnight, both for a parent that confirms such drops.
+ */
 export type DropFn = (
   startsAt: Date,
   locationId: string | null,
-  clash: ScheduleSession | null,
+  clash: RoomClash | null,
+  cut: MidnightCut | null,
 ) => void;
 
 /** The grip that picks a session up; the rest of the block still opens it. */
@@ -227,29 +237,40 @@ function GridDay({
     const start = fromPacificWall(`${day.key}T${minutesToHHMM(slotStart)}`);
     if (!start) return null;
     const locationId = colId === NO_ROOM ? null : colId;
-    const times = carryMinutes
+    const full = carryMinutes
       ? {
           startsAt: start,
           endsAt: new Date(start.getTime() + carryMinutes * 60_000),
         }
       : movedTimes(carrying, start);
+    const capped = confirmClash ? capAtMidnight(full) : null;
+    const times = capped ?? full;
+    const cut =
+      capped?.cutFromMinutes != null
+        ? { endsAt: capped.endsAt, fromMinutes: capped.cutFromMinutes }
+        : null;
     const clash = findClash(
       sessions,
       { id: carrying.id, locationId, ...times },
       locations,
     );
     const overlaps = clash && `Overlaps ${clash.title}`;
+    const hint = [cut && "Shortened at midnight", overlaps]
+      .filter(Boolean)
+      .join(" · ");
     return {
-      ...times,
+      startsAt: times.startsAt,
+      endsAt: times.endsAt,
       locationId,
       clash,
+      cut,
       blocked:
         outsideHours(times.startsAt, times.endsAt)?.error ??
         (confirmClash ? null : overlaps),
-      hint: confirmClash ? overlaps : null,
+      hint: confirmClash ? hint || null : null,
     };
   };
-  const lanes = overlapLanes(day.sessions);
+  const lanes = useMemo(() => overlapLanes(day.sessions), [day.sessions]);
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   return (
     <div
@@ -328,7 +349,7 @@ function GridDay({
                         e.preventDefault();
                         const t = target(slotStart, col.id);
                         if (t && !t.blocked)
-                          onDrop(t.startsAt, t.locationId, t.clash);
+                          onDrop(t.startsAt, t.locationId, t.clash, t.cut);
                       }}
                       onClick={() => {
                         if (!carrying) {
@@ -341,7 +362,7 @@ function GridDay({
                         }
                         const t = target(slotStart, col.id);
                         if (t && !t.blocked)
-                          onDrop(t.startsAt, t.locationId, t.clash);
+                          onDrop(t.startsAt, t.locationId, t.clash, t.cut);
                       }}
                       className={`absolute inset-0 transition-colors enabled:hover:bg-navy/[0.06] ${
                         !carrying
@@ -464,7 +485,7 @@ export default function ScheduleGrid({
   onGrab,
   onDrop,
   confirmClash,
-  dayIndex: controlledDay,
+  dayKey: controlledDay,
   onDayChange,
 }: {
   days: Day[];
@@ -484,12 +505,11 @@ export default function ScheduleGrid({
   /** Let drops onto an overlap through (with its clash) instead of refusing them. */
   confirmClash?: boolean;
   /** Controlled day tab, for a parent that needs to switch it (search). */
-  dayIndex?: number;
-  onDayChange?: (index: number) => void;
+  dayKey?: string;
+  onDayChange?: (key: string) => void;
 }) {
-  const [ownDay, setOwnDay] = useState(() => openingDayIndex(days));
-  const dayIndex = controlledDay ?? ownDay;
-  const setDayIndex = onDayChange ?? setOwnDay;
+  const [ownDay, setOwnDay] = useState(() => openingDayKey(days));
+  const setDayKey = onDayChange ?? setOwnDay;
   const [view, setView] = useState<View>("grid");
 
   const columns: Column[] = locations.map((l) => ({
@@ -516,7 +536,7 @@ export default function ScheduleGrid({
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
 
-  const day = days[Math.min(dayIndex, days.length - 1)];
+  const day = selectedDay(days, controlledDay ?? ownDay);
   const placed = days.flatMap((d) => d.sessions);
 
   return (
@@ -528,14 +548,14 @@ export default function ScheduleGrid({
           className="inline-flex overflow-hidden rounded-lg border border-line bg-white"
         >
           {days.map((d, i) => {
-            const active = i === dayIndex;
+            const active = d.key === day.key;
             return (
               <button
                 key={d.key}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setDayIndex(i)}
+                onClick={() => setDayKey(d.key)}
                 className={`px-3 py-2 text-sm font-semibold transition-colors sm:px-4 ${
                   active ? "bg-navy text-white" : "text-ink/70 hover:bg-ink/5"
                 } ${i > 0 ? "border-l border-line" : ""}`}
