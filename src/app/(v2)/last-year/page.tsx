@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const PAGE = "mx-auto w-full max-w-[1192px] px-4 sm:px-8";
 
 // Last year's program: a short blurb, then the weekend at any moment (with
-// the full schedule grid a toggle away), and two links out.
+// the full schedule grid a toggle away), and a link back to 2026.
 export default function LastYearPage() {
   return (
     <div className={`${PAGE} pt-24 pb-20 lg:pt-28`}>
@@ -28,10 +28,17 @@ export default function LastYearPage() {
           Metagame 2025<span className="text-meeple">.</span>
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-ink/80 sm:text-xl">
-          Three days of talks, workshops and games at Lighthaven, with one
-          megagame running through all of it. Pick any moment of the weekend to
-          see what was on, or browse the full schedule.
+          Three days of talks, games, workshops and a multi-faction Megagame
+          fighting over territory at Lighthaven.
         </p>
+        <a
+          href={LAST_YEAR_SITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-block font-space-mono text-sm font-bold tracking-[0.08em] text-navy uppercase underline decoration-2 underline-offset-4 hover:text-meeple"
+        >
+          The 2025 site <span aria-hidden="true">&#8599;</span>
+        </a>
       </header>
 
       <div className="mt-10 border-t-2 border-navy pt-8">
@@ -41,19 +48,6 @@ export default function LastYearPage() {
       <div className="mt-16 flex flex-wrap gap-3 border-t-2 border-navy pt-10">
         <Button asChild>
           <Link href="/">Back to Metagame 2026</Link>
-        </Button>
-        <Button
-          asChild
-          variant="ghost"
-          className="border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
-        >
-          <a
-            href={LAST_YEAR_SITE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            The 2025 site <span aria-hidden="true">&#8599;</span>
-          </a>
         </Button>
       </div>
     </div>
