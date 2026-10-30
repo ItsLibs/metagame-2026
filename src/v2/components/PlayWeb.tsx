@@ -79,7 +79,7 @@ const CAMERA = 9;
 const HEX_CLIP = "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)";
 
 const DRAG = 0.008;
-const IDLE_SPIN = 0.00175;
+const IDLE_SPIN = 0.000875;
 const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {
@@ -137,11 +137,15 @@ export default function PlayWeb() {
   const nodes = CORNERS.map((c) => {
     const [x, y, z] = apply(pose, c);
     const k = CAMERA / (CAMERA - z);
+    const depth = r((z + RADIUS) / (2 * RADIUS));
     return {
       x: r(W / 2 + x * SCALE * k),
       y: r(H / 2 + y * SCALE * k),
       k: r(k),
-      depth: r((z + RADIUS) / (2 * RADIUS)),
+      depth,
+      // Stacking order: nearer corners over further ones, with room between
+      // them for the edges.
+      z: 1 + Math.round(depth * 1000),
     };
   });
 
@@ -154,14 +158,18 @@ export default function PlayWeb() {
       onPointerUp={up}
       onPointerCancel={up}
     >
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        aria-hidden
-        className="absolute inset-0 size-full"
-      >
-        {EDGES.map(([i, j]) => (
+      {/* Each edge on its own layer, just under the further of its two
+          corners, so a corner at the back sits behind the edges in front of
+          it and no edge crosses the face of a corner it joins. */}
+      {EDGES.map(([i, j]) => (
+        <svg
+          key={`${i}-${j}`}
+          viewBox={`0 0 ${W} ${H}`}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 size-full"
+          style={{ zIndex: Math.min(nodes[i].z, nodes[j].z) - 1 }}
+        >
           <line
-            key={`${i}-${j}`}
             x1={nodes[i].x}
             y1={nodes[i].y}
             x2={nodes[j].x}
@@ -172,21 +180,25 @@ export default function PlayWeb() {
               0.1 + 0.35 * ((nodes[i].depth + nodes[j].depth) / 2),
             )}
           />
-        ))}
-      </svg>
+        </svg>
+      ))}
       <ul>
         {KINDS.map(({ name, bg, fg }, i) => {
-          const { x, y, k, depth } = nodes[i];
+          const { x, y, k, z } = nodes[i];
           return (
             <li
               key={name}
-              className="group absolute -translate-x-1/2 -translate-y-1/2"
-              style={{
-                left: `${r((x / W) * 100)}%`,
-                top: `${r((y / H) * 100)}%`,
-                width: `${r(((HEX * k) / W) * 100)}%`,
-                zIndex: Math.round(depth * 10),
-              }}
+              // The hovered one rises above the rest, so its label is never
+              // under a nearer edge.
+              className="group absolute z-(--z) -translate-x-1/2 -translate-y-1/2 hover:z-[2000]"
+              style={
+                {
+                  left: `${r((x / W) * 100)}%`,
+                  top: `${r((y / H) * 100)}%`,
+                  width: `${r(((HEX * k) / W) * 100)}%`,
+                  "--z": z,
+                } as React.CSSProperties
+              }
             >
               {/* A navy hex with the coloured one inset, for an outline the
                   clip can't cut. */}
