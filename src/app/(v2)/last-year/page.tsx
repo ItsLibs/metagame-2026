@@ -49,7 +49,7 @@ export default function LastYearPage() {
         <LastYearViews />
       </div>
 
-      <figure className="mt-12 ml-auto w-full max-w-[320px]">
+      <figure className="mx-auto mt-12 w-full max-w-[320px]">
         <Image
           src={megagameMap}
           alt="Aerial map of Lighthaven with each Megagame territory shaded orange or purple by the faction holding it"
