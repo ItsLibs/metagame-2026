@@ -9,7 +9,7 @@ import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
 import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
-import { setMegagameLevels } from "@/lib/megagame-store";
+import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
 import {
   claimOwnTicket,
   claimTicket,
@@ -262,7 +262,10 @@ export async function unclaimMine(paymentId: string): Promise<UnclaimState> {
 
 export type ClassState = { error?: string };
 
-/** Placeholder class picker: level 1 in the chosen class, 0 in the others. */
+/**
+ * Joins a faction: level 1 in its class, 0 in the others. Picking one you're
+ * already in is a no-op, so it can't knock your level back to 1.
+ */
 export async function chooseMegagameClass(
   _prev: ClassState,
   formData: FormData,
@@ -270,6 +273,8 @@ export async function chooseMegagameClass(
   const session = await requireSession();
   const chosen = formData.get("class");
   if (!isMegagameClass(chosen)) return { error: "Pick a class." };
+  const current = await loadMegagameLevels(session.user.id);
+  if (current[chosen] > 0) return {};
   await setMegagameLevels(session.user.id, starterLevels(chosen));
   revalidatePath("/account");
   revalidatePath(`/u/${session.user.id}`);

@@ -14,7 +14,7 @@ import {
 } from "@/lib/user-profile";
 import AccountWall from "@/v2/components/AccountWall";
 import ContentPage from "@/v2/components/ContentPage";
-import MegagameClassLevels from "@/v2/components/MegagameClassLevels";
+import ClassBadges from "@/v2/components/megagame/ClassBadges";
 import UserSessions from "@/v2/components/schedule/UserSessions";
 
 // An attendee's profile. Signed-in only, and everything on it is either
@@ -98,7 +98,7 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
           {profile.pronouns && (
             <p className="text-base text-ink/70">{profile.pronouns}</p>
           )}
-          <MegagameClassLevels levels={levels} />
+          <ClassBadges levels={levels} />
           {profile.website && (
             <a
               href={profile.website}
