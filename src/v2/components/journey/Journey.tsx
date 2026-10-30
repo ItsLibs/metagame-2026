@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, CircleAlert, RotateCcw } from "lucide-react";
 import { readUtm } from "@/lib/utm";
 import { FORMS } from "@/v2/forms";
 import {
@@ -269,7 +269,7 @@ export default function Journey({ slug }: { slug: string }) {
 
       {index === 0 && (
         <div className="mt-6">
-          <p className="max-w-[38em] text-lg leading-relaxed text-ink/80 sm:text-xl">
+          <p className="max-w-[38em] text-lg leading-relaxed whitespace-pre-line text-ink/80 sm:text-xl">
             <Rich text={def.pitch} />
           </p>
           {def.aside && (
@@ -293,6 +293,18 @@ export default function Journey({ slug }: { slug: string }) {
               ))}
             </dl>
           ) : null}
+          {def.warning && (
+            <p className="mt-5 flex max-w-[44em] items-start gap-2.5 border-l-2 border-meeple pl-4 text-[15px] leading-relaxed text-ink/80">
+              <CircleAlert
+                aria-label="Warning"
+                className="mt-[3px] size-[18px] shrink-0 text-meeple"
+                strokeWidth={2.5}
+              />
+              <span>
+                <Rich text={def.warning} />
+              </span>
+            </p>
+          )}
           {def.notice && (
             <p className="mt-5 max-w-[44em] border-l-2 border-tan pl-4 text-[15px] leading-relaxed text-ink/70">
               <Rich text={def.notice} />

@@ -123,6 +123,64 @@ const PATHS = {
       <circle cx="24" cy="22.5" r="1.4" fill="currentColor" stroke="none" />
     </>
   ),
+  // And for the session proposal's categories.
+  trophy: (
+    <>
+      <path d="M16 8 h16 v10 a8 8 0 0 1 -16 0 z" />
+      <path d="M16 11 h-5 a4.5 4.5 0 0 0 0 9 h5" />
+      <path d="M32 11 h5 a4.5 4.5 0 0 1 0 9 h-5" />
+      <path d="M24 26 v6 M18 39 h12 M21 32 h6 v7" />
+    </>
+  ),
+  panel: (
+    <>
+      <circle cx="24" cy="15" r="4.5" />
+      <circle cx="12" cy="19" r="3.5" />
+      <circle cx="36" cy="19" r="3.5" />
+      <path d="M15 39 v-4 a9 9 0 0 1 18 0 v4" />
+      <path d="M5 36 v-3 a7 7 0 0 1 8 -7" />
+      <path d="M43 36 v-3 a7 7 0 0 0 -8 -7" />
+    </>
+  ),
+  dice: (
+    <>
+      <rect x="22" y="8" width="17" height="17" rx="3" />
+      <circle cx="30.5" cy="16.5" r="1.8" fill="currentColor" stroke="none" />
+      <rect
+        x="9"
+        y="21"
+        width="18"
+        height="18"
+        rx="3"
+        fill="var(--glyph-bg, #fffbf2)"
+      />
+      <circle cx="14" cy="26" r="1.8" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="30" r="1.8" fill="currentColor" stroke="none" />
+      <circle cx="22" cy="34" r="1.8" fill="currentColor" stroke="none" />
+    </>
+  ),
+  ice: (
+    <>
+      <rect x="7" y="23" width="16" height="16" rx="3" />
+      <rect x="25" y="23" width="16" height="16" rx="3" />
+      <rect
+        x="16"
+        y="9"
+        width="16"
+        height="16"
+        rx="3"
+        fill="var(--glyph-bg, #fffbf2)"
+      />
+      <path d="M20 13.5 l3 -0.5" />
+    </>
+  ),
+  dollar: (
+    <>
+      <circle cx="24" cy="24" r="17" />
+      <path d="M24 13 v22" />
+      <path d="M29 18.5 a4.5 4 0 0 0 -4.5 -3 h-1.5 a4.25 4.25 0 0 0 0 8.5 h2 a4.25 4.25 0 0 1 0 8.5 h-1.5 a4.5 4 0 0 1 -4.5 -3" />
+    </>
+  ),
 };
 
 export type GlyphName = keyof typeof PATHS;
@@ -142,6 +200,11 @@ export const GLYPH_LABELS: Record<GlyphName, string> = {
   trivia: "Trivia",
   physical: "Physical challenges",
   treasure: "Scavenger hunts",
+  trophy: "Competitions",
+  panel: "Panels",
+  dice: "Tabletop RPGs",
+  ice: "Icebreakers",
+  dollar: "Selling or demoing",
 };
 
 export default function Glyph({

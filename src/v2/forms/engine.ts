@@ -143,6 +143,8 @@ export type FormDef = {
   facts?: { label: string; value: string }[];
   /** A heads-up under the pitch, e.g. who sees the answers. */
   notice?: string;
+  /** A warning under the pitch, with a red mark: a deadline that's passed. */
+  warning?: string;
   steps: Step[];
   done: {
     title: string;
