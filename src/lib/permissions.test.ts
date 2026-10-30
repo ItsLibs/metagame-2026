@@ -50,6 +50,7 @@ describe("expand", () => {
   it("closes over implications and drops unknown keys", () => {
     expect([...expand(["schedule.manage", "gone.away"])]).toEqual([
       "schedule.manage",
+      "schedule.view",
       "schedule.preview",
       "schedule.volunteer_rooms",
     ]);
@@ -66,10 +67,12 @@ describe("effectivePermissions", () => {
       }),
     );
     expect([...got].sort()).toEqual([
+      "promo.create",
       "promo.manage",
       "promo.view",
       "schedule.manage",
       "schedule.preview",
+      "schedule.view",
       "schedule.volunteer_rooms",
       "tickets.view",
     ]);
@@ -80,6 +83,7 @@ describe("effectivePermissions", () => {
     expect([...got].sort()).toEqual([
       "schedule.manage",
       "schedule.preview",
+      "schedule.view",
       "schedule.volunteer_rooms",
     ]);
   });
@@ -111,7 +115,10 @@ describe("explainPermissions", () => {
     });
     expect(got["schedule.preview"]).toEqual({
       effective: true,
-      sources: [{ kind: "implied", by: "schedule.manage" }],
+      sources: [
+        { kind: "implied", by: "schedule.view" },
+        { kind: "implied", by: "schedule.manage" },
+      ],
     });
     expect(got["users.view"]).toEqual({ effective: false, sources: [] });
   });

@@ -56,11 +56,12 @@ const TABLE_GROUPS: Record<string, string[]> = {
   Tickets: ["tickets"],
   Schedule: ["locations", "sessions", "session_hosts", "rsvps", "bookmarks"],
   Grading: ["session_grades", "session_grade_space_options"],
+  Budget: ["xero_connections", "budget_import_runs", "budget_ignored_lines"],
 };
 
 // What each table is for, in one line. Reviewed alongside the columns.
 const TABLE_NOTES: Record<string, string> = {
-  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL.",
+  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL. wizard_level, pirate_level and alien_level are the Megagame class levels, 0–5 (check constraints); Better Auth doesn't know them, so only our code sets them (for now, the Megagame tab on /account).",
   session:
     "Signed-in browser sessions. Deleting a user removes their sessions (cascade).",
   account:
@@ -93,6 +94,12 @@ const TABLE_NOTES: Record<string, string> = {
     "One committee member's grade of a proposal, one row per session and grader; re-grading overwrites it. A row with submitted_at null is an assignment not yet graded. topic_areas and potential_panels are multi-selects as enum arrays. Deleting a grader's account is refused while they have grades, since these are the only copy.",
   session_grade_space_options:
     "The rooms a grader thinks would suit the session, one row per grade and location.",
+  xero_connections:
+    "The budget tool's Xero OAuth tokens: one row, id \"metagame\". The refresh token rotates on every use, so it needs a writable home; refresh_locked_at serialises concurrent refreshes, since a single-use token can't be exchanged twice. connected_by names who linked the account. The budget itself lives in the Google Sheet, not here.",
+  budget_import_runs:
+    'One row per Claude call from /backstage/budget: kind "import" (Xero lines proposed into the sheet) or "request" (the Ask Claude box). Holds the outcome counts, the model and its token counts for cost tracking, and the error if it failed.',
+  budget_ignored_lines:
+    "Xero bank lines the team chose not to import, keyed by the Xero line id so later imports skip them; reason and ignored_by record why and who.",
 };
 
 function columnName(column: PgColumn): string {

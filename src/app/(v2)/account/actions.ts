@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
+import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
+import { setMegagameLevels } from "@/lib/megagame-store";
 import {
   claimOwnTicket,
   claimTicket,
@@ -256,6 +258,22 @@ export async function unclaimMine(paymentId: string): Promise<UnclaimState> {
   if (!ticket) return { error: "That ticket isn't claimed by you." };
   revalidatePath("/account");
   return { released: ticketLabel(ticket.tier) };
+}
+
+export type ClassState = { error?: string };
+
+/** Placeholder class picker: level 1 in the chosen class, 0 in the others. */
+export async function chooseMegagameClass(
+  _prev: ClassState,
+  formData: FormData,
+): Promise<ClassState> {
+  const session = await requireSession();
+  const chosen = formData.get("class");
+  if (!isMegagameClass(chosen)) return { error: "Pick a class." };
+  await setMegagameLevels(session.user.id, starterLevels(chosen));
+  revalidatePath("/account");
+  revalidatePath(`/u/${session.user.id}`);
+  return {};
 }
 
 export async function signOut(): Promise<void> {
