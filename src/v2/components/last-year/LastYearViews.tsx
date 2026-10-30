@@ -6,7 +6,7 @@ import { DISPLAY } from "../styles";
 import WhatWasOn from "./WhatWasOn";
 
 const VIEWS = [
-  { id: "moment", label: "Any moment" },
+  { id: "moment", label: "Moments" },
   { id: "schedule", label: "Full schedule" },
 ] as const;
 type View = (typeof VIEWS)[number]["id"];

@@ -168,7 +168,7 @@ export default function WhatWasOn() {
         <div
           role="group"
           aria-label="Day"
-          className="flex border-2 border-navy"
+          className="flex divide-x divide-navy/30 border-2 border-navy"
         >
           {DAYS.map((x, i) => (
             <button
