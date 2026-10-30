@@ -52,6 +52,10 @@ const OPENING = DAYS.reduce(
   { day: 0, t: DAYS[0].start, n: -1 },
 );
 
+// Radius of the open circles that bookend the timeline, in px. The time axis
+// runs between their centres, so the track is inset by this much each side.
+const END_R = 7;
+
 const hourLabel = (t: number) => {
   const h = Math.floor(t / 60) % 24;
   return `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
@@ -92,8 +96,8 @@ function playback(s: State, a: Action): State {
 
 // The 2025 weekend at any moment: an alternative to the schedule grid. Press
 // play and the clock runs fifteen minutes at a time across all three days;
-// drag along the day's pulse (how many sessions were running when) to jump
-// to a moment. The board shows every venue and what was on there just then;
+// drag along the day's timeline to jump to a moment. The board shows every
+// venue and what was on there just then;
 // click a session for its card.
 export default function WhatWasOn() {
   const [state, dispatch] = useReducer(playback, {
@@ -112,15 +116,18 @@ export default function WhatWasOn() {
 
   const d = DAYS[day];
   const running = d.timed.filter((x) => x.a <= t && t < x.b);
+  // A tick every two hours, on even clock hours, strictly inside the day.
   const ticks: number[] = [];
-  for (let h = Math.ceil(d.start / 60) * 60; h < d.end; h += 180) ticks.push(h);
+  for (let h = Math.ceil(d.start / 120) * 120; h < d.end; h += 120)
+    if (h > d.start) ticks.push(h);
+  const at = (m: number) => `${((m - d.start) / (d.end - d.start)) * 100}%`;
 
   const scrub = (e: PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    const i = Math.floor(((e.clientX - r.left) / r.width) * d.steps.length);
+    const frac = (e.clientX - r.left - END_R) / (r.width - 2 * END_R);
     dispatch({
       type: "seek",
-      t: d.steps[Math.min(d.steps.length - 1, Math.max(0, i))].t,
+      t: d.start + Math.round((frac * (d.end - d.start)) / STEP) * STEP,
     });
   };
   const key = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -141,23 +148,27 @@ export default function WhatWasOn() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Play on the left, the day in the middle, the clock on the right; on
+          a phone the clock takes its own row above. */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <button
           type="button"
           onClick={() => dispatch({ type: "toggle" })}
-          className={`${DISPLAY} flex items-center gap-2 rounded-xl bg-meeple py-2.5 pr-5 pl-4 text-[22px] leading-none text-cream transition-transform hover:-translate-y-0.5 active:translate-y-0`}
+          aria-label={
+            playing ? "Pause" : atEnd(state) ? "Play it again" : "Play"
+          }
+          className="-ml-2 justify-self-start rounded-full p-2 text-navy/45 transition-colors hover:text-navy focus-visible:text-navy"
         >
           {playing ? (
-            <Pause aria-hidden className="size-5" fill="currentColor" />
+            <Pause aria-hidden className="size-6" fill="currentColor" />
           ) : (
-            <Play aria-hidden className="size-5" fill="currentColor" />
+            <Play aria-hidden className="size-6" fill="currentColor" />
           )}
-          {playing ? "Pause" : atEnd(state) ? "Play it again" : "Play"}
         </button>
         <div
           role="group"
           aria-label="Day"
-          className="flex overflow-hidden rounded-xl border-2 border-navy"
+          className="flex border-2 border-navy"
         >
           {DAYS.map((x, i) => (
             <button
@@ -173,19 +184,15 @@ export default function WhatWasOn() {
             </button>
           ))}
         </div>
-        <p className="ml-auto text-right">
-          <span
-            className={`${DISPLAY} block text-[clamp(30px,4vw,44px)] leading-none text-navy`}
-          >
-            {d.name} · {slotLabel(t)}
-          </span>
-          <span className="font-space-mono text-xs tracking-[0.1em] text-ink/60 uppercase">
-            {running.length} {running.length === 1 ? "session" : "sessions"} on
-          </span>
+        <p
+          className={`${DISPLAY} order-first col-span-3 justify-self-end text-[clamp(30px,4vw,44px)] leading-none text-navy sm:order-none sm:col-span-1`}
+        >
+          {d.name} · {slotLabel(t)}
         </p>
       </div>
 
-      {/* The day's pulse, which is also the scrubber. */}
+      {/* The day as a timeline, which is also the scrubber: an open circle at
+          each end, a tick every two hours, a red line for the current time. */}
       <div className="mt-6">
         <div
           role="slider"
@@ -203,37 +210,49 @@ export default function WhatWasOn() {
           onPointerMove={(e) => {
             if (e.currentTarget.hasPointerCapture(e.pointerId)) scrub(e);
           }}
-          className="flex h-16 cursor-pointer touch-pan-y items-end gap-[2px] rounded-md border-b border-navy/20 outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+          className="relative h-10 cursor-pointer touch-pan-y rounded-md outline-none focus-visible:ring-2 focus-visible:ring-meeple focus-visible:ring-offset-4 focus-visible:ring-offset-background"
         >
-          {d.steps.map((s) => (
+          {/* The axis runs between the centres of the two end circles. */}
+          <div
+            className="absolute inset-y-0"
+            style={{ left: END_R, right: END_R }}
+          >
             <span
-              key={s.t}
-              className="group relative flex h-full flex-1 items-end justify-center"
-            >
-              {s.n > 0 && (
-                <span
-                  className={`w-full max-w-6 rounded-t-[4px] transition-colors ${
-                    s.t === t
-                      ? "bg-meeple"
-                      : s.t < t
-                        ? "bg-navy/45 group-hover:bg-navy/70"
-                        : "bg-navy/20 group-hover:bg-navy/45"
-                  }`}
-                  style={{ height: `${(s.n / d.peak) * 100}%` }}
-                />
-              )}
-              <span className="pointer-events-none absolute bottom-full z-10 mb-1.5 rounded bg-navy px-2 py-1 font-space-mono text-[10.5px] whitespace-nowrap text-cream/80 opacity-0 transition-opacity group-hover:opacity-100">
-                <b className="text-cream">{s.n}</b> running · {slotLabel(s.t)}
-              </span>
-            </span>
-          ))}
+              aria-hidden
+              className="absolute top-1/2 right-0 left-0 h-px -translate-y-1/2 bg-ink/30"
+            />
+            {ticks.map((h) => (
+              <span
+                key={h}
+                aria-hidden
+                className="absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 bg-ink/40"
+                style={{ left: at(h) }}
+              />
+            ))}
+            {[d.start, d.end].map((m) => (
+              <span
+                key={m}
+                aria-hidden
+                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-navy bg-background"
+                style={{ left: at(m), width: END_R * 2, height: END_R * 2 }}
+              />
+            ))}
+            <span
+              aria-hidden
+              className="absolute top-1/2 h-7 w-[2px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-meeple transition-[left] duration-150 ease-out"
+              style={{ left: at(t) }}
+            />
+          </div>
         </div>
-        <div className="relative mt-1.5 h-4 font-space-mono text-[10.5px] text-ink/55">
+        <div
+          className="relative h-4 font-space-mono text-[10.5px] text-ink/55"
+          style={{ marginLeft: END_R, marginRight: END_R }}
+        >
           {ticks.map((h) => (
             <span
               key={h}
-              className="absolute -translate-x-1/2 first:translate-x-0"
-              style={{ left: `${((h - d.start) / (d.end - d.start)) * 100}%` }}
+              className="absolute -translate-x-1/2 whitespace-nowrap"
+              style={{ left: at(h) }}
             >
               {hourLabel(h)}
             </span>
