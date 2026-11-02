@@ -345,20 +345,21 @@ for (const { id, name } of await sql.query(
   reusedRooms.add(room);
 }
 // Pitches on the bulletin board. created_at is spelled out because the board
-// paints the OLDEST note on top, so the stack is only worth looking at when
+// paints the NEWEST note on top, so the stack is only worth looking at when
 // the times differ. x/y are fractions of the board.
 // prettier-ignore
 const NOTES = [
-  [1801, "attendee", "butter", 0, 0, 6, 10, "Anyone up for a 3-hour game of Diplomacy? I'll bring the map and the grudges."],
-  [1802, "host", "rose", 0.5, 0, 6, 11, "Lightning talks, 5 min each, no slides. Sign up underneath this one."],
-  [1803, "attendee", "sky", 1, 0, 6, 14, "Prediction market on who wins the megagame. I have whiteboard markers."],
-  [1804, "newcomer", "mint", 0, 0.2, 6, 17, "First Metagame — would love a walking tour of campus from someone who knows it."],
-  [1805, "team", "tangerine", 0.5, 0.2, 7, 9, "Teaching Hanabi to anyone who hasn't played. Repeatedly. All weekend."],
-  [1806, "attendee", "lilac", 1, 0.35, 7, 13, "Does anyone want to co-run a Werewolf game at 10pm? Need a second moderator."],
-].map(([n, who, color, x, y, day, hour, body]) => ({
+  [1801, "attendee", "butter", 0, 0, 6, 10, "Diplomacy, 3 hours", "I'll bring the map and the grudges. Need six more."],
+  [1802, "host", "rose", 0.5, 0, 6, 11, "Lightning talks", "Five minutes each, no slides. Sign up underneath this one."],
+  [1803, "attendee", "sky", 1, 0, 6, 14, "Megagame prediction market", "I have whiteboard markers and too many opinions."],
+  [1804, "newcomer", "mint", 0, 0.2, 6, 17, "Walking tour of campus?", "First Metagame — would love one from someone who knows the place."],
+  [1805, "team", "tangerine", 0.5, 0.2, 7, 9, "Teaching Hanabi, all weekend", null],
+  [1806, "attendee", "lilac", 1, 0.35, 7, 13, "Werewolf at 10pm — need a co-moderator", "Happy to run it if someone else takes the night phase."],
+].map(([n, who, color, x, y, day, hour, title, body]) => ({
   id: uuid(n),
   location_id: locations.ratpark.id,
   author_user_id: users[who].id,
+  title,
   body,
   color,
   x,

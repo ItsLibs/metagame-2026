@@ -13,6 +13,7 @@ import {
   NOTE_RATE_LIMIT,
   overNoteRateLimit,
   parseNoteBody,
+  parseNoteTitle,
   pickNoteColor,
   type BoardNote,
 } from "@/lib/unconference";
@@ -93,7 +94,13 @@ async function target(noteId: string) {
 /** Pin a new note up, at a spot the board measured as fractions of itself. */
 export async function pinNote(
   locationId: string,
-  input: { body: unknown; x: number; y: number; color?: unknown },
+  input: {
+    title: unknown;
+    body?: unknown;
+    x: number;
+    y: number;
+    color?: unknown;
+  },
 ): Promise<NoteState> {
   const who = await poster();
   if (typeof who !== "string") return who;
@@ -104,6 +111,8 @@ export async function pinNote(
   if (!rooms.some((r) => r.id === locationId)) {
     return { error: "That board isn't on the schedule." };
   }
+  const heading = parseNoteTitle(input.title);
+  if ("error" in heading) return { field: "title", error: heading.error };
   const parsed = parseNoteBody(input.body);
   if ("error" in parsed) return { field: "body", error: parsed.error };
 
@@ -121,6 +130,7 @@ export async function pinNote(
     const note = await createNote({
       locationId,
       authorUserId: who,
+      title: heading.title,
       body: parsed.body,
       // The composer shows the note in the colour it will be, so it sends
       // one; anything else falls back to the random pick. Cosmetic either
@@ -138,10 +148,13 @@ export async function pinNote(
 /** Rewrite a note's text. The author only. */
 export async function rewriteNote(
   noteId: string,
+  title: unknown,
   body: unknown,
 ): Promise<NoteState> {
   const who = await poster();
   if (typeof who !== "string") return who;
+  const heading = parseNoteTitle(title);
+  if ("error" in heading) return { field: "title", error: heading.error };
   const parsed = parseNoteBody(body);
   if ("error" in parsed) return { field: "body", error: parsed.error };
 
@@ -151,7 +164,11 @@ export async function rewriteNote(
     if (!canEditNote(editor)) return { error: NOT_YOURS };
     // The colour comes from the stored row, so an edit can't recolour a note
     // by what the client happened to send.
-    await updateNote(noteId, { body: parsed.body, color: note.color });
+    await updateNote(noteId, {
+      title: heading.title,
+      body: parsed.body,
+      color: note.color,
+    });
     return {
       note: boardNote((await noteById(noteId)) ?? note, who),
       savedAt: Date.now(),
@@ -174,7 +191,7 @@ export async function recolourNote(
     const { editor, note } = await target(noteId);
     if (!note) return { error: GONE };
     if (!canEditNote(editor)) return { error: NOT_YOURS };
-    await updateNote(noteId, { body: note.body, color });
+    await updateNote(noteId, { title: note.title, body: note.body, color });
     return {
       note: boardNote((await noteById(noteId)) ?? { ...note, color }, who),
       savedAt: Date.now(),

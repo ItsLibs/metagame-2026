@@ -161,20 +161,21 @@ export default function BoardNotes({
   async function create(
     locationId: string,
     spot: Spot,
+    title: string,
     body: string,
     color: NoteColor,
   ) {
     setError(null);
     const result = await safely(() =>
-      pinNote(locationId, { body, color, ...spot }),
+      pinNote(locationId, { title, body, color, ...spot }),
     );
     if (result.note) adopt(result.note);
     return result;
   }
 
-  async function rewrite(noteId: string, body: string) {
+  async function rewrite(noteId: string, title: string, body: string) {
     setError(null);
-    const result = await safely(() => rewriteNote(noteId, body));
+    const result = await safely(() => rewriteNote(noteId, title, body));
     if (result.note) adopt(result.note);
     return result;
   }
@@ -267,14 +268,14 @@ export default function BoardNotes({
           draftColor={pending.kind === "new" ? pending.color : undefined}
           // The id comes from the dialog, not from `pending`: its first save
           // creates the note, and every save after that rewrites that one.
-          onSave={(body, color, id) => {
-            if (id) return rewrite(id, body);
+          onSave={(title, body, color, id) => {
+            if (id) return rewrite(id, title, body);
             // No id means this is the first save of a note being composed,
             // which only ever happens under a "new" pending.
             if (pending.kind !== "new") {
               return Promise.resolve({ error: "That note is gone." });
             }
-            return create(pending.locationId, pending.spot, body, color);
+            return create(pending.locationId, pending.spot, title, body, color);
           }}
           onRecolour={(id, color) => recolour(id, color)}
           onDelete={(id) => remove(id)}

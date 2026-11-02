@@ -6,6 +6,7 @@ import type { NoteState } from "@/app/(v2)/schedule/note-actions";
 import {
   NOTE_BODY_MAX,
   NOTE_COLORS,
+  NOTE_TITLE_MAX,
   type NoteColor,
   type BoardNote,
 } from "@/lib/unconference";
@@ -24,8 +25,11 @@ import { NOTE_STYLES } from "@/v2/lib/schedule-styles";
 const AUTOSAVE_MS = 700;
 
 // Bare paper. No border, no placeholder, no label — the sheet is the prompt.
+const HEADLINE =
+  "w-full resize-none border-0 bg-transparent p-0 text-lg leading-snug font-bold text-[#1b1530] outline-none placeholder:text-transparent disabled:opacity-60";
+
 const PAPER =
-  "min-h-[220px] w-full resize-none border-0 bg-transparent p-0 text-base leading-relaxed text-[#1b1530] outline-none placeholder:text-transparent disabled:opacity-60";
+  "min-h-[180px] w-full resize-none border-0 bg-transparent p-0 text-base leading-relaxed text-[#1b1530] outline-none placeholder:text-transparent disabled:opacity-60";
 
 export default function NoteDialog({
   note,
@@ -46,6 +50,7 @@ export default function NoteDialog({
   onClose: () => void;
   /** With no id, this is the first save and creates the note. */
   onSave: (
+    title: string,
     body: string,
     color: NoteColor,
     id: string | null,
@@ -53,6 +58,7 @@ export default function NoteDialog({
   onRecolour: (id: string, color: NoteColor) => Promise<NoteState>;
   onDelete: (id: string) => Promise<NoteState>;
 }) {
+  const [title, setTitle] = useState(note?.title ?? "");
   const [body, setBody] = useState(note?.body ?? "");
   // The note this dialog is editing: the one it opened, or the one its first
   // save created. Without this, every keystroke after the first would pin up
@@ -68,15 +74,15 @@ export default function NoteDialog({
 
   // What is on the sheet versus what the server has, so closing knows whether
   // there is anything left to write.
-  const stored = useRef(note?.body ?? "");
-  const latest = useRef(body);
+  const stored = useRef(`${note?.title ?? ""}\u0000${note?.body ?? ""}`);
+  const latest = useRef({ title, body });
   const inFlight = useRef(false);
   const idRef = useRef(liveId);
   // Mirrored in an effect rather than during render: a handler that fires
   // after the paint — a blur, a close — needs the newest of each.
   useEffect(() => {
-    latest.current = body;
-  }, [body]);
+    latest.current = { title, body };
+  }, [title, body]);
   useEffect(() => {
     idRef.current = liveId;
   }, [liveId]);
@@ -84,22 +90,26 @@ export default function NoteDialog({
   const over = body.trim().length > NOTE_BODY_MAX;
 
   const save = useCallback(async () => {
-    const text = latest.current.trim();
-    // Nothing to pin up, and an empty body is refused by the column's own
-    // check anyway — so a note emptied out keeps the words it had.
-    if (!text || text === stored.current.trim() || inFlight.current) return;
+    const heading = latest.current.title.trim();
+    const text = latest.current.body.trim();
+    // A note is its heading: with none there is nothing to pin up, and a note
+    // whose title is cleared keeps the one it had rather than failing the
+    // column's own check. The body may be empty — that is a heading alone.
+    if (!heading || heading.length > NOTE_TITLE_MAX) return;
     if (text.length > NOTE_BODY_MAX) return;
+    const mark = `${heading}\u0000${text}`;
+    if (mark === stored.current || inFlight.current) return;
     inFlight.current = true;
     setSaving(true);
     setError(null);
-    const result = await onSave(latest.current, color, idRef.current);
+    const result = await onSave(heading, text, color, idRef.current);
     inFlight.current = false;
     setSaving(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    stored.current = latest.current;
+    stored.current = mark;
     if (result.note && !idRef.current) {
       idRef.current = result.note.id;
       setLiveId(result.note.id);
@@ -162,18 +172,38 @@ export default function NoteDialog({
         </DialogTitle>
 
         {canEdit ? (
-          <textarea
-            autoFocus
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onBlur={() => void save()}
-            aria-label="Note"
-            className={PAPER}
-          />
+          <>
+            <textarea
+              autoFocus
+              rows={1}
+              value={title}
+              onChange={(e) =>
+                // One line: a heading that wrapped would not fit the tile.
+                setTitle(e.target.value.replace(/[\r\n]+/g, " "))
+              }
+              onBlur={() => void save()}
+              aria-label="Title"
+              className={HEADLINE}
+            />
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onBlur={() => void save()}
+              aria-label="Note"
+              className={PAPER}
+            />
+          </>
         ) : (
-          <p className="text-base break-words whitespace-pre-wrap text-[#1b1530]">
-            {note?.body}
-          </p>
+          <>
+            <p className="text-lg leading-snug font-bold break-words text-[#1b1530]">
+              {note?.title}
+            </p>
+            {note?.body && (
+              <p className="text-base break-words whitespace-pre-wrap text-[#1b1530]">
+                {note.body}
+              </p>
+            )}
+          </>
         )}
 
         <div className="flex items-center justify-between gap-3 text-sm text-[#1b1530]/65">

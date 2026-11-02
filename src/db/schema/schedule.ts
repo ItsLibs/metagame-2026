@@ -260,7 +260,8 @@ export const unconferenceNotes = pgTable(
     authorUserId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    body: text().notNull(),
+    title: text().notNull(),
+    body: text(),
     color: unconferenceNoteColor().notNull(),
     x: real().notNull().default(0),
     y: real().notNull().default(0),
@@ -269,10 +270,15 @@ export const unconferenceNotes = pgTable(
   (t) => [
     index("unconference_notes_location_id_idx").on(t.locationId),
     index("unconference_notes_author_user_id_idx").on(t.authorUserId),
-    // Mirrors NOTE_BODY_MAX in src/lib/unconference.ts.
+    // Mirror NOTE_TITLE_MAX and NOTE_BODY_MAX in src/lib/unconference.ts.
+    check(
+      "unconference_notes_title_length",
+      sql`char_length(${t.title}) > 0 AND char_length(${t.title}) <= 120`,
+    ),
+    // Null is a note that is only a heading; empty text is not.
     check(
       "unconference_notes_body_length",
-      sql`char_length(${t.body}) > 0 AND char_length(${t.body}) <= 1000`,
+      sql`${t.body} is null OR (char_length(${t.body}) > 0 AND char_length(${t.body}) <= 1000)`,
     ),
     check("unconference_notes_x_fraction", sql`${t.x} >= 0 AND ${t.x} <= 1`),
     check("unconference_notes_y_fraction", sql`${t.y} >= 0 AND ${t.y} <= 1`),

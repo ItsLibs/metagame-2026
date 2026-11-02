@@ -197,6 +197,27 @@
       "when": 1793420938157,
       "tag": "0027_unconference_post_attendee",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793588326500,
+      "tag": "0028_note_title_add",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793588333170,
+      "tag": "0029_note_title_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793588349153,
+      "tag": "0030_note_title_required",
+      "breakpoints": true
     }
   ]
 }

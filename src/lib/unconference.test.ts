@@ -16,6 +16,8 @@ import {
   NOTE_RATE_LIMIT,
   overNoteRateLimit,
   parseNoteBody,
+  parseNoteTitle,
+  NOTE_TITLE_MAX,
   pickNoteColor,
 } from "./unconference";
 
@@ -48,6 +50,29 @@ describe("pickNoteColor", () => {
   });
 });
 
+describe("parseNoteTitle", () => {
+  it("trims what it keeps", () => {
+    expect(parseNoteTitle("  Werewolf, 10pm  ")).toEqual({
+      title: "Werewolf, 10pm",
+    });
+  });
+
+  // A note is its heading: without one there is nothing for a tile to show.
+  it("refuses a blank or absent title", () => {
+    for (const bad of ["", "   ", undefined, null, 42]) {
+      expect(parseNoteTitle(bad)).toEqual({ error: "Give it a title first." });
+    }
+  });
+
+  it("caps the length, counting after the trim", () => {
+    const max = "x".repeat(NOTE_TITLE_MAX);
+    expect(parseNoteTitle(`  ${max}  `)).toEqual({ title: max });
+    expect(parseNoteTitle(`${max}y`)).toEqual({
+      error: `Keep the title under ${NOTE_TITLE_MAX} characters.`,
+    });
+  });
+});
+
 describe("parseNoteBody", () => {
   it("trims what it keeps", () => {
     expect(parseNoteBody("  lightning chess  ")).toEqual({
@@ -55,15 +80,17 @@ describe("parseNoteBody", () => {
     });
   });
 
-  it("refuses an empty or blank body", () => {
-    expect(parseNoteBody("")).toEqual({ error: "Write something first." });
-    expect(parseNoteBody("   \n ")).toEqual({
-      error: "Write something first.",
-    });
-    expect(parseNoteBody(undefined)).toEqual({
-      error: "Write something first.",
-    });
-    expect(parseNoteBody(42)).toEqual({ error: "Write something first." });
+  it("reads an empty or absent body as a note with no body", () => {
+    // A note may be a heading alone, so this is not an error — only a title
+    // is required, and parseNoteTitle is what refuses a blank one.
+    expect(parseNoteBody("")).toEqual({ body: null });
+    expect(parseNoteBody("   \n ")).toEqual({ body: null });
+    expect(parseNoteBody(undefined)).toEqual({ body: null });
+    expect(parseNoteBody(null)).toEqual({ body: null });
+  });
+
+  it("still refuses something that is not text", () => {
+    expect(parseNoteBody(42)).toEqual({ error: "That isn't text." });
   });
 
   it("caps the length, counting after the trim", () => {
@@ -112,21 +139,21 @@ describe("notesInPaintOrder", () => {
   const mid = note("mid", "2026-06-01T11:00:00.000Z");
   const recent = note("new", "2026-06-01T12:00:00.000Z");
 
-  // DELIBERATE INVERSION, not a bug: the board stacks the OLDEST note on top.
-  // The list is back to front, so the oldest must come LAST. If you are here
-  // because this test failed after you "fixed" the comparator, put it back.
-  it("puts the oldest note last, so it paints on top", () => {
+  // The list is back to front, so whatever paints on top comes LAST. This was
+  // oldest-on-top until 2026-11-02, pinned by a test written to catch a silent
+  // reversal; the reversal was asked for, so the pin moved with it.
+  it("puts the newest note last, so it paints on top", () => {
     expect(notesInPaintOrder([old, recent, mid]).map((n) => n.id)).toEqual([
-      "new",
-      "mid",
       "old",
+      "mid",
+      "new",
     ]);
-    expect(notesInPaintOrder([mid, old, recent]).at(-1)).toBe(old);
+    expect(notesInPaintOrder([mid, old, recent]).at(-1)).toBe(recent);
   });
 
-  it("does not put the newest note on top", () => {
-    expect(notesInPaintOrder([old, mid, recent]).at(-1)).not.toBe(recent);
-    expect(notesInPaintOrder([old, mid, recent])[0]).toBe(recent);
+  it("does not put the oldest note on top", () => {
+    expect(notesInPaintOrder([old, mid, recent]).at(-1)).not.toBe(old);
+    expect(notesInPaintOrder([old, mid, recent])[0]).toBe(old);
   });
 
   it("reads Date and ISO string timestamps the same way", () => {
@@ -134,14 +161,14 @@ describe("notesInPaintOrder", () => {
       { id: "old", createdAt: new Date(old.createdAt) },
       { id: "new", createdAt: new Date(recent.createdAt) },
     ];
-    expect(notesInPaintOrder(dates).map((n) => n.id)).toEqual(["new", "old"]);
+    expect(notesInPaintOrder(dates).map((n) => n.id)).toEqual(["old", "new"]);
   });
 
   it("breaks a tie on id, so the stack never shuffles", () => {
     const a = note("a", "2026-06-01T10:00:00.000Z");
     const b = note("b", "2026-06-01T10:00:00.000Z");
-    expect(notesInPaintOrder([a, b]).map((n) => n.id)).toEqual(["b", "a"]);
-    expect(notesInPaintOrder([b, a]).map((n) => n.id)).toEqual(["b", "a"]);
+    expect(notesInPaintOrder([a, b]).map((n) => n.id)).toEqual(["a", "b"]);
+    expect(notesInPaintOrder([b, a]).map((n) => n.id)).toEqual(["a", "b"]);
   });
 
   it("copies rather than sorting the caller's array", () => {
@@ -188,7 +215,8 @@ describe("boardNote", () => {
   const stored = {
     id: "n1",
     locationId: "room",
-    body: "lightning chess",
+    title: "Lightning chess",
+    body: "Five minutes a side.",
     color: "sky" as const,
     x: 0,
     y: 0,

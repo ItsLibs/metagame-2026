@@ -207,14 +207,6 @@ export default function UnconferenceBoard({
     document.body.classList.remove("cursor-grabbing");
   }
 
-  function addNote() {
-    const rect = surface.current?.getBoundingClientRect();
-    const size = rect
-      ? { width: rect.width, height: rect.height, tile: TILE_PX }
-      : BOARD_MIN;
-    board.compose(locationId, firstFreeSpot(notes, size));
-  }
-
   // Where the pin is resting, in board pixels, once it has been still long
   // enough to mean it. Mouse only: a touch has no hover to read.
   const [pin, setPin] = useState<{ x: number; y: number } | null>(null);
@@ -268,15 +260,13 @@ export default function UnconferenceBoard({
 
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden bg-[#c08a55]/20">
-      <div className={BAR}>
-        {board.canPost ? (
-          <button type="button" onClick={addNote} className={ADD}>
-            + Add a note
-          </button>
-        ) : (
+      {/* No button: a note goes up where the pin is. The bar stays only to
+          tell someone without a ticket why they can't put one up. */}
+      {!board.canPost && (
+        <div className={BAR}>
           <PostHint className="text-[#1b1530]/55" />
-        )}
-      </div>
+        </div>
+      )}
       <div
         ref={surface}
         onPointerMove={trackPin}
@@ -301,7 +291,7 @@ export default function UnconferenceBoard({
             Add a note
           </span>
         )}
-        {/* Back to front: the oldest note is last, so it paints on top. No
+        {/* Back to front: the newest note is last, so it paints on top. No
             z-index anywhere, including mid-drag — that order is the point. */}
         {notesInPaintOrder(notes).map((note) => {
           const at = sliding?.noteId === note.id ? sliding : note;
@@ -309,7 +299,7 @@ export default function UnconferenceBoard({
             <button
               key={note.id}
               type="button"
-              title={note.body}
+              title={note.title}
               aria-haspopup="dialog"
               onPointerDown={(e) => grab(e, note)}
               onPointerMove={slide}
@@ -334,8 +324,8 @@ export default function UnconferenceBoard({
                 board.canMove(note) ? "cursor-grab" : "cursor-pointer"
               }`}
             >
-              <span className="line-clamp-4 text-[11px] leading-tight">
-                {preview(note.body)}
+              <span className="line-clamp-4 text-[11px] leading-tight font-bold">
+                {preview(note.title)}
               </span>
               <span className="mt-auto truncate text-[9px] text-[#1b1530]/60">
                 {note.author.name}
@@ -410,9 +400,12 @@ function NoteRow({
           style={NOTE_STYLES[note.color]}
         />
         <div className="min-w-0 flex-1">
-          <div className="leading-snug font-semibold break-words whitespace-pre-wrap">
-            {note.body}
-          </div>
+          <div className="leading-snug font-bold break-words">{note.title}</div>
+          {note.body && (
+            <div className="mt-0.5 leading-snug break-words whitespace-pre-wrap text-[#1b1530]/80">
+              {note.body}
+            </div>
+          )}
           <div className="mt-0.5 text-[13px] text-[#1b1530]/65">
             {note.author.name}
           </div>

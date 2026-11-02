@@ -22,13 +22,19 @@ export const isNoteColor = (value: unknown): value is NoteColor =>
 /** Mirrors the unconference_notes_body_length check constraint. */
 export const NOTE_BODY_MAX = 1000;
 
+/** The heading a tile shows. Mirrors the column's own check. */
+export const NOTE_TITLE_MAX = 120;
+
 /** What the board shows on a tile before the overlay gives the whole thing. */
 export const NOTE_PREVIEW_MAX = 140;
 
 export type UnconferenceNote = {
   id: string;
   locationId: string;
-  body: string;
+  /** The heading, shown on the tile. */
+  title: string;
+  /** The rest, shown only once the note is opened; null when there is none. */
+  body: string | null;
   color: NoteColor;
   /** Fractions of the board, 0..1, measured from its top left. */
   x: number;
@@ -62,7 +68,11 @@ export const boardNote = (
  * The columns a note's author may change. Separate from the row so no write
  * built from this can move a note between rooms or change its author.
  */
-export type NoteFields = { body: string; color: NoteColor };
+export type NoteFields = {
+  title: string;
+  body: string | null;
+  color: NoteColor;
+};
 
 /**
  * Everything the board's client needs that it can't work out for itself: the
@@ -92,12 +102,26 @@ export function pickNoteColor(index: number): NoteColor {
 }
 
 /** The body as it may be stored, or why it can't be. */
+export function parseNoteTitle(
+  value: unknown,
+): { title: string } | { error: string } {
+  if (typeof value !== "string") return { error: "Give it a title first." };
+  const title = value.trim();
+  if (title.length === 0) return { error: "Give it a title first." };
+  if (title.length > NOTE_TITLE_MAX) {
+    return { error: `Keep the title under ${NOTE_TITLE_MAX} characters.` };
+  }
+  return { title };
+}
+
+/** The body is optional: a note may be a heading and nothing else. */
 export function parseNoteBody(
   value: unknown,
-): { body: string } | { error: string } {
-  if (typeof value !== "string") return { error: "Write something first." };
+): { body: string | null } | { error: string } {
+  if (value === null || value === undefined) return { body: null };
+  if (typeof value !== "string") return { error: "That isn't text." };
   const body = value.trim();
-  if (body.length === 0) return { error: "Write something first." };
+  if (body.length === 0) return { body: null };
   if (body.length > NOTE_BODY_MAX) {
     return { error: `Keep it under ${NOTE_BODY_MAX} characters.` };
   }
@@ -137,16 +161,19 @@ const at = (value: string | Date): number =>
   (value instanceof Date ? value : new Date(value)).getTime();
 
 /**
- * Notes back to front: the LAST one paints on top. The order is deliberately
- * inverted from the usual convention — the OLDEST note sits on top, so a
- * proposal that has been up all weekend is never buried by a newer one.
- * Do not "fix" this to newest-on-top; unconference.test.ts pins it.
+ * Notes back to front: the LAST one paints on top, so the NEWEST note sits on
+ * top, like the last thing pinned to a real board.
+ *
+ * This was the other way round until 2026-11-02 — oldest on top, so nothing
+ * got buried — and the test below was written to catch anyone reversing it.
+ * It did its job: the reversal is now deliberate, and the test pins this
+ * direction instead.
  */
 export function notesInPaintOrder<T extends Pinned>(notes: readonly T[]): T[] {
   return [...notes].sort((a, b) => {
-    const diff = at(b.createdAt) - at(a.createdAt);
+    const diff = at(a.createdAt) - at(b.createdAt);
     // Same instant: fall back to the id so the stack never shuffles.
-    return diff !== 0 ? diff : a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+    return diff !== 0 ? diff : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
 }
 

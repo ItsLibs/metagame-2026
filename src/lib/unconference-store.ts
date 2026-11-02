@@ -21,6 +21,7 @@ const authorName = sql<string>`coalesce(nullif(trim(${user.name}), ''), 'Someone
 const noteColumns = {
   id: unconferenceNotes.id,
   locationId: unconferenceNotes.locationId,
+  title: unconferenceNotes.title,
   body: unconferenceNotes.body,
   color: unconferenceNotes.color,
   x: unconferenceNotes.x,
@@ -34,7 +35,8 @@ const noteColumns = {
 type NoteRow = {
   id: string;
   locationId: string;
-  body: string;
+  title: string;
+  body: string | null;
   color: NoteColor;
   x: number;
   y: number;
@@ -47,6 +49,7 @@ type NoteRow = {
 const toNote = (row: NoteRow): UnconferenceNote => ({
   id: row.id,
   locationId: row.locationId,
+  title: row.title,
   body: row.body,
   color: row.color,
   x: row.x,
@@ -105,6 +108,7 @@ export async function createNote(note: NewNote): Promise<UnconferenceNote> {
       .values({
         locationId: note.locationId,
         authorUserId: note.authorUserId,
+        title: note.title,
         body: note.body,
         color: note.color,
         x,
@@ -122,7 +126,7 @@ export async function createNote(note: NewNote): Promise<UnconferenceNote> {
 }
 
 /**
- * What the author may rewrite. Names body and colour only, so nothing built
+ * What the author may rewrite. Names title, body and colour only, so nothing built
  * from a form can move a note to another room or hand it to someone else.
  */
 export async function updateNote(
@@ -131,7 +135,7 @@ export async function updateNote(
 ): Promise<void> {
   const [updated] = await getDb()
     .update(unconferenceNotes)
-    .set({ body: fields.body, color: fields.color })
+    .set({ title: fields.title, body: fields.body, color: fields.color })
     .where(eq(unconferenceNotes.id, noteId))
     .returning({ id: unconferenceNotes.id });
   if (!updated) throw new Error("That note is no longer on the board.");
