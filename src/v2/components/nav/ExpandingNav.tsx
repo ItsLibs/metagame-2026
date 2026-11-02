@@ -18,6 +18,7 @@ import {
   type NavLink,
 } from "./links";
 import { NavLogo, Pips, TopIcon } from "./LogoDice";
+import AccountMenu from "./AccountMenu";
 import { useHomeSection } from "./useHomeSection";
 import { useAccountStatus } from "./useAccountStatus";
 import { useMediaQuery } from "./useMediaQuery";
@@ -146,11 +147,12 @@ export default function ExpandingNav() {
   const section = useHomeSection();
   const onHome = usePathname() === "/";
   const account = useAccountStatus();
+  // Backstage lives in the account menu rather than the bar.
   const links: readonly NavLink[] = [
     ...NAV_LINKS,
-    ...(account?.admin ? [ADMIN_LINK] : []),
     ...(account ? [account.signedIn ? ACCOUNT_LINK : LOGIN_LINK] : []),
   ];
+
   const active = useActiveLink(links, section);
   // The die's top face: on "/" the section under the viewport centre, else
   // the current page's icon, or home's pips off-nav.
@@ -272,10 +274,14 @@ export default function ExpandingNav() {
   useEffect(() => {
     if (!expanded) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      // The account menu portals out of the nav; it still counts as inside.
+      const inMenu = (target as Element).closest?.("[data-nav-menu]");
+      if (!rootRef.current?.contains(target) && !inMenu) setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      // An Escape the menu already used closes just the menu.
+      if (e.key === "Escape" && !e.defaultPrevented) setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -424,35 +430,49 @@ export default function ExpandingNav() {
             ref={rowRef}
             className="flex w-max items-center gap-4 pr-(--hex) pl-2"
           >
-            {links.map(({ id, label, href }, i) => (
-              <li key={id}>
-                <Link
-                  href={href}
-                  tabIndex={unfold ? 0 : -1}
-                  onClick={onLinkClick(id)}
-                  aria-current={active === id ? "page" : undefined}
-                  className={linkClass(active === id)}
-                  style={{
-                    opacity: unfold ? 1 : 0,
-                    transform: unfold ? "translateX(0)" : "translateX(-12px)",
-                    // Links ripple out left→right on open and fold back
-                    // right→left on close, trailing the wordmark's dice.
-                    transition: withDelay(
-                      [
-                        `opacity 300ms ease`,
-                        `transform 450ms ${EASE}`,
-                        "color 200ms ease",
-                      ],
-                      unfold
-                        ? 200 + i * LINK_STAGGER_MS
-                        : (links.length - 1 - i) * LINK_STAGGER_MS * 0.5,
-                    ),
-                  }}
-                >
-                  {label}
-                </Link>
-              </li>
-            ))}
+            {links.map(({ id, label, href }, i) => {
+              const style = {
+                opacity: unfold ? 1 : 0,
+                transform: unfold ? "translateX(0)" : "translateX(-12px)",
+                // Links ripple out left→right on open and fold back
+                // right→left on close, trailing the wordmark's dice.
+                transition: withDelay(
+                  [
+                    `opacity 300ms ease`,
+                    `transform 450ms ${EASE}`,
+                    "color 200ms ease",
+                  ],
+                  unfold
+                    ? 200 + i * LINK_STAGGER_MS
+                    : (links.length - 1 - i) * LINK_STAGGER_MS * 0.5,
+                ),
+              };
+              return (
+                <li key={id}>
+                  {id === "account" ? (
+                    <AccountMenu
+                      admin={account?.admin ?? false}
+                      userId={account?.userId ?? null}
+                      current={active === id}
+                      className={linkClass(active === id)}
+                      style={style}
+                      tabIndex={unfold ? 0 : -1}
+                    />
+                  ) : (
+                    <Link
+                      href={href}
+                      tabIndex={unfold ? 0 : -1}
+                      onClick={onLinkClick(id)}
+                      aria-current={active === id ? "page" : undefined}
+                      className={linkClass(active === id)}
+                      style={style}
+                    >
+                      {label}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
         {/* Mobile: links stack under the die, spread down the full-height box,
@@ -474,35 +494,50 @@ export default function ExpandingNav() {
           }}
         >
           <ul className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pb-[calc(var(--bar-h)/4)] pl-2">
-            {links.map(({ id, label, href }, i) => (
-              <li key={id}>
-                <Link
-                  href={href}
-                  tabIndex={dropDown ? 0 : -1}
-                  onClick={(e) => {
-                    onLinkClick(id)(e);
-                    setOpen(false);
-                  }}
-                  aria-current={active === id ? "page" : undefined}
-                  className={linkClass(active === id)}
-                  style={{
-                    opacity: dropDown ? 1 : 0,
-                    // Fade each word in around when the growing box uncovers
-                    // it; on close the shrinking box hides them, so they only
-                    // fade once it's down.
-                    transition: withDelay(
-                      ["opacity 1000ms ease", "color 200ms ease"],
-                      dropDown
-                        ? sidewaysMs +
-                            ((i + 0.5) / links.length) * MOBILE_DROP_MS * 0.8
-                        : MOBILE_COLLAPSE_MS,
-                    ),
-                  }}
-                >
-                  {label}
-                </Link>
-              </li>
-            ))}
+            {links.map(({ id, label, href }, i) => {
+              const style = {
+                opacity: dropDown ? 1 : 0,
+                // Fade each word in around when the growing box uncovers
+                // it; on close the shrinking box hides them, so they only
+                // fade once it's down.
+                transition: withDelay(
+                  ["opacity 1000ms ease", "color 200ms ease"],
+                  dropDown
+                    ? sidewaysMs +
+                        ((i + 0.5) / links.length) * MOBILE_DROP_MS * 0.8
+                    : MOBILE_COLLAPSE_MS,
+                ),
+              };
+              return (
+                <li key={id}>
+                  {id === "account" ? (
+                    <AccountMenu
+                      admin={account?.admin ?? false}
+                      userId={account?.userId ?? null}
+                      current={active === id}
+                      className={linkClass(active === id)}
+                      style={style}
+                      tabIndex={dropDown ? 0 : -1}
+                      onPick={() => setOpen(false)}
+                    />
+                  ) : (
+                    <Link
+                      href={href}
+                      tabIndex={dropDown ? 0 : -1}
+                      onClick={(e) => {
+                        onLinkClick(id)(e);
+                        setOpen(false);
+                      }}
+                      aria-current={active === id ? "page" : undefined}
+                      className={linkClass(active === id)}
+                      style={style}
+                    >
+                      {label}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </div>
