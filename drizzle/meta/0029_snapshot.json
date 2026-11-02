@@ -1,6 +1,6 @@
 {
-  "id": "2cf816a9-013a-4317-a006-dc5cd11bcd8b",
-  "prevId": "4ee9ac91-1e9e-410a-9a49-8e8515cdb00d",
+  "id": "96427238-26bd-46f5-9801-2f280b6f4d56",
+  "prevId": "83bf2d53-a478-44f8-9cf7-addb19d47033",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -801,6 +801,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "referral_code": {
+          "name": "referral_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referred_by_payment_id": {
+          "name": "referred_by_payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -861,6 +873,21 @@
           "with": {},
           "method": "btree",
           "concurrently": false
+        },
+        "tickets_referred_by_payment_id_idx": {
+          "name": "tickets_referred_by_payment_id_idx",
+          "columns": [
+            {
+              "expression": "referred_by_payment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
@@ -881,6 +908,15 @@
           "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "set null"
+        },
+        "tickets_referred_by_payment_id_tickets_payment_id_fk": {
+          "name": "tickets_referred_by_payment_id_tickets_payment_id_fk",
+          "tableFrom": "tickets",
+          "columnsFrom": ["referred_by_payment_id"],
+          "tableTo": "tickets",
+          "columnsTo": ["payment_id"],
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
@@ -888,6 +924,11 @@
         "tickets_ticketCode_unique": {
           "name": "tickets_ticketCode_unique",
           "columns": ["ticket_code"],
+          "nullsNotDistinct": false
+        },
+        "tickets_referralCode_unique": {
+          "name": "tickets_referralCode_unique",
+          "columns": ["referral_code"],
           "nullsNotDistinct": false
         }
       },
@@ -1342,6 +1383,13 @@
           "notNull": true,
           "default": false
         },
+        "rsvps_open": {
+          "name": "rsvps_open",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
         "airtable_rfp_record_id": {
           "name": "airtable_rfp_record_id",
           "type": "text",
@@ -1629,7 +1677,7 @@
           "name": "title",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "body": {
           "name": "body",

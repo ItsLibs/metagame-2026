@@ -14,6 +14,7 @@ import {
 } from "@/lib/schedule";
 import type { BoardData } from "@/lib/unconference";
 import { LEGEND } from "@/v2/lib/schedule-styles";
+import { AgeMark, LIMITED_SPOTS, LimitedSpotsMark } from "./SessionBits";
 import {
   buildColumns,
   DayTabs,
@@ -47,6 +48,18 @@ export function CategoryLegend() {
           {entry.label}
         </span>
       ))}
+      <span className="flex items-center gap-1.5 text-xs">
+        <LimitedSpotsMark />
+        {LIMITED_SPOTS}
+      </span>
+      <span className="flex items-center gap-1.5 text-xs">
+        <AgeMark ages="adults" />
+        18+
+      </span>
+      <span className="flex items-center gap-1.5 text-xs">
+        <AgeMark ages="kids" />
+        Kid-friendly
+      </span>
     </div>
   );
 }

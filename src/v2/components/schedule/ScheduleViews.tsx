@@ -21,7 +21,12 @@ import {
   type LocationLayout,
   type PublicLocation,
 } from "@/lib/schedule";
-import { AgeMark, BlockSummary, blockStyle, SponsorTag } from "./SessionBits";
+import {
+  BlockSummary,
+  blockStyle,
+  SessionMarks,
+  SponsorTag,
+} from "./SessionBits";
 
 // The day grid, the day list and the toggles the schedule is built from,
 // shared by /schedule and the profile pages' session views.
@@ -33,6 +38,7 @@ export type ViewSession = {
   title: string;
   category: Category | null;
   ages: Ages | null;
+  rsvpIsCommitment: boolean;
   sponsored: boolean;
   locationId: string | null;
   hosts: { name: string }[];
@@ -420,7 +426,7 @@ export function SessionRow<S extends ViewSession>({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-start gap-1.5 leading-tight font-semibold">
           <span>{session.title}</span>
-          <AgeMark ages={session.ages} />
+          <SessionMarks session={session} />
           {session.sponsored && <SponsorTag />}
           {badge?.(session)}
         </div>

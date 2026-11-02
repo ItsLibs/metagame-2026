@@ -4,13 +4,15 @@ CREATE TABLE "unconference_notes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"location_id" uuid NOT NULL,
 	"author_user_id" text NOT NULL,
-	"body" text NOT NULL,
+	"title" text NOT NULL,
+	"body" text,
 	"color" "unconference_note_color" NOT NULL,
 	"x" real DEFAULT 0 NOT NULL,
 	"y" real DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "unconference_notes_body_length" CHECK (char_length("unconference_notes"."body") > 0 AND char_length("unconference_notes"."body") <= 1000),
+	CONSTRAINT "unconference_notes_title_length" CHECK (char_length("unconference_notes"."title") > 0 AND char_length("unconference_notes"."title") <= 120),
+	CONSTRAINT "unconference_notes_body_length" CHECK ("unconference_notes"."body" is null OR (char_length("unconference_notes"."body") > 0 AND char_length("unconference_notes"."body") <= 1000)),
 	CONSTRAINT "unconference_notes_x_fraction" CHECK ("unconference_notes"."x" >= 0 AND "unconference_notes"."x" <= 1),
 	CONSTRAINT "unconference_notes_y_fraction" CHECK ("unconference_notes"."y" >= 0 AND "unconference_notes"."y" <= 1)
 );
