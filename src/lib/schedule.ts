@@ -900,6 +900,42 @@ export function publicSchedule(
   return { locations, sessions };
 }
 
+/** The session's own page, under /schedule. */
+export function sessionHref(session: { slug: string }): string {
+  return `/schedule/${encodeURIComponent(session.slug)}`;
+}
+
+export type HostedSession = Pick<
+  PublicSession,
+  "slug" | "title" | "category" | "startsAt"
+>;
+
+/**
+ * The shown sessions each account hosts, by account id, in schedule order.
+ * `shown` is the public schedule; `schedule` the raw one, which has the
+ * hosts' ids.
+ */
+export function hostedSessions(
+  schedule: { sessions: ScheduleSession[] },
+  shown: { sessions: PublicSession[] },
+): Map<string, HostedSession[]> {
+  const hosts = new Map(schedule.sessions.map((s) => [s.id, s.hosts]));
+  const out = new Map<string, HostedSession[]>();
+  for (const s of shown.sessions) {
+    for (const h of hosts.get(s.id) ?? []) {
+      let mine = out.get(h.userId);
+      if (!mine) out.set(h.userId, (mine = []));
+      mine.push({
+        slug: s.slug,
+        title: s.title,
+        category: s.category,
+        startsAt: s.startsAt,
+      });
+    }
+  }
+  return out;
+}
+
 /**
  * The ids of the sessions a viewer is in: hosting, shepherding, RSVP'd to
  * (waitlist included) or bookmarked. Only ids from `sessions` come back, so
