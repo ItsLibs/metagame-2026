@@ -39,12 +39,13 @@ const MONO =
 // Where a speaker's faction medals sit, by how many they have: the centre of
 // each in medal widths (--s) from the photo's top-right corner. One sits on
 // the corner; more wrap it in an arc, the next along the top edge and the
-// third down the side, spaced so none overlaps. `spread` is how much further
-// out each slides while the arc is hovered.
+// third down the side, overlapping a little like pins on a lapel. `spread` is
+// how far each springs out along the arc while the arc is hovered, so they
+// come apart; the later ones set off a beat after the first.
 type Slot = { x: number; y: number; spread: number; tilt: string };
 const CORNER: Slot = { x: 0.55, y: 0.55, spread: 0, tilt: "rotate-[-6deg]" };
-const ALONG: Slot = { x: 1.65, y: 0.72, spread: 0.2, tilt: "rotate-[6deg]" };
-const DOWN: Slot = { x: 0.72, y: 1.65, spread: 0.2, tilt: "rotate-[-6deg]" };
+const ALONG: Slot = { x: 1.32, y: 0.68, spread: 0.5, tilt: "rotate-[6deg]" };
+const DOWN: Slot = { x: 0.68, y: 1.32, spread: 0.5, tilt: "rotate-[-6deg]" };
 const ARCS: Slot[][] = [[], [CORNER], [CORNER, ALONG], [CORNER, ALONG, DOWN]];
 
 // Each faction's own words on a medal's tooltip, and how its medal moves when
@@ -210,9 +211,10 @@ export default function SpeakerCard({
                   return (
                     <li
                       key={f}
-                      className="absolute transition-[top,right] duration-300 motion-reduce:transition-none"
+                      className="absolute transition-[top,right] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none"
                       style={{
                         zIndex: factions.length - i,
+                        transitionDelay: `${i * 60}ms`,
                         top: `calc(var(--s) * (${slot.y - 0.5} + ${slot.spread} * var(--k)))`,
                         right: `calc(var(--s) * (${slot.x - 0.5} + ${slot.spread} * var(--k)))`,
                       }}
