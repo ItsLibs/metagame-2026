@@ -10,7 +10,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { removeUser, setBanned, setRole, type Result } from "./actions";
+import {
+  removeUser,
+  setBanned,
+  setMegagameLevel,
+  setRole,
+  type Result,
+} from "./actions";
 import { assignRole } from "./[id]/actions";
 import NewUserDialog, { type Created } from "./NewUserDialog";
 import { fieldClass, selectClass, selectStyle, smallButtonClass } from "../ui";
@@ -18,6 +24,7 @@ import { ticketBadge } from "@/lib/admin-tickets";
 import {
   CLASS_LABELS,
   FACTION_NAMES,
+  MAX_LEVEL,
   MEGAGAME_CLASSES,
   classLevelLabel,
   type MegagameClass,
@@ -149,6 +156,87 @@ function FactionCell({ u, dark }: { u: UserRow; dark?: boolean }) {
   );
 }
 
+/**
+ * One row per faction with its level and − / + to take or grant experience:
+ * + on 0 joins, − on 1 leaves. `dark` restyles it for the navy sheet.
+ */
+function FactionLevels({
+  u,
+  pending,
+  run,
+  dark,
+}: {
+  u: UserRow;
+  pending: boolean;
+  run: (userId: string, action: () => Promise<Result>) => void;
+  dark?: boolean;
+}) {
+  const step = `inline-flex size-6 items-center justify-center rounded border text-sm leading-none disabled:opacity-30 ${
+    dark
+      ? "border-cream/30 text-cream hover:enabled:bg-cream/10"
+      : "border-line text-navy hover:enabled:bg-cream"
+  }`;
+  const muted = dark ? "text-cream/50" : "text-ink/50";
+  return (
+    <ul className="space-y-1">
+      {MEGAGAME_CLASSES.map((c) => {
+        const level = levelIn(u, c);
+        const set = (to: number) =>
+          run(u.id, () => setMegagameLevel(u.id, c, to));
+        return (
+          <li key={c} className="flex items-center gap-2 rounded px-2 py-1">
+            <FactionMedal
+              faction={c}
+              className={`size-5 ${level === 0 ? "opacity-40 grayscale" : ""}`}
+            />
+            <span className="min-w-0 flex-1">
+              <span
+                className={`block text-sm font-semibold ${level === 0 ? muted : dark ? "text-cream" : "text-navy"}`}
+              >
+                {FACTION_NAMES[c]}
+              </span>
+              <span className={`block text-xs ${muted}`}>
+                {level === 0 ? "Not joined" : classLevelLabel(c, level)}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                disabled={pending || level === 0}
+                onClick={() => set(level - 1)}
+                aria-label={
+                  level === 1
+                    ? `Remove from the ${FACTION_NAMES[c]}`
+                    : `Take a ${CLASS_LABELS[c]} level`
+                }
+                className={step}
+              >
+                −
+              </button>
+              <span className="w-4 text-center font-mono text-xs tabular-nums">
+                {level}
+              </span>
+              <button
+                type="button"
+                disabled={pending || level === MAX_LEVEL}
+                onClick={() => set(level + 1)}
+                aria-label={
+                  level === 0
+                    ? `Add to the ${FACTION_NAMES[c]}`
+                    : `Grant a ${CLASS_LABELS[c]} level`
+                }
+                className={step}
+              >
+                +
+              </button>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function AdminShield() {
   return (
     <span title="Admin" className="inline-flex">
@@ -186,6 +274,7 @@ export default function UsersTable({
   const [deleting, setDeleting] = useState<UserRow | null>(null);
   const [promoting, setPromoting] = useState<UserRow | null>(null);
   const [openRoles, setOpenRoles] = useState<string | null>(null);
+  const [openFactions, setOpenFactions] = useState<string | null>(null);
   // An id, not a row: rows refresh after each action and the sheet must follow.
   const [openId, setOpenId] = useState<string | null>(null);
   const openUser = rows.find((u) => u.id === openId) ?? null;
@@ -355,7 +444,7 @@ export default function UsersTable({
           menu when the list is only a row or two tall — so let the box
           overflow while a menu is open. */}
       <div
-        className={`hidden rounded-xl border border-line bg-white shadow-sm md:block ${openRoles ? "overflow-visible" : "overflow-x-auto"}`}
+        className={`hidden rounded-xl border border-line bg-white shadow-sm md:block ${openRoles || openFactions ? "overflow-visible" : "overflow-x-auto"}`}
       >
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
@@ -420,7 +509,45 @@ export default function UsersTable({
                     <TicketCell id={u.id} count={u.tickets} />
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap">
-                    <FactionCell u={u} />
+                    {viewerCanEdit ? (
+                      <span className="relative inline-block">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          aria-haspopup="menu"
+                          aria-expanded={openFactions === u.id}
+                          onClick={() =>
+                            setOpenFactions(openFactions === u.id ? null : u.id)
+                          }
+                          className={`${smallButtonClass} inline-flex items-center gap-1.5`}
+                        >
+                          <FactionCell u={u} />
+                          <ChevronDownIcon className="size-3.5" />
+                        </button>
+                        {openFactions === u.id && (
+                          <>
+                            <button
+                              type="button"
+                              aria-label="Close"
+                              onClick={() => setOpenFactions(null)}
+                              className="fixed inset-0 z-10 cursor-default"
+                            />
+                            <div
+                              role="menu"
+                              className="absolute left-0 z-20 mt-1 w-64 rounded-lg border border-line bg-white p-2 text-left shadow-lg"
+                            >
+                              <FactionLevels
+                                u={u}
+                                pending={pending}
+                                run={run}
+                              />
+                            </div>
+                          </>
+                        )}
+                      </span>
+                    ) : (
+                      <FactionCell u={u} />
+                    )}
                   </td>
                   <td
                     className="px-4 py-2 whitespace-nowrap"
@@ -845,7 +972,13 @@ function UserDetail({
         </Field>
         <div className="col-span-2">
           <Field label="Factions">
-            <FactionCell u={u} dark />
+            {viewerCanEdit || viewerIsAdmin ? (
+              <div className="-mx-2 mt-1">
+                <FactionLevels u={u} pending={pending} run={run} dark />
+              </div>
+            ) : (
+              <FactionCell u={u} dark />
+            )}
           </Field>
         </div>
         <div className="col-span-2">
