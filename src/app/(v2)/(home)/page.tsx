@@ -22,7 +22,6 @@ import Highlights2025 from "@/v2/components/Highlights2025";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
 import SiteHero from "@/v2/components/SiteHero";
-import SpeakerCard from "@/v2/components/SpeakerCard";
 import PlayWeb from "@/v2/components/PlayWeb";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import {
@@ -42,7 +41,7 @@ import {
   SILVER_SPONSORS,
 } from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
-import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
+import SpeakersSection from "@/v2/components/SpeakersSection";
 import {
   HOTELS_SEARCH_URL,
   HOUSING_URL,
@@ -325,34 +324,12 @@ export default async function Home() {
       <CastlingDivider />
 
       {/* speakers */}
-      <section id="speakers" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading eyebrow="Who will be there?" title="Speakers" />
-          {/* Wrapping flex, not a grid, so a short last row centers. */}
-          <div className="mt-10 flex flex-wrap justify-center gap-2 sm:gap-5">
-            {SPEAKERS.map((speaker) => (
-              <div
-                key={speaker.name}
-                className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(20%-1rem)]"
-              >
-                <SpeakerCard
-                  {...speaker}
-                  factions={activeFactions(
-                    levels?.get(speaker.userId) ?? NO_LEVELS,
-                  )}
-                  sessions={speaking?.get(speaker.userId)}
-                />
-              </div>
-            ))}
-            <div className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(20%-1rem)]">
-              <SpeakerCtaCard href={RFP_FORM_URL} />
-            </div>
-          </div>
-          <p className="mt-8 text-center text-base text-ink/70">
-            And many more coming soon&hellip;
-          </p>
-        </div>
-      </section>
+      <SpeakersSection
+        factionsFor={(speaker) =>
+          activeFactions(levels?.get(speaker.userId) ?? NO_LEVELS)
+        }
+        sessionsFor={(speaker) => speaking?.get(speaker.userId)}
+      />
 
       <CardSuitsDivider />
 
