@@ -99,10 +99,15 @@ export default async function AccountPage({
         initial={initialTab}
         trailing={
           backstage && (
-            <Button asChild variant="navy" size="sm">
+            <Button
+              asChild
+              variant="navy"
+              size="sm"
+              className="max-sm:size-8 max-sm:p-0 max-sm:[&_svg]:size-4"
+            >
               <Link href="/backstage">
                 <GiTheaterCurtains aria-hidden />
-                Backstage
+                <span className="sr-only sm:not-sr-only">Backstage</span>
               </Link>
             </Button>
           )
