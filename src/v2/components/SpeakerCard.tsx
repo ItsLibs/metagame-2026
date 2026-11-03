@@ -36,15 +36,16 @@ const FACE =
 const MONO =
   "font-space-mono text-[9px] uppercase sm:text-xs sm:tracking-[0.08em]";
 
-// Where a speaker's faction medals sit, in medal widths (--s) from the photo's
-// top-right corner: the first on the corner, the next two on an arc around it,
-// one along the top edge and one down the side. `spread` is how far each
-// slides outward while the arc is hovered, so stacked medals come apart.
-const ARC = [
-  { top: 0.12, right: 0.12, spread: 0, tilt: "rotate-[-6deg]" },
-  { top: 0.3, right: 0.74, spread: 0.42, tilt: "rotate-[7deg]" },
-  { top: 0.74, right: 0.3, spread: 0.42, tilt: "rotate-[-7deg]" },
-];
+// Where a speaker's faction medals sit, by how many they have: the centre of
+// each in medal widths (--s) from the photo's top-right corner. One sits on
+// the corner; more wrap it in an arc, the next along the top edge and the
+// third down the side, spaced so none overlaps. `spread` is how much further
+// out each slides while the arc is hovered.
+type Slot = { x: number; y: number; spread: number; tilt: string };
+const CORNER: Slot = { x: 0.55, y: 0.55, spread: 0, tilt: "rotate-[-6deg]" };
+const ALONG: Slot = { x: 1.65, y: 0.72, spread: 0.2, tilt: "rotate-[6deg]" };
+const DOWN: Slot = { x: 0.72, y: 1.65, spread: 0.2, tilt: "rotate-[-6deg]" };
+const ARCS: Slot[][] = [[], [CORNER], [CORNER, ALONG], [CORNER, ALONG, DOWN]];
 
 // Each faction's own words on a medal's tooltip, and how its medal moves when
 // hovered: the College's lifts and glows, the Fleet's rolls like a ship, the
@@ -192,8 +193,8 @@ export default function SpeakerCard({
               </div>
             )}
             {/* The factions a speaker has joined, as the medals from their level
-                badges, tucked around the photo's top-right corner in an arc so
-                they cover as little face as possible (the Hat Trick's hats sit
+                badges, set around the photo's top-right corner in an arc so they
+                cover as little face as possible (the Hat Trick's hats sit
                 on heads). Hovering one wakes its emblem, as on the Megagame
                 tab, and moves it the way its faction would; hovering the arc
                 fans a multiclasser's medals apart. Clicking goes to the
@@ -201,10 +202,10 @@ export default function SpeakerCard({
             {factions.length > 0 && (
               <ul
                 aria-label="Megagame factions"
-                className="absolute top-0 right-0 [--k:0] [--s:2.25rem] focus-within:[--k:1] hover:[--k:1] sm:[--s:3rem]"
+                className="absolute top-0 right-0 [--k:0] [--s:1.75rem] focus-within:[--k:1] hover:[--k:1] sm:[--s:2.5rem]"
               >
                 {factions.map((f, i) => {
-                  const slot = ARC[Math.min(i, ARC.length - 1)];
+                  const slot = ARCS[Math.min(factions.length, 3)][i];
                   const lore = LORE[f];
                   return (
                     <li
@@ -212,8 +213,8 @@ export default function SpeakerCard({
                       className="absolute transition-[top,right] duration-300 motion-reduce:transition-none"
                       style={{
                         zIndex: factions.length - i,
-                        top: `calc(var(--s) * (${slot.top} + ${slot.spread} * var(--k)))`,
-                        right: `calc(var(--s) * (${slot.right} + ${slot.spread} * var(--k)))`,
+                        top: `calc(var(--s) * (${slot.y - 0.5} + ${slot.spread} * var(--k)))`,
+                        right: `calc(var(--s) * (${slot.x - 0.5} + ${slot.spread} * var(--k)))`,
                       }}
                     >
                       <a
