@@ -19,6 +19,7 @@ import {
   CLASS_LABELS,
   FACTION_NAMES,
   MEGAGAME_CLASSES,
+  classLevelLabel,
   type MegagameClass,
 } from "@/lib/megagame-levels";
 import { FactionMedal } from "@/v2/components/megagame/FactionPatch";
@@ -71,17 +72,28 @@ const roleText = (u: UserRow) =>
     .filter(Boolean)
     .join(", ");
 
-/** "Astral College (Wizard) 2, Brethren Fleet (Pirate) 1": what search sees. */
+/** "Astral College (Wizard), Brethren Fleet (Pirate)" or "factionless": what
+ * search sees (one word, so "no" from "no ticket" can't match it). */
 const factionText = (u: UserRow) =>
-  u.factions
-    .map(
-      (f) => `${FACTION_NAMES[f.class]} (${CLASS_LABELS[f.class]}) ${f.level}`,
-    )
-    .join(", ");
+  u.factions.length === 0
+    ? "factionless"
+    : u.factions
+        .map((f) => `${FACTION_NAMES[f.class]} (${CLASS_LABELS[f.class]})`)
+        .join(", ");
 
-/** Sorts the most committed first: more factions, then higher levels. */
-const factionRank = (u: UserRow) =>
-  u.factions.reduce((n, f) => n * 8 + f.level, u.factions.length * 1000);
+const levelIn = (u: UserRow, c: MegagameClass) =>
+  u.factions.find((f) => f.class === c)?.level ?? 0;
+
+/** More factions first, then the higher level, class by class. */
+const compareFactions = (a: UserRow, b: UserRow): number => {
+  if (a.factions.length !== b.factions.length)
+    return a.factions.length - b.factions.length;
+  for (const c of MEGAGAME_CLASSES) {
+    const d = levelIn(a, c) - levelIn(b, c);
+    if (d !== 0) return d;
+  }
+  return 0;
+};
 
 const compare = (a: UserRow, b: UserRow, key: SortKey): number => {
   switch (key) {
@@ -92,7 +104,7 @@ const compare = (a: UserRow, b: UserRow, key: SortKey): number => {
     case "tickets":
       return a.tickets - b.tickets;
     case "factions":
-      return factionRank(a) - factionRank(b);
+      return compareFactions(a, b);
     case "joined":
       return a.joinedAt - b.joinedAt;
     case "roles":
@@ -123,13 +135,13 @@ function FactionCell({ u, dark }: { u: UserRow; dark?: boolean }) {
       {u.factions.map((f) => (
         <span
           key={f.class}
-          title={`${FACTION_NAMES[f.class]} · level ${f.level} ${CLASS_LABELS[f.class]}`}
+          title={`${FACTION_NAMES[f.class]} · ${classLevelLabel(f.class, f.level)}`}
           className="inline-flex items-center gap-1"
         >
           <FactionMedal faction={f.class} className="size-5" />
           <span className="font-mono text-xs">{f.level}</span>
           <span className="sr-only">
-            {FACTION_NAMES[f.class]}, level {f.level}
+            {FACTION_NAMES[f.class]}, {classLevelLabel(f.class, f.level)}
           </span>
         </span>
       ))}
@@ -216,7 +228,7 @@ export default function UsersTable({
         u.banned ? "banned" : "",
         u.emailVerified ? "" : "unverified",
         u.tickets > 0 ? "ticket" : "no ticket",
-        factionText(u) || "no faction",
+        factionText(u),
       ]
         .join(" ")
         .toLowerCase();
@@ -528,6 +540,13 @@ export default function UsersTable({
                   {u.email}
                 </span>
               </span>
+              {u.factions.map((f) => (
+                <FactionMedal
+                  key={f.class}
+                  faction={f.class}
+                  className="-ml-1 size-4"
+                />
+              ))}
               {u.tickets > 0 && (
                 <TicketIcon
                   className="size-4 shrink-0 text-navy"
