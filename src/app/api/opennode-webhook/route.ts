@@ -24,6 +24,7 @@ import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
 import { sendTicketConfirmationEmail } from "@/lib/email";
 import { reportError } from "@/lib/error-report";
+import { followUpTicketPurchase } from "@/lib/ticket-followup";
 
 // HMAC verification + the OpenNode key need Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -258,6 +259,15 @@ export async function POST(request: Request) {
         error: err,
       });
     }
+
+    await followUpTicketPurchase({
+      to: email,
+      name: meta.name ? String(meta.name) : undefined,
+      ticketType: meta.ticketLabel ? String(meta.ticketLabel) : undefined,
+      paymentId: charge.id,
+      test: meta.test === true || meta.test === "true",
+      source: "OpenNode webhook",
+    });
   }
 
   return NextResponse.json({ received: true });

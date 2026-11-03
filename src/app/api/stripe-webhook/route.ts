@@ -11,6 +11,7 @@ import {
 } from "@/lib/airtable";
 import { sendTicketConfirmationEmail } from "@/lib/email";
 import { reportError } from "@/lib/error-report";
+import { followUpTicketPurchase } from "@/lib/ticket-followup";
 import { getStripe } from "@/lib/stripe";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
@@ -332,6 +333,15 @@ export async function POST(request: Request) {
           error: err,
         });
       }
+
+      await followUpTicketPurchase({
+        to: email,
+        name: preferredName ?? full.customer_details?.name ?? undefined,
+        ticketType,
+        paymentId: paymentIntent?.id ?? full.id,
+        test: !event.livemode || isTestCoupon,
+        source: "Stripe webhook",
+      });
     }
   } catch (err) {
     // 500 → Stripe retries; recordPurchase upserts, so a retry can't duplicate.
