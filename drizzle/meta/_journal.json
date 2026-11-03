@@ -211,6 +211,13 @@
       "when": 1793650967440,
       "tag": "0029_unconference_post_attendee",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793742052173,
+      "tag": "0030_unconference_notices",
+      "breakpoints": true
     }
   ]
 }

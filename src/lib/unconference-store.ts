@@ -2,17 +2,21 @@ import { and, asc, count, eq, inArray, lte, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { can } from "./access";
 import { currentSession } from "./auth";
+import type { NoticeDoc } from "./notice-doc";
 import {
   clampNotePosition,
   noteEditor,
   noteRateWindowExpiry,
+  summarizeReactions,
   type NoteColor,
   type NoteEditor,
   type NoteFields,
+  type Reaction,
   type UnconferenceNote,
 } from "./unconference";
 
-const { unconferenceNotes, user, verification } = schema;
+const { unconferenceNotes, unconferenceNoteReactions, user, verification } =
+  schema;
 
 // Notes are read by anyone who can see the schedule, so the author's email is
 // never part of the name; a code sign-in can leave the account name blank.
@@ -22,7 +26,8 @@ const noteColumns = {
   id: unconferenceNotes.id,
   locationId: unconferenceNotes.locationId,
   title: unconferenceNotes.title,
-  body: unconferenceNotes.body,
+  sticky: unconferenceNotes.sticky,
+  poster: unconferenceNotes.poster,
   color: unconferenceNotes.color,
   x: unconferenceNotes.x,
   y: unconferenceNotes.y,
@@ -35,8 +40,9 @@ const noteColumns = {
 type NoteRow = {
   id: string;
   locationId: string;
-  title: string;
-  body: string | null;
+  title: string | null;
+  sticky: NoticeDoc;
+  poster: NoticeDoc;
   color: NoteColor;
   x: number;
   y: number;
@@ -46,22 +52,53 @@ type NoteRow = {
   updatedAt: Date;
 };
 
-const toNote = (row: NoteRow): UnconferenceNote => ({
+const toNote = (row: NoteRow, reactions: Reaction[]): UnconferenceNote => ({
   id: row.id,
   locationId: row.locationId,
   title: row.title,
-  body: row.body,
+  sticky: row.sticky,
+  poster: row.poster,
   color: row.color,
   x: row.x,
   y: row.y,
   author: { userId: row.authorUserId, name: row.authorName },
+  reactions,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 });
 
+/** Each note's reaction chips, as `viewerId` sees them. */
+async function reactionsFor(
+  noteIds: readonly string[],
+  viewerId: string | null,
+): Promise<Map<string, Reaction[]>> {
+  const out = new Map<string, Reaction[]>();
+  if (noteIds.length === 0) return out;
+  const rows = await getDb()
+    .select({
+      noteId: unconferenceNoteReactions.noteId,
+      emoji: unconferenceNoteReactions.emoji,
+      userId: unconferenceNoteReactions.userId,
+      name: authorName,
+      createdAt: unconferenceNoteReactions.createdAt,
+    })
+    .from(unconferenceNoteReactions)
+    .innerJoin(user, eq(user.id, unconferenceNoteReactions.userId))
+    .where(inArray(unconferenceNoteReactions.noteId, [...noteIds]));
+  const byNote = new Map<string, typeof rows>();
+  for (const r of rows) {
+    byNote.set(r.noteId, [...(byNote.get(r.noteId) ?? []), r]);
+  }
+  for (const [id, list] of byNote) {
+    out.set(id, summarizeReactions(list, viewerId));
+  }
+  return out;
+}
+
 /** Every note in these rooms, oldest first. The board restacks for painting. */
 export async function listNotesIn(
   locationIds: readonly string[],
+  viewerId: string | null,
 ): Promise<UnconferenceNote[]> {
   if (locationIds.length === 0) return [];
   const rows = await getDb()
@@ -70,18 +107,20 @@ export async function listNotesIn(
     .innerJoin(user, eq(user.id, unconferenceNotes.authorUserId))
     .where(inArray(unconferenceNotes.locationId, [...locationIds]))
     .orderBy(asc(unconferenceNotes.createdAt), asc(unconferenceNotes.id));
-  return rows.map(toNote);
+  const reactions = await reactionsFor(
+    rows.map((r) => r.id),
+    viewerId,
+  );
+  return rows.map((r) => toNote(r, reactions.get(r.id) ?? []));
 }
 
-export const listNotes = (locationId: string): Promise<UnconferenceNote[]> =>
-  listNotesIn([locationId]);
-
 /**
- * One note as it stands. A partial edit (just the body, just the colour)
+ * One note as it stands. A partial edit (just the sticky, just the colour)
  * reads this rather than trusting the client for the other half.
  */
 export async function noteById(
   noteId: string,
+  viewerId: string | null = null,
 ): Promise<UnconferenceNote | null> {
   const [row] = await getDb()
     .select(noteColumns)
@@ -89,7 +128,9 @@ export async function noteById(
     .innerJoin(user, eq(user.id, unconferenceNotes.authorUserId))
     .where(eq(unconferenceNotes.id, noteId))
     .limit(1);
-  return row ? toNote(row) : null;
+  if (!row) return null;
+  const reactions = await reactionsFor([noteId], viewerId);
+  return toNote(row, reactions.get(noteId) ?? []);
 }
 
 export type NewNote = NoteFields & {
@@ -109,7 +150,8 @@ export async function createNote(note: NewNote): Promise<UnconferenceNote> {
         locationId: note.locationId,
         authorUserId: note.authorUserId,
         title: note.title,
-        body: note.body,
+        sticky: note.sticky,
+        poster: note.poster,
         color: note.color,
         x,
         y,
@@ -122,12 +164,13 @@ export async function createNote(note: NewNote): Promise<UnconferenceNote> {
       .limit(1),
   ]);
   if (!row) throw new Error("That note could not be pinned up.");
-  return toNote({ ...row, authorName: who?.authorName ?? "Someone" });
+  return toNote({ ...row, authorName: who?.authorName ?? "Someone" }, []);
 }
 
 /**
- * What the author may rewrite. Names title, body and colour only, so nothing built
- * from a form can move a note to another room or hand it to someone else.
+ * What the author may rewrite. Names the documents, title and colour only,
+ * so nothing built from a form can move a note to another room or hand it to
+ * someone else.
  */
 export async function updateNote(
   noteId: string,
@@ -135,7 +178,12 @@ export async function updateNote(
 ): Promise<void> {
   const [updated] = await getDb()
     .update(unconferenceNotes)
-    .set({ title: fields.title, body: fields.body, color: fields.color })
+    .set({
+      title: fields.title,
+      sticky: fields.sticky,
+      poster: fields.poster,
+      color: fields.color,
+    })
     .where(eq(unconferenceNotes.id, noteId))
     .returning({ id: unconferenceNotes.id });
   if (!updated) throw new Error("That note is no longer on the board.");
@@ -183,6 +231,46 @@ export async function noteAccess(noteId: string): Promise<NoteEditor | null> {
   ]);
   if (!authorId) return null;
   return noteEditor(session?.user.id ?? null, authorId, !!team);
+}
+
+/** How many different emoji a notice already carries. */
+export async function distinctEmojiCount(noteId: string): Promise<number> {
+  const [row] = await getDb()
+    .select({
+      n: sql<number>`count(distinct ${unconferenceNoteReactions.emoji})::int`,
+    })
+    .from(unconferenceNoteReactions)
+    .where(eq(unconferenceNoteReactions.noteId, noteId));
+  return row?.n ?? 0;
+}
+
+/**
+ * Adds the viewer's emoji, or takes it back off if it was already there.
+ * Returns the note's chips afterwards.
+ */
+export async function toggleReaction(
+  noteId: string,
+  userId: string,
+  emoji: string,
+): Promise<{ added: boolean; reactions: Reaction[] }> {
+  const db = getDb();
+  const key = and(
+    eq(unconferenceNoteReactions.noteId, noteId),
+    eq(unconferenceNoteReactions.userId, userId),
+    eq(unconferenceNoteReactions.emoji, emoji),
+  );
+  const removed = await db
+    .delete(unconferenceNoteReactions)
+    .where(key)
+    .returning({ emoji: unconferenceNoteReactions.emoji });
+  if (removed.length === 0) {
+    await db
+      .insert(unconferenceNoteReactions)
+      .values({ noteId, userId, emoji })
+      .onConflictDoNothing();
+  }
+  const chips = await reactionsFor([noteId], userId);
+  return { added: removed.length === 0, reactions: chips.get(noteId) ?? [] };
 }
 
 // The posting budget is spent on pinning a note up, not on leaving it up:

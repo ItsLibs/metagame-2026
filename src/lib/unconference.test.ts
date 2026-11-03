@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EMPTY_DOC } from "./notice-doc";
 import {
   boardEditor,
   boardLattice,
@@ -11,14 +12,12 @@ import {
   noteEditor,
   noteRateWindowExpiry,
   notesInPaintOrder,
-  NOTE_BODY_MAX,
   NOTE_COLORS,
   NOTE_RATE_LIMIT,
   overNoteRateLimit,
-  parseNoteBody,
-  parseNoteTitle,
-  NOTE_TITLE_MAX,
+  parseEmoji,
   pickNoteColor,
+  summarizeReactions,
 } from "./unconference";
 
 describe("pickNoteColor", () => {
@@ -47,59 +46,6 @@ describe("pickNoteColor", () => {
       expect(isNoteColor(pickNoteColor(i))).toBe(true);
     expect(isNoteColor("chartreuse")).toBe(false);
     expect(isNoteColor(null)).toBe(false);
-  });
-});
-
-describe("parseNoteTitle", () => {
-  it("trims what it keeps", () => {
-    expect(parseNoteTitle("  Werewolf, 10pm  ")).toEqual({
-      title: "Werewolf, 10pm",
-    });
-  });
-
-  // A note is its heading: without one there is nothing for a tile to show.
-  it("refuses a blank or absent title", () => {
-    for (const bad of ["", "   ", undefined, null, 42]) {
-      expect(parseNoteTitle(bad)).toEqual({ error: "Give it a title first." });
-    }
-  });
-
-  it("caps the length, counting after the trim", () => {
-    const max = "x".repeat(NOTE_TITLE_MAX);
-    expect(parseNoteTitle(`  ${max}  `)).toEqual({ title: max });
-    expect(parseNoteTitle(`${max}y`)).toEqual({
-      error: `Keep the title under ${NOTE_TITLE_MAX} characters.`,
-    });
-  });
-});
-
-describe("parseNoteBody", () => {
-  it("trims what it keeps", () => {
-    expect(parseNoteBody("  lightning chess  ")).toEqual({
-      body: "lightning chess",
-    });
-  });
-
-  it("reads an empty or absent body as a note with no body", () => {
-    // A note may be a heading alone, so this is not an error — only a title
-    // is required, and parseNoteTitle is what refuses a blank one.
-    expect(parseNoteBody("")).toEqual({ body: null });
-    expect(parseNoteBody("   \n ")).toEqual({ body: null });
-    expect(parseNoteBody(undefined)).toEqual({ body: null });
-    expect(parseNoteBody(null)).toEqual({ body: null });
-  });
-
-  it("still refuses something that is not text", () => {
-    expect(parseNoteBody(42)).toEqual({ error: "That isn't text." });
-  });
-
-  it("caps the length, counting after the trim", () => {
-    const max = "x".repeat(NOTE_BODY_MAX);
-    expect(parseNoteBody(max)).toEqual({ body: max });
-    expect(parseNoteBody(`  ${max}  `)).toEqual({ body: max });
-    expect(parseNoteBody(`${max}y`)).toEqual({
-      error: `Keep it under ${NOTE_BODY_MAX} characters.`,
-    });
   });
 });
 
@@ -216,11 +162,13 @@ describe("boardNote", () => {
     id: "n1",
     locationId: "room",
     title: "Lightning chess",
-    body: "Five minutes a side.",
+    sticky: EMPTY_DOC,
+    poster: EMPTY_DOC,
     color: "sky" as const,
     x: 0,
     y: 0,
     author: { userId: "ana", name: "Ana" },
+    reactions: [],
     createdAt: "2026-06-01T10:00:00.000Z",
     updatedAt: "2026-06-01T10:00:00.000Z",
   };
@@ -352,5 +300,42 @@ describe("firstFreeSpot", () => {
     expect(second).toEqual({ x: 1, y: 0 });
     const third = firstFreeSpot([{ x: 0, y: 0 }, second], phone);
     expect(third.y).toBeGreaterThan(0);
+  });
+});
+
+describe("parseEmoji", () => {
+  it("takes single emoji, ZWJ sequences, skin tones, flags and keycaps", () => {
+    for (const e of ["👍", "❤️", "👩‍💻", "👍🏽", "🇺🇸", "1️⃣", "🏳️‍🌈"]) {
+      expect(parseEmoji(e)).toBe(e);
+    }
+  });
+
+  it("refuses text, digits and anything too long", () => {
+    for (const bad of ["", "hi", "1", "#", "👍 hi", "<b>", null, 3]) {
+      expect(parseEmoji(bad)).toBeNull();
+    }
+    expect(parseEmoji("👍".repeat(20))).toBeNull();
+  });
+});
+
+describe("summarizeReactions", () => {
+  const row = (emoji: string, userId: string, minute: number) => ({
+    emoji,
+    userId,
+    name: userId.toUpperCase(),
+    createdAt: new Date(Date.UTC(2026, 10, 6, 10, minute)),
+  });
+
+  it("folds rows into chips in first-reacted order, marking the viewer's", () => {
+    const chips = summarizeReactions(
+      [row("🎉", "b", 2), row("👍", "a", 1), row("🎉", "a", 3)],
+      "a",
+    );
+    expect(chips.map((c) => [c.emoji, c.count, c.mine])).toEqual([
+      ["👍", 1, true],
+      ["🎉", 2, true],
+    ]);
+    expect(chips[1].names).toEqual(["B", "A"]);
+    expect(summarizeReactions([row("🎉", "b", 2)], null)[0].mine).toBe(false);
   });
 });

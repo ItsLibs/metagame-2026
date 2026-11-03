@@ -3,6 +3,8 @@
 // read the same constants. Positions are fractions of the board, never pixels:
 // the column is 1fr-fluid and its height changes with the day.
 
+import type { NoticeDoc } from "./notice-doc";
+
 /** Mirrors the unconference_note_color pgEnum. */
 export const NOTE_COLORS = [
   "butter",
@@ -19,27 +21,34 @@ export const isNoteColor = (value: unknown): value is NoteColor =>
   typeof value === "string" &&
   (NOTE_COLORS as readonly string[]).includes(value);
 
-/** Mirrors the unconference_notes_body_length check constraint. */
-export const NOTE_BODY_MAX = 1000;
+/** One emoji on one notice, as the board shows it. */
+export type Reaction = {
+  emoji: string;
+  count: number;
+  /** Whether the viewer is one of them, so the chip shows pressed. */
+  mine: boolean;
+  /** A few of the names, for the chip's tooltip. */
+  names: string[];
+};
 
-/** The heading a tile shows. Mirrors the column's own check. */
-export const NOTE_TITLE_MAX = 120;
-
-/** What the board shows on a tile before the overlay gives the whole thing. */
-export const NOTE_PREVIEW_MAX = 140;
-
+/**
+ * A notice: a sticky note, which is what the board draws, and the poster it
+ * opens into. Both are NoticeDocs; see notice-doc.ts.
+ */
 export type UnconferenceNote = {
   id: string;
   locationId: string;
-  /** The heading, shown on the tile. */
-  title: string;
-  /** The rest, shown only once the note is opened; null when there is none. */
-  body: string | null;
+  /** Plain text standing in for the notice, derived on save; null if only drawings. */
+  title: string | null;
+  sticky: NoticeDoc;
+  poster: NoticeDoc;
+  /** The sticky note's paper. */
   color: NoteColor;
   /** Fractions of the board, 0..1, measured from its top left. */
   x: number;
   y: number;
   author: { userId: string; name: string };
+  reactions: Reaction[];
   /** ISO strings. */
   createdAt: string;
   updatedAt: string;
@@ -69,8 +78,9 @@ export const boardNote = (
  * built from this can move a note between rooms or change its author.
  */
 export type NoteFields = {
-  title: string;
-  body: string | null;
+  title: string | null;
+  sticky: NoticeDoc;
+  poster: NoticeDoc;
   color: NoteColor;
 };
 
@@ -84,7 +94,7 @@ export type BoardData = {
   notes: BoardNote[];
   /** Whether there is an account at all, so the board says which key is missing. */
   signedIn: boolean;
-  /** Holds unconference.post. */
+  /** Holds unconference.post, which also covers reacting. */
   canPost: boolean;
   /** Holds schedule.manage, so may take anyone's note down. */
   isTeam: boolean;
@@ -101,31 +111,57 @@ export function pickNoteColor(index: number): NoteColor {
   return NOTE_COLORS[i < 0 ? i + NOTE_COLORS.length : i];
 }
 
-/** The body as it may be stored, or why it can't be. */
-export function parseNoteTitle(
-  value: unknown,
-): { title: string } | { error: string } {
-  if (typeof value !== "string") return { error: "Give it a title first." };
-  const title = value.trim();
-  if (title.length === 0) return { error: "Give it a title first." };
-  if (title.length > NOTE_TITLE_MAX) {
-    return { error: `Keep the title under ${NOTE_TITLE_MAX} characters.` };
-  }
-  return { title };
+/** Mirrors the unconference_note_reactions_emoji_length check. */
+export const EMOJI_MAX = 32;
+
+/** How many different emoji one notice can collect. */
+export const REACTIONS_PER_NOTE_MAX = 30;
+
+// One emoji, possibly a ZWJ sequence with skin tones, a flag or a keycap:
+// only emoji parts, and at least one part that is a picture on its own.
+const EMOJI_PARTS =
+  /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\p{Emoji_Modifier}|‍|️|⃣)+$/u;
+const EMOJI_CORE = /\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u;
+
+/** The emoji as it may be stored, or null. */
+export function parseEmoji(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const emoji = value.trim();
+  if (emoji.length === 0 || emoji.length > EMOJI_MAX) return null;
+  if (!EMOJI_PARTS.test(emoji) || !EMOJI_CORE.test(emoji)) return null;
+  return emoji;
 }
 
-/** The body is optional: a note may be a heading and nothing else. */
-export function parseNoteBody(
-  value: unknown,
-): { body: string | null } | { error: string } {
-  if (value === null || value === undefined) return { body: null };
-  if (typeof value !== "string") return { error: "That isn't text." };
-  const body = value.trim();
-  if (body.length === 0) return { body: null };
-  if (body.length > NOTE_BODY_MAX) {
-    return { error: `Keep it under ${NOTE_BODY_MAX} characters.` };
+/**
+ * Reaction rows folded into chips, in the order each emoji first appeared,
+ * the way Discord keeps them.
+ */
+export function summarizeReactions(
+  rows: readonly {
+    emoji: string;
+    userId: string;
+    name: string;
+    createdAt: Date | string;
+  }[],
+  viewerId: string | null,
+): Reaction[] {
+  const sorted = [...rows].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+  const chips = new Map<string, Reaction>();
+  for (const r of sorted) {
+    const chip = chips.get(r.emoji) ?? {
+      emoji: r.emoji,
+      count: 0,
+      mine: false,
+      names: [],
+    };
+    chip.count += 1;
+    if (viewerId && r.userId === viewerId) chip.mine = true;
+    if (chip.names.length < 8) chip.names.push(r.name);
+    chips.set(r.emoji, chip);
   }
-  return { body };
+  return [...chips.values()];
 }
 
 /** The tile's own size, as fractions of the board. */

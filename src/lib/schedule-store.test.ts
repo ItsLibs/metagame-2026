@@ -31,11 +31,11 @@ describe("constraintMessage", () => {
 
   it("reads a constraint through the error's causes", () => {
     const err = Object.assign(new Error("insert failed"), {
-      cause: { constraint: "unconference_notes_body_length" },
+      cause: { constraint: "unconference_notes_x_fraction" },
     });
     expect(constraintMessage(err)).toEqual({
-      field: "body",
-      error: "A note needs some text, and under 1000 characters of it.",
+      field: "position",
+      error: "That spot is off the board.",
     });
     expect(explainDbError(err)).toEqual(constraintMessage(err));
   });

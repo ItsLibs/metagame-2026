@@ -7,23 +7,38 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { noticeText } from "@/lib/notice-doc";
 import {
   clampNotePosition,
   firstFreeSpot,
-  NOTE_PREVIEW_MAX,
   notesInPaintOrder,
   type BoardNote,
 } from "@/lib/unconference";
-import { NOTE_STYLES } from "@/v2/lib/schedule-styles";
 import { NEEDS_TICKET_HINT, useNoteBoard } from "./NoteBoard";
+import NoticeCanvas from "./notice/NoticeCanvas";
+import { StickyPaper, tiltFor } from "./notice/Paper";
+import { ReactionCrumbs } from "./notice/Reactions";
 import { EmptyPanel, ROW, SessionRows } from "./ScheduleViews";
 
-// The bulletin board a "board" room's column is drawn as: identical post-its
-// wherever their fractions put them, the oldest on top. A mouse drags them
-// around; everything else taps one open.
+// The bulletin board a "board" room's column is drawn as: a cork board in a
+// wooden frame, with each notice's sticky note wherever its fractions put it,
+// the newest on top. A mouse drags them around; everything else taps one
+// open into its poster.
 
-/** Every note is the same tile; the overlay is what shows the whole thing. */
-export const TILE_PX = 92;
+/** Every sticky note is the same size; the poster is what shows the rest. */
+export const TILE_PX = 108;
+
+// Cork: a warm base with two scales of speckle, all CSS so nothing to load.
+const CORK: React.CSSProperties = {
+  backgroundColor: "#c99a62",
+  backgroundImage: [
+    "radial-gradient(rgba(92,54,22,0.35) 1px, transparent 1.5px)",
+    "radial-gradient(rgba(255,236,200,0.35) 1px, transparent 1.5px)",
+    "radial-gradient(rgba(92,54,22,0.18) 2px, transparent 2.5px)",
+  ].join(","),
+  backgroundSize: "9px 9px, 13px 13px, 23px 23px",
+  backgroundPosition: "0 0, 5px 7px, 11px 3px",
+};
 
 /** A drag has to beat this many pixels before it counts as one. */
 const DRAG_SLOP = 3;
@@ -64,12 +79,8 @@ const PIN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
 /** How long the pin rests before the board offers to take a note there. */
 const DWELL_MS = 450;
 
-const preview = (body: string): string =>
-  body.length > NOTE_PREVIEW_MAX
-    ? `${body.slice(0, NOTE_PREVIEW_MAX - 1).trimEnd()}…`
-    : body;
-
-const BAR = "flex items-center gap-2 px-1.5 py-1.5 text-[11px]";
+const BAR =
+  "flex items-center gap-2 border-b-2 border-[#1b1530]/25 bg-[#f4ecd2] px-2 py-1.5 text-[11px]";
 const HINT_LINK = "underline underline-offset-2 hover:text-[#1b1530]";
 
 /**
@@ -259,7 +270,8 @@ export default function UnconferenceBoard({
   }
 
   return (
-    <div className="absolute inset-0 flex flex-col overflow-hidden bg-[#c08a55]/20">
+    // The frame: a wooden border with a dark ink outline, clipart-style.
+    <div className="absolute inset-0 flex flex-col overflow-hidden border-[7px] border-[#9a6430] shadow-[inset_0_0_0_2px_#1b1530,inset_3px_4px_0_8px_rgba(27,21,48,0.18)] outline-2 -outline-offset-2 outline-[#1b1530]">
       {/* No button: a note goes up where the pin is. The bar stays only to
           tell someone without a ticket why they can't put one up. */}
       {!board.canPost && (
@@ -272,12 +284,13 @@ export default function UnconferenceBoard({
         onPointerMove={trackPin}
         onPointerLeave={dropPin}
         onClick={pinHere}
-        style={pinnable ? { cursor: PIN_CURSOR } : undefined}
-        className="relative min-h-0 flex-1"
+        style={{ ...CORK, ...(pinnable && { cursor: PIN_CURSOR }) }}
+        className="relative min-h-0 flex-1 shadow-[inset_2px_3px_6px_rgba(27,21,48,0.35)]"
       >
         {notes.length === 0 && (
-          <p className="px-2 py-3 text-center text-[11px] text-[#1b1530]/45">
+          <p className="pointer-events-none mx-auto mt-4 w-fit rounded-[3px] border-[1.5px] border-[#1b1530]/40 bg-cream/90 px-2 py-1 text-center text-[11px] text-[#1b1530]/70 shadow-[2px_2px_0_rgba(27,21,48,0.25)]">
             Nothing pinned up yet.
+            {board.canPost && " Click the cork to add one."}
           </p>
         )}
         {/* Only after the pin has rested: following the cursor from the first
@@ -299,7 +312,8 @@ export default function UnconferenceBoard({
             <button
               key={note.id}
               type="button"
-              title={note.title}
+              title={note.title ?? "A drawing"}
+              aria-label={`${note.title ?? "A drawing"}, by ${note.author.name}`}
               aria-haspopup="dialog"
               onPointerDown={(e) => grab(e, note)}
               onPointerMove={slide}
@@ -318,18 +332,23 @@ export default function UnconferenceBoard({
                 top: offset(at.y, TILE_PX),
                 width: TILE_PX,
                 height: TILE_PX,
-                ...NOTE_STYLES[note.color],
+                transform: `rotate(${tiltFor(note.id)}deg)`,
               }}
-              className={`absolute flex flex-col overflow-hidden rounded-[2px] border p-1.5 text-left text-[#1b1530] shadow-[0_1px_4px_rgba(27,21,48,0.25)] select-none ${
+              className={`group absolute text-left select-none ${
                 board.canMove(note) ? "cursor-grab" : "cursor-pointer"
               }`}
             >
-              <span className="line-clamp-4 text-[11px] leading-tight font-bold">
-                {preview(note.title)}
-              </span>
-              <span className="mt-auto truncate text-[9px] text-[#1b1530]/60">
-                {note.author.name}
-              </span>
+              <StickyPaper
+                color={note.color}
+                size={TILE_PX}
+                outline={1.75}
+                className="transition-transform group-hover:-translate-y-0.5"
+              >
+                <NoticeCanvas face="sticky" doc={note.sticky} width={TILE_PX} />
+              </StickyPaper>
+              <div className="absolute -bottom-2 left-1">
+                <ReactionCrumbs reactions={note.reactions} />
+              </div>
             </button>
           );
         })}
@@ -386,6 +405,7 @@ function NoteRow({
   note: BoardNote;
   onOpen: (noteId: string) => void;
 }) {
+  const body = noticeText(note.poster);
   return (
     <li>
       <button
@@ -394,20 +414,26 @@ function NoteRow({
         onClick={() => onOpen(note.id)}
         className={`${ROW} transition-colors hover:bg-[#1b1530]/[0.04]`}
       >
-        <div
-          aria-hidden
-          className="w-1.5 shrink-0 rounded-full border"
-          style={NOTE_STYLES[note.color]}
-        />
+        <StickyPaper
+          color={note.color}
+          size={64}
+          outline={1.5}
+          className="shrink-0"
+        >
+          <NoticeCanvas face="sticky" doc={note.sticky} width={64} />
+        </StickyPaper>
         <div className="min-w-0 flex-1">
-          <div className="leading-snug font-bold break-words">{note.title}</div>
-          {note.body && (
-            <div className="mt-0.5 leading-snug break-words whitespace-pre-wrap text-[#1b1530]/80">
-              {note.body}
+          <div className="leading-snug font-bold break-words">
+            {note.title ?? "A drawing"}
+          </div>
+          {body && (
+            <div className="mt-0.5 line-clamp-2 leading-snug break-words text-[#1b1530]/80">
+              {body}
             </div>
           )}
-          <div className="mt-0.5 text-[13px] text-[#1b1530]/65">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-[#1b1530]/65">
             {note.author.name}
+            <ReactionCrumbs reactions={note.reactions} max={5} />
           </div>
         </div>
       </button>

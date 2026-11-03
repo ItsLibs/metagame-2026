@@ -50,13 +50,16 @@ export const boardRooms = cache(async (): Promise<PublicLocation[]> => {
 export const loadBoard = cache(async (): Promise<BoardData | null> => {
   const rooms = await boardRooms();
   if (rooms.length === 0) return null;
-  const [notes, session, post, team] = await Promise.all([
-    listNotesIn(rooms.map((r) => r.id)),
+  const [session, post, team] = await Promise.all([
     currentSession(),
     can("unconference.post"),
     can("schedule.manage"),
   ]);
   const viewerId = session?.user.id ?? null;
+  const notes = await listNotesIn(
+    rooms.map((r) => r.id),
+    viewerId,
+  );
   return {
     // Mapped, not sent as read: the client needs the author's name and
     // whether the note is its own, never an account id.

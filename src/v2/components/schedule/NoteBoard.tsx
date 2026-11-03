@@ -10,9 +10,9 @@ import {
 } from "react";
 import {
   pinNote,
-  recolourNote,
+  reactToNote,
   repinNote,
-  rewriteNote,
+  saveNote,
   unpinNote,
   type NoteState,
 } from "@/app/(v2)/schedule/note-actions";
@@ -26,8 +26,9 @@ import {
   type BoardData,
   type BoardNote,
   type NoteColor,
+  type Reaction,
 } from "@/lib/unconference";
-import NoteDialog from "./NoteDialog";
+import NoticeDialog, { type Draft } from "./notice/NoticeDialog";
 
 // Every note surface — the board column in grid view and the rows in list
 // view — reads its notes from here, so switching view or day tab doesn't
@@ -83,10 +84,33 @@ const moved = (list: BoardNote[], id: string, at: Spot) =>
 const without = (list: BoardNote[], id: string) =>
   list.filter((n) => n.id !== id);
 
+const withReactions = (list: BoardNote[], id: string, reactions: Reaction[]) =>
+  list.map((n) => (n.id === id ? { ...n, reactions } : n));
+
+/** The chips after the viewer taps `emoji`, before the server answers. */
+function toggled(reactions: Reaction[], emoji: string): Reaction[] {
+  const chip = reactions.find((r) => r.emoji === emoji);
+  if (!chip) {
+    return [...reactions, { emoji, count: 1, mine: true, names: ["You"] }];
+  }
+  const count = chip.count + (chip.mine ? -1 : 1);
+  if (count <= 0) return reactions.filter((r) => r.emoji !== emoji);
+  return reactions.map((r) =>
+    r.emoji === emoji ? { ...r, count, mine: !r.mine } : r,
+  );
+}
+
 type Pending =
   // The colour is drawn when the composer opens, not when the note saves, so
-  // the dialog can wear the paper it is about to become.
-  | { kind: "new"; locationId: string; spot: Spot; color: NoteColor }
+  // the dialog can wear the paper it is about to become. `createdId` is set
+  // by the first save, so the same dialog keeps editing that notice.
+  | {
+      kind: "new";
+      locationId: string;
+      spot: Spot;
+      color: NoteColor;
+      createdId?: string;
+    }
   | { kind: "open"; noteId: string }
   | null;
 
@@ -158,33 +182,60 @@ export default function BoardNotes({
     }));
   }, []);
 
-  async function create(
-    locationId: string,
-    spot: Spot,
-    title: string,
-    body: string,
-    color: NoteColor,
-  ) {
+  async function save(draft: Draft, id: string | null): Promise<NoteState> {
     setError(null);
-    const result = await safely(() =>
-      pinNote(locationId, { title, body, color, ...spot }),
-    );
+    if (!id) {
+      // No id means the first save of a notice being composed, which only
+      // ever happens under a "new" pending.
+      if (pending?.kind !== "new") return { error: "That note is gone." };
+      const { locationId, spot } = pending;
+      const result = await safely(() =>
+        pinNote(locationId, { ...draft, ...spot }),
+      );
+      if (result.note) {
+        adopt(result.note);
+        const createdId = result.note.id;
+        setPending((p) => (p?.kind === "new" ? { ...p, createdId } : p));
+      }
+      return result;
+    }
+    const result = await safely(() => saveNote(id, draft));
     if (result.note) adopt(result.note);
     return result;
   }
 
-  async function rewrite(noteId: string, title: string, body: string) {
+  async function react(noteId: string, emoji: string) {
     setError(null);
-    const result = await safely(() => rewriteNote(noteId, title, body));
-    if (result.note) adopt(result.note);
-    return result;
-  }
-
-  async function recolour(noteId: string, color: NoteColor) {
-    setError(null);
-    const result = await safely(() => recolourNote(noteId, color));
-    if (result.note) adopt(result.note);
-    return result;
+    setState((s) => {
+      const note = s.shown.find((n) => n.id === noteId);
+      return note
+        ? {
+            ...s,
+            shown: withReactions(
+              s.shown,
+              noteId,
+              toggled(note.reactions, emoji),
+            ),
+          }
+        : s;
+    });
+    const result = await safely(() => reactToNote(noteId, emoji));
+    if (result.reactions) {
+      const reactions = result.reactions;
+      setState((s) => ({
+        ...s,
+        shown: withReactions(s.shown, noteId, reactions),
+        confirmed: withReactions(s.confirmed, noteId, reactions),
+      }));
+      return;
+    }
+    setState((s) => {
+      const was = s.confirmed.find((n) => n.id === noteId);
+      return was
+        ? { ...s, shown: withReactions(s.shown, noteId, was.reactions) }
+        : s;
+    });
+    setError(result.error ?? FAILED);
   }
 
   async function remove(noteId: string) {
@@ -205,10 +256,13 @@ export default function BoardNotes({
 
   // A note that has gone (a delete, or a server render without it) leaves
   // nothing to draw; the stale `pending` is replaced by the next open.
-  const openNote =
+  const openId =
     pending?.kind === "open"
-      ? (shown.find((n) => n.id === pending.noteId) ?? null)
-      : null;
+      ? pending.noteId
+      : pending?.kind === "new"
+        ? pending.createdId
+        : undefined;
+  const openNote = openId ? (shown.find((n) => n.id === openId) ?? null) : null;
 
   const editor = openNote ? editorOf(openNote) : null;
 
@@ -242,7 +296,7 @@ export default function BoardNotes({
       {error && (
         <div
           role="status"
-          className="fixed bottom-4 left-1/2 z-50 flex max-w-[90vw] -translate-x-1/2 items-center gap-3 rounded-lg border border-cream/20 bg-navy px-4 py-2 text-sm text-cream shadow-lg"
+          className="fixed bottom-4 left-1/2 z-[60] flex max-w-[90vw] -translate-x-1/2 items-center gap-3 rounded-lg border border-cream/20 bg-navy px-4 py-2 text-sm text-cream shadow-lg"
         >
           <span>{error}</span>
           <button
@@ -255,30 +309,21 @@ export default function BoardNotes({
         </div>
       )}
       {pending && (openNote || pending.kind === "new") && (
-        <NoteDialog
+        <NoticeDialog
           key={pending.kind === "open" ? pending.noteId : "new"}
           note={openNote}
+          draftColor={pending.kind === "new" ? pending.color : undefined}
           canEdit={
             board.canPost && (pending.kind === "new" || canEditNote(editor))
           }
           // Delete is not gated on canPost: a team member clearing the board
           // holds no ticket, and the action allows them without one.
           canDelete={!!openNote && canDeleteNote(editor)}
+          canReact={board.canPost}
           onClose={() => setPending(null)}
-          draftColor={pending.kind === "new" ? pending.color : undefined}
-          // The id comes from the dialog, not from `pending`: its first save
-          // creates the note, and every save after that rewrites that one.
-          onSave={(title, body, color, id) => {
-            if (id) return rewrite(id, title, body);
-            // No id means this is the first save of a note being composed,
-            // which only ever happens under a "new" pending.
-            if (pending.kind !== "new") {
-              return Promise.resolve({ error: "That note is gone." });
-            }
-            return create(pending.locationId, pending.spot, title, body, color);
-          }}
-          onRecolour={(id, color) => recolour(id, color)}
-          onDelete={(id) => remove(id)}
+          onSave={save}
+          onDelete={remove}
+          onReact={(id, emoji) => void react(id, emoji)}
         />
       )}
     </Context.Provider>

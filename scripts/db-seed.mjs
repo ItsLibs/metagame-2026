@@ -43,6 +43,7 @@
 import { createHash, scryptSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { neon } from "@neondatabase/serverless";
+import { textDoc } from "../src/lib/notice-doc.ts";
 import { SPEAKER_ACCOUNTS } from "../src/v2/data/speaker-accounts.ts";
 
 for (const file of [
@@ -375,18 +376,43 @@ const NOTES = [
   [1804, "newcomer", "mint", 0, 0.2, 6, 17, "Walking tour of campus?", "First Metagame — would love one from someone who knows the place."],
   [1805, "team", "tangerine", 0.5, 0.2, 7, 9, "Teaching Hanabi, all weekend", null],
   [1806, "attendee", "lilac", 1, 0.35, 7, 13, "Werewolf at 10pm — need a co-moderator", "Happy to run it if someone else takes the night phase."],
-].map(([n, who, color, x, y, day, hour, title, body]) => ({
-  id: uuid(n),
-  location_id: locations.ratpark.id,
-  author_user_id: users[who].id,
-  title,
-  body,
-  color,
-  x,
-  y,
-  created_at: at(day, hour),
-  updated_at: at(day, hour),
-}));
+].map(([n, who, color, x, y, day, hour, title, body]) => {
+  // Fixed item ids, so a re-run writes the same documents.
+  const fixed = (doc, tag) => ({
+    ...doc,
+    items: doc.items.map((it, i) => ({ ...it, id: `seed${n}${tag}${i}` })),
+  });
+  const sticky = fixed(
+    textDoc("sticky", [{ text: title, size: "l", bold: true }]),
+    "s",
+  );
+  const poster = fixed(
+    textDoc(
+      "poster",
+      [
+        { text: title, size: "xl", bold: true },
+        { text: "" },
+        ...(body ? [{ text: body, size: "m" }] : []),
+      ],
+      { x: 36, y: 40 },
+      "cream",
+    ),
+    "p",
+  );
+  return {
+    id: uuid(n),
+    location_id: locations.ratpark.id,
+    author_user_id: users[who].id,
+    title,
+    sticky: JSON.stringify(sticky),
+    poster: JSON.stringify(poster),
+    color,
+    x,
+    y,
+    created_at: at(day, hour),
+    updated_at: at(day, hour),
+  };
+});
 
 const slugify = (title) =>
   `seed-${title

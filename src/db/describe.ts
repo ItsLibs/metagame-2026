@@ -61,6 +61,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "rsvps",
     "bookmarks",
     "unconference_notes",
+    "unconference_note_reactions",
   ],
   Grading: ["session_grades", "session_grade_space_options"],
   Budget: ["xero_connections", "budget_import_runs", "budget_ignored_lines"],
@@ -98,7 +99,9 @@ const TABLE_NOTES: Record<string, string> = {
     "Going or waitlisted, one row per user per session. The rsvps_capacity trigger refuses a going row once the session's max_capacity is reached (null = unlimited).",
   bookmarks: "Sessions a user starred. One row per pair.",
   unconference_notes:
-    "Post-its on a board room (locations.layout = 'board'), one row per note; any ticket holder may pin one up, with no committee approval. x and y are fractions of the board, 0 to 1, so it reflows at any width; y is free placement and carries no time. color is a fixed palette, picked at random when the note is made and changeable by its author. The author's name is read from the account, never stored here.",
+    "Notices on a board room (locations.layout = 'board'), one row per notice; any ticket holder may pin one up, with no committee approval. Each is a sticky note (what the board draws) and a poster (what it opens into), stored as JSON documents of text boxes and pen strokes (src/lib/notice-doc.ts), validated on every write. title is plain text derived from them on save, null for a notice that is only drawings. x and y are fractions of the board, 0 to 1, so it reflows at any width; y is free placement and carries no time. color is the sticky note's paper, from a fixed palette. The author's name is read from the account, never stored here.",
+  unconference_note_reactions:
+    "Emoji reactions on a notice, one row per person per emoji, Discord-style. Any ticket holder may react; tapping the same emoji again deletes the row.",
   session_grades:
     "One committee member's grade of a proposal, one row per session and grader; re-grading overwrites it. A row with submitted_at null is an assignment not yet graded. topic_areas and potential_panels are multi-selects as enum arrays. Deleting a grader's account is refused while they have grades, since these are the only copy.",
   session_grade_space_options:

@@ -2,6 +2,11 @@
 
 import { can } from "@/lib/access";
 import { currentSession } from "@/lib/auth";
+import {
+  noticeHeadline,
+  parseNoticeDoc,
+  type NoticeDoc,
+} from "@/lib/notice-doc";
 import { constraintMessage } from "@/lib/schedule-store";
 import {
   boardNote,
@@ -12,19 +17,22 @@ import {
   NOTE_COLORS,
   NOTE_RATE_LIMIT,
   overNoteRateLimit,
-  parseNoteBody,
-  parseNoteTitle,
+  parseEmoji,
   pickNoteColor,
+  REACTIONS_PER_NOTE_MAX,
   type BoardNote,
+  type Reaction,
 } from "@/lib/unconference";
 import {
   createNote,
   deleteNote,
+  distinctEmojiCount,
   moveNote,
   noteAccess,
   noteById,
   recentNoteCount,
   recordNotePost,
+  toggleReaction,
   updateNote,
 } from "@/lib/unconference-store";
 import { boardRooms } from "./data";
@@ -33,8 +41,6 @@ import { boardRooms } from "./data";
 // much work behind a drag. The board updates in place from these results.
 export type NoteState = {
   error?: string;
-  /** Which input the error belongs to, when it belongs to one. */
-  field?: string;
   savedAt?: number;
   /** The note as stored, for the board to adopt. */
   note?: BoardNote;
@@ -42,6 +48,8 @@ export type NoteState = {
   position?: { x: number; y: number };
   /** The note that is no longer on the board. */
   removedId?: string;
+  /** The note's reaction chips after a toggle. */
+  reactions?: Reaction[];
 };
 
 const SIGN_IN = "Sign in first.";
@@ -49,6 +57,7 @@ const NEEDS_TICKET = "Claim your ticket first, then the board is yours.";
 const NOT_YOURS = "That note isn't yours.";
 const GONE = "That note is no longer on the board.";
 const FAILED = "That didn't save. Try again.";
+const BLANK = "Write or draw something first.";
 
 // Note ids come from the client, so a malformed one is answered here rather
 // than let into a uuid comparison the driver would refuse.
@@ -82,21 +91,41 @@ async function act(run: () => Promise<NoteState>): Promise<NoteState> {
 }
 
 /** The note and this request's standing to change it, read together. */
-async function target(noteId: string) {
+async function target(noteId: string, viewerId: string | null = null) {
   if (!UUID.test(noteId)) return { editor: null, note: null };
   const [editor, note] = await Promise.all([
     noteAccess(noteId),
-    noteById(noteId),
+    noteById(noteId, viewerId),
   ]);
   return { editor, note };
 }
 
-/** Pin a new note up, at a spot the board measured as fractions of itself. */
+type Faces = { sticky: NoticeDoc; poster: NoticeDoc; title: string | null };
+
+/** Both faces checked, and the title worked out from them. */
+function parseFaces(sticky: unknown, poster: unknown): Faces | NoteState {
+  const s = parseNoticeDoc(sticky, "sticky");
+  if ("error" in s) return { error: `Sticky note: ${s.error}` };
+  const p = parseNoticeDoc(poster, "poster");
+  if ("error" in p) return { error: `Poster: ${p.error}` };
+  if (s.doc.items.length === 0 && p.doc.items.length === 0) {
+    return { error: BLANK };
+  }
+  return {
+    sticky: s.doc,
+    poster: p.doc,
+    title: noticeHeadline(s.doc, p.doc),
+  };
+}
+
+const isFaces = (v: Faces | NoteState): v is Faces => "sticky" in v;
+
+/** Pin a new notice up, at a spot the board measured as fractions of itself. */
 export async function pinNote(
   locationId: string,
   input: {
-    title: unknown;
-    body?: unknown;
+    sticky: unknown;
+    poster: unknown;
     x: number;
     y: number;
     color?: unknown;
@@ -111,10 +140,8 @@ export async function pinNote(
   if (!rooms.some((r) => r.id === locationId)) {
     return { error: "That board isn't on the schedule." };
   }
-  const heading = parseNoteTitle(input.title);
-  if ("error" in heading) return { field: "title", error: heading.error };
-  const parsed = parseNoteBody(input.body);
-  if ("error" in parsed) return { field: "body", error: parsed.error };
+  const faces = parseFaces(input.sticky, input.poster);
+  if (!isFaces(faces)) return faces;
 
   return act(async () => {
     // Counted and then inserted, which is not atomic, so two posts at the
@@ -130,11 +157,7 @@ export async function pinNote(
     const note = await createNote({
       locationId,
       authorUserId: who,
-      title: heading.title,
-      body: parsed.body,
-      // The composer shows the note in the colour it will be, so it sends
-      // one; anything else falls back to the random pick. Cosmetic either
-      // way — the author can recolour it the moment it's up.
+      ...faces,
       color: isNoteColor(input.color)
         ? input.color
         : pickNoteColor(Math.floor(Math.random() * NOTE_COLORS.length)),
@@ -145,55 +168,24 @@ export async function pinNote(
   });
 }
 
-/** Rewrite a note's text. The author only. */
-export async function rewriteNote(
+/** Rewrite a notice's sticky note, poster and paper. The author only. */
+export async function saveNote(
   noteId: string,
-  title: unknown,
-  body: unknown,
+  input: { sticky: unknown; poster: unknown; color?: unknown },
 ): Promise<NoteState> {
   const who = await poster();
   if (typeof who !== "string") return who;
-  const heading = parseNoteTitle(title);
-  if ("error" in heading) return { field: "title", error: heading.error };
-  const parsed = parseNoteBody(body);
-  if ("error" in parsed) return { field: "body", error: parsed.error };
+  const faces = parseFaces(input.sticky, input.poster);
+  if (!isFaces(faces)) return faces;
 
   return act(async () => {
-    const { editor, note } = await target(noteId);
+    const { editor, note } = await target(noteId, who);
     if (!note) return { error: GONE };
     if (!canEditNote(editor)) return { error: NOT_YOURS };
-    // The colour comes from the stored row, so an edit can't recolour a note
-    // by what the client happened to send.
-    await updateNote(noteId, {
-      title: heading.title,
-      body: parsed.body,
-      color: note.color,
-    });
+    const color = isNoteColor(input.color) ? input.color : note.color;
+    await updateNote(noteId, { ...faces, color });
     return {
-      note: boardNote((await noteById(noteId)) ?? note, who),
-      savedAt: Date.now(),
-    };
-  });
-}
-
-/** Repaint a note from the palette. The author only. */
-export async function recolourNote(
-  noteId: string,
-  color: unknown,
-): Promise<NoteState> {
-  const who = await poster();
-  if (typeof who !== "string") return who;
-  if (!isNoteColor(color)) {
-    return { field: "color", error: "Pick a colour from the pad." };
-  }
-
-  return act(async () => {
-    const { editor, note } = await target(noteId);
-    if (!note) return { error: GONE };
-    if (!canEditNote(editor)) return { error: NOT_YOURS };
-    await updateNote(noteId, { title: note.title, body: note.body, color });
-    return {
-      note: boardNote((await noteById(noteId)) ?? { ...note, color }, who),
+      note: boardNote((await noteById(noteId, who)) ?? note, who),
       savedAt: Date.now(),
     };
   });
@@ -208,7 +200,7 @@ export async function repinNote(
   const who = await poster();
   if (typeof who !== "string") return who;
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    return { field: "position", error: "That spot is off the board." };
+    return { error: "That spot is off the board." };
   }
 
   return act(async () => {
@@ -216,6 +208,32 @@ export async function repinNote(
     if (!note) return { error: GONE };
     if (!canMoveNote(editor)) return { error: NOT_YOURS };
     return { position: await moveNote(noteId, { x, y }), savedAt: Date.now() };
+  });
+}
+
+/** Add or take back one emoji on a notice. Anyone who may post may react. */
+export async function reactToNote(
+  noteId: string,
+  emoji: unknown,
+): Promise<NoteState> {
+  const who = await poster();
+  if (typeof who !== "string") return who;
+  const parsed = parseEmoji(emoji);
+  if (!parsed) return { error: "That isn't an emoji." };
+  if (!UUID.test(noteId)) return { error: GONE };
+
+  return act(async () => {
+    const note = await noteById(noteId, who);
+    if (!note) return { error: GONE };
+    const known = note.reactions.some((r) => r.emoji === parsed);
+    if (
+      !known &&
+      (await distinctEmojiCount(noteId)) >= REACTIONS_PER_NOTE_MAX
+    ) {
+      return { error: "That notice has all the emoji it can hold." };
+    }
+    const { reactions } = await toggleReaction(noteId, who, parsed);
+    return { reactions, savedAt: Date.now() };
   });
 }
 

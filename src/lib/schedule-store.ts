@@ -944,9 +944,9 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
     field: "capacity",
     error: "Capacity must be at least 1.",
   },
-  unconference_notes_body_length: {
-    field: "body",
-    error: "A note needs some text, and under 1000 characters of it.",
+  unconference_note_reactions_emoji_length: {
+    field: "emoji",
+    error: "That isn't an emoji.",
   },
   unconference_notes_x_fraction: {
     field: "position",
