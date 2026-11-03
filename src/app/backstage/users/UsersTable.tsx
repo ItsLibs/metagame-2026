@@ -15,6 +15,13 @@ import { assignRole } from "./[id]/actions";
 import NewUserDialog, { type Created } from "./NewUserDialog";
 import { fieldClass, selectClass, selectStyle, smallButtonClass } from "../ui";
 import { ticketBadge } from "@/lib/admin-tickets";
+import {
+  CLASS_LABELS,
+  FACTION_NAMES,
+  MEGAGAME_CLASSES,
+  type MegagameClass,
+} from "@/lib/megagame-levels";
+import { FactionMedal } from "@/v2/components/megagame/FactionPatch";
 import { Button } from "@/v2/components/ui/button";
 import {
   Dialog,
@@ -42,15 +49,18 @@ export type UserRow = {
   self: boolean;
   /** Tickets they've claimed. */
   tickets: number;
+  /** The Megagame factions they've joined, with their level in each. */
+  factions: { class: MegagameClass; level: number }[];
 };
 
-type SortKey = "name" | "email" | "tickets" | "joined" | "roles";
+type SortKey = "name" | "email" | "tickets" | "factions" | "joined" | "roles";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name" },
   { key: "email", label: "Email" },
   { key: "tickets", label: "Ticket" },
+  { key: "factions", label: "Factions" },
   { key: "joined", label: "Joined" },
   { key: "roles", label: "Roles" },
 ];
@@ -61,6 +71,18 @@ const roleText = (u: UserRow) =>
     .filter(Boolean)
     .join(", ");
 
+/** "Astral College (Wizard) 2, Brethren Fleet (Pirate) 1": what search sees. */
+const factionText = (u: UserRow) =>
+  u.factions
+    .map(
+      (f) => `${FACTION_NAMES[f.class]} (${CLASS_LABELS[f.class]}) ${f.level}`,
+    )
+    .join(", ");
+
+/** Sorts the most committed first: more factions, then higher levels. */
+const factionRank = (u: UserRow) =>
+  u.factions.reduce((n, f) => n * 8 + f.level, u.factions.length * 1000);
+
 const compare = (a: UserRow, b: UserRow, key: SortKey): number => {
   switch (key) {
     case "name":
@@ -69,6 +91,8 @@ const compare = (a: UserRow, b: UserRow, key: SortKey): number => {
       return a.email.localeCompare(b.email);
     case "tickets":
       return a.tickets - b.tickets;
+    case "factions":
+      return factionRank(a) - factionRank(b);
     case "joined":
       return a.joinedAt - b.joinedAt;
     case "roles":
@@ -87,6 +111,29 @@ function TicketCell({ id, count }: { id: string; count: number }) {
       <TicketIcon className="size-4" aria-label="Tickets" />
       {label && <span className="text-xs font-semibold">{label}</span>}
     </Link>
+  );
+}
+
+/** The medals of the factions someone has joined, each with its level. */
+function FactionCell({ u, dark }: { u: UserRow; dark?: boolean }) {
+  if (u.factions.length === 0)
+    return <span className={dark ? "text-cream/40" : "text-ink/25"}>None</span>;
+  return (
+    <span className="inline-flex items-center gap-2">
+      {u.factions.map((f) => (
+        <span
+          key={f.class}
+          title={`${FACTION_NAMES[f.class]} · level ${f.level} ${CLASS_LABELS[f.class]}`}
+          className="inline-flex items-center gap-1"
+        >
+          <FactionMedal faction={f.class} className="size-5" />
+          <span className="font-mono text-xs">{f.level}</span>
+          <span className="sr-only">
+            {FACTION_NAMES[f.class]}, level {f.level}
+          </span>
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -136,6 +183,8 @@ export default function UsersTable({
   const [query, setQuery] = useState(initialQuery);
   /** "" = everyone, "admin", "none", or a role id. */
   const [roleFilter, setRoleFilter] = useState("");
+  /** "" = everyone, a class, or "none". */
+  const [factionFilter, setFactionFilter] = useState("");
   const [sort, setSort] = useState<Sort>({ key: "joined", dir: "desc" });
 
   const shown = useMemo(() => {
@@ -151,6 +200,13 @@ export default function UsersTable({
         !u.roles.some((r) => r.id === roleFilter)
       )
         return false;
+      if (factionFilter === "none" && u.factions.length > 0) return false;
+      if (
+        factionFilter &&
+        factionFilter !== "none" &&
+        !u.factions.some((f) => f.class === factionFilter)
+      )
+        return false;
       if (terms.length === 0) return true;
       const hay = [
         u.name,
@@ -160,6 +216,7 @@ export default function UsersTable({
         u.banned ? "banned" : "",
         u.emailVerified ? "" : "unverified",
         u.tickets > 0 ? "ticket" : "no ticket",
+        factionText(u) || "no faction",
       ]
         .join(" ")
         .toLowerCase();
@@ -171,13 +228,19 @@ export default function UsersTable({
       return sort.dir === "asc" ? c : -c;
     });
     return out;
-  }, [rows, query, roleFilter, sort]);
+  }, [rows, query, roleFilter, factionFilter, sort]);
 
   const toggleSort = (key: SortKey) =>
     setSort((s) =>
       s.key === key
         ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: key === "joined" || key === "tickets" ? "desc" : "asc" },
+        : {
+            key,
+            dir:
+              key === "joined" || key === "tickets" || key === "factions"
+                ? "desc"
+                : "asc",
+          },
     );
 
   const run = (userId: string, action: () => Promise<Result>) => {
@@ -193,7 +256,8 @@ export default function UsersTable({
   };
 
   const canPickRoles = viewerCanEdit || viewerIsAdmin;
-  const filtered = query.trim() !== "" || roleFilter !== "";
+  const filtered =
+    query.trim() !== "" || roleFilter !== "" || factionFilter !== "";
 
   return (
     <div className="space-y-4">
@@ -202,7 +266,7 @@ export default function UsersTable({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.currentTarget.value)}
-          placeholder="Search name, email, role…"
+          placeholder="Search name, email, role, faction…"
           aria-label="Search accounts"
           className={`${fieldClass} min-w-56 flex-1`}
         />
@@ -221,6 +285,21 @@ export default function UsersTable({
             </option>
           ))}
           <option value="none">No roles</option>
+        </select>
+        <select
+          value={factionFilter}
+          onChange={(e) => setFactionFilter(e.currentTarget.value)}
+          aria-label="Filter by Megagame faction"
+          className={selectClass}
+          style={selectStyle}
+        >
+          <option value="">All factions</option>
+          {MEGAGAME_CLASSES.map((c) => (
+            <option key={c} value={c}>
+              {FACTION_NAMES[c]}
+            </option>
+          ))}
+          <option value="none">No faction</option>
         </select>
         {viewerCanCreate && (
           <button
@@ -328,6 +407,9 @@ export default function UsersTable({
                   <td className="px-4 py-2">
                     <TicketCell id={u.id} count={u.tickets} />
                   </td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    <FactionCell u={u} />
+                  </td>
                   <td
                     className="px-4 py-2 whitespace-nowrap"
                     title={u.joinedExact}
@@ -420,7 +502,7 @@ export default function UsersTable({
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-ink/50">
+                <td colSpan={7} className="px-4 py-6 text-center text-ink/50">
                   No accounts{filtered && " match"}.
                 </td>
               </tr>
@@ -742,6 +824,11 @@ function UserDetail({
             <span className="text-cream/40">None</span>
           )}
         </Field>
+        <div className="col-span-2">
+          <Field label="Factions">
+            <FactionCell u={u} dark />
+          </Field>
+        </div>
         <div className="col-span-2">
           <Field label="Roles">
             {pickable ? (
