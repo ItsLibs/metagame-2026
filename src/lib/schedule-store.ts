@@ -12,7 +12,9 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { revalidateTag, unstable_cache } from "next/cache";
 import { getDb, schema } from "@/db";
+import { env } from "@/env";
 import { can } from "./access";
 import { currentSession, getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
@@ -54,7 +56,15 @@ export type Schedule = {
   sessions: ScheduleSession[];
 };
 
-export async function loadSchedule(): Promise<Schedule> {
+const SCHEDULE_TAG = "schedule";
+
+/** Call after any write to sessions, locations, session_hosts or user names. */
+export function invalidateSchedule(): void {
+  revalidateTag(SCHEDULE_TAG, { expire: 0 });
+}
+
+/** Straight from the database: for admin writes that merge over the current row. */
+export async function querySchedule(): Promise<Schedule> {
   const db = getDb();
   const [locs, sess, hosts, shepherds] = await Promise.all([
     db
@@ -80,10 +90,9 @@ export async function loadSchedule(): Promise<Schedule> {
   );
   const hostsBySession = new Map<string, ScheduleAccount[]>();
   for (const { sessionId, ...host } of hosts) {
-    hostsBySession.set(sessionId, [
-      ...(hostsBySession.get(sessionId) ?? []),
-      host,
-    ]);
+    const list = hostsBySession.get(sessionId);
+    if (list) list.push(host);
+    else hostsBySession.set(sessionId, [host]);
   }
   return {
     locations: locs.map((l) => ({
@@ -120,6 +129,21 @@ export async function loadSchedule(): Promise<Schedule> {
     })),
   };
 }
+
+// The TTL backstops writes that skip invalidateSchedule(); deployments share
+// one data cache, so the key carries the database host and the deployment.
+export const loadSchedule = unstable_cache(
+  querySchedule,
+  [
+    "schedule",
+    env.DATABASE_URL ? new URL(env.DATABASE_URL).host : "",
+    process.env.VERCEL_DEPLOYMENT_ID ?? "",
+  ],
+  {
+    tags: [SCHEDULE_TAG],
+    revalidate: process.env.NODE_ENV === "production" ? 600 : 5,
+  },
+);
 
 export type SessionInput = Omit<
   ScheduleSession,
@@ -189,6 +213,7 @@ export async function upsertSession(
         ),
     ]);
   }
+  invalidateSchedule();
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
   return { id: sessionId, clash };
@@ -236,6 +261,7 @@ export async function setSessionHosts(
     .where(eq(sessionHosts.sessionId, sessionId));
   if (hostIds.length === 0) {
     await remove;
+    invalidateSchedule();
     return;
   }
   await db.batch([
@@ -246,6 +272,7 @@ export async function setSessionHosts(
         hostIds.map((userId, position) => ({ sessionId, position, userId })),
       ),
   ]);
+  invalidateSchedule();
 }
 
 /**
@@ -272,6 +299,7 @@ export async function updateSessionAsHost(
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
   if (!updated) throw new Error("That session no longer exists.");
+  invalidateSchedule();
   // A raised capacity frees seats for the waitlist.
   await promoteWaitlist(sessionId);
 }
@@ -308,6 +336,7 @@ export async function moveSessionTo(
     .update(sessions)
     .set({ startsAt, endsAt, locationId })
     .where(eq(sessions.id, id));
+  invalidateSchedule();
 }
 
 /** A save refused for double-booking a room; the caller may offer to override. */
@@ -672,6 +701,7 @@ export async function loadAccountPlans(userId: string) {
 
 export async function removeSession(id: string): Promise<void> {
   await getDb().delete(sessions).where(eq(sessions.id, id));
+  invalidateSchedule();
 }
 
 export type LocationInput = Omit<ScheduleLocation, "id"> & { id?: string };
@@ -686,12 +716,14 @@ export async function upsertLocation(input: LocationInput): Promise<string> {
       .where(eq(locations.id, id))
       .returning({ id: locations.id });
     if (!updated) throw new Error("That location no longer exists.");
+    invalidateSchedule();
     return updated.id;
   }
   const [inserted] = await db
     .insert(locations)
     .values(row)
     .returning({ id: locations.id });
+  invalidateSchedule();
   return inserted.id;
 }
 
@@ -717,6 +749,7 @@ export async function setLocationImages(
   images: RoomImages,
 ): Promise<void> {
   await getDb().update(locations).set(images).where(eq(locations.id, id));
+  invalidateSchedule();
 }
 
 /**
@@ -728,6 +761,7 @@ export async function removeLocation(id: string): Promise<RoomImages | null> {
     .delete(locations)
     .where(eq(locations.id, id))
     .returning(imageColumns);
+  invalidateSchedule();
   return row ?? null;
 }
 
@@ -1075,6 +1109,7 @@ export async function insertSample(): Promise<void> {
       })),
     );
   }
+  invalidateSchedule();
 }
 
 /** Removes the sample sessions and hosts, then any sample room nothing else uses. */
@@ -1104,4 +1139,5 @@ export async function removeSample(): Promise<void> {
   if (unused.length > 0) {
     await db.delete(locations).where(inArray(locations.id, unused));
   }
+  invalidateSchedule();
 }
