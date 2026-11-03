@@ -16,6 +16,7 @@ import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
 import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
+import { isMegagameClass } from "@/lib/megagame-levels";
 import { loadMegagameLevels } from "@/lib/megagame-store";
 import {
   loadRsvpCounts,
@@ -35,14 +36,16 @@ export const metadata: Metadata = {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; join?: string }>;
 }) {
-  const { tab } = await searchParams;
+  const { tab, join } = await searchParams;
   const initialTab = parseAccountTab(tab);
+  // A speaker card's medal links here with the faction to join.
+  const joining = isMegagameClass(join) ? join : null;
   const session = await currentSession();
   if (!session)
     redirect(
-      `/login?next=${encodeURIComponent(initialTab === "profile" ? "/account" : `/account?tab=${initialTab}`)}`,
+      `/login?next=${encodeURIComponent(initialTab === "profile" ? "/account" : `/account?tab=${initialTab}${joining ? `&join=${joining}` : ""}`)}`,
     );
   const { user } = session;
 
@@ -162,7 +165,7 @@ export default async function AccountPage({
               )}
             />
           ),
-          megagame: <MegagamePanel levels={levels} />,
+          megagame: <MegagamePanel levels={levels} joining={joining} />,
         }}
       />
     </div>

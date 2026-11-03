@@ -152,29 +152,44 @@ export default function SpeakerCard({
               </div>
             )}
             {/* The factions a speaker has joined, as the medals from their level
-                badges, pinned to the photo's bottom-left corner: the Hat Trick's
-                hats sit higher up, on heads, and the flip corner is bottom-right.
-                A multiclasser's fan out to the right, the first on top. */}
+                badges, pinned to the photo's top-right corner (the Hat Trick's
+                hats sit on heads). Hovering one brings its emblem to life, as
+                on the Megagame tab, and fans a multiclasser's medals apart;
+                clicking goes to the Megagame tab to join that faction. */}
             {factions.length > 0 && (
               <ul
                 aria-label="Megagame factions"
-                className="absolute bottom-1.5 left-1.5 flex sm:bottom-2.5 sm:left-2.5"
+                className="group/medals absolute top-1.5 right-1.5 flex flex-row-reverse sm:top-2.5 sm:right-2.5"
               >
                 {factions.map((f, i) => (
                   <li
                     key={f}
-                    title={FACTION_NAMES[f]}
-                    className={`rounded-full shadow-[0_2px_6px_rgba(23,48,89,0.4)] ring-2 ring-[#FFFBF2] ${i > 0 ? "-ml-2.5 sm:-ml-3.5" : ""}`}
-                    style={{
-                      transform: `rotate(${i % 2 ? 7 : -7}deg)`,
-                      zIndex: factions.length - i,
-                    }}
+                    className={`transition-[margin] duration-300 motion-reduce:transition-none ${i > 0 ? "-mr-2.5 group-focus-within/medals:mr-1 group-hover/medals:mr-1 sm:-mr-3.5" : ""}`}
+                    style={{ zIndex: factions.length - i }}
                   >
-                    <span className="sr-only">{FACTION_NAMES[f]}</span>
-                    <FactionMedal
-                      faction={f}
-                      className="size-9 rounded-full sm:size-12"
-                    />
+                    <a
+                      href={`/account?tab=megagame&join=${f}#faction-${f}`}
+                      aria-label={`${FACTION_NAMES[f]}: a Megagame faction ${name.split(" ")[0]} has joined. Join it too`}
+                      className="group peer block rounded-full shadow-[0_2px_6px_rgba(23,48,89,0.4)] ring-2 ring-[#FFFBF2] transition-transform duration-300 outline-none hover:scale-110 hover:rotate-0 focus-visible:scale-110 focus-visible:ring-meeple motion-reduce:transition-none"
+                      style={{ transform: `rotate(${i % 2 ? 7 : -7}deg)` }}
+                    >
+                      <FactionMedal
+                        faction={f}
+                        className="size-9 rounded-full sm:size-12"
+                      />
+                    </a>
+                    <span
+                      role="tooltip"
+                      className="pointer-events-none absolute top-full right-0 z-10 mt-2 w-max max-w-[11rem] translate-y-1 rounded-lg bg-navy px-2.5 py-1.5 text-left text-[11px] leading-snug text-cream opacity-0 shadow-[0_4px_12px_rgba(23,48,89,0.35)] transition duration-200 peer-hover:translate-y-0 peer-hover:opacity-100 peer-focus-visible:translate-y-0 peer-focus-visible:opacity-100 motion-reduce:transition-none"
+                    >
+                      <b className="block font-[family-name:var(--font-bebas)] text-sm tracking-[0.04em]">
+                        {FACTION_NAMES[f]}
+                      </b>
+                      A Megagame faction {name.split(" ")[0]} has joined.
+                      <span className="block text-tan">
+                        Click to join too →
+                      </span>
+                    </span>
                   </li>
                 ))}
               </ul>
