@@ -61,6 +61,24 @@ export const PERMISSIONS = {
     label: "View tickets",
     description: "Each ticket with its buyer, holder and attendee.",
   },
+  "tickets.edit": {
+    audience: "team",
+    group: "Tickets",
+    level: "edit",
+    label: "Edit tickets",
+    description: "Set or clear which ticket referred a ticket, after the fact.",
+    implies: ["tickets.view"],
+  },
+  // Its own permission, not folded into a role: it exposes parents' contact
+  // details and children's medical notes.
+  "children.view": {
+    audience: "team",
+    group: "Childcare",
+    level: "view",
+    label: "View children",
+    description:
+      "Every registered child with their parent's contact details and childcare sessions.",
+  },
   "schedule.preview": {
     audience: "attendee",
     group: "Schedule",

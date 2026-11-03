@@ -6,16 +6,30 @@ import { opts } from "./shared";
 
 const kids = (a: Answers) => Number(a.count) || 0;
 
-const SESSIONS = opts(
+export const SESSION_NAMES = [
   "Friday afternoon (3pm-7pm, includes dinner)",
   "Saturday morning (9:45am-2:45pm, includes lunch)",
   "Saturday afternoon (5pm-7:30pm, includes dinner)",
   "Sunday morning (9:45am-3pm, includes lunch)",
   "Sunday afternoon (5pm-7:30pm, includes dinner)",
-);
+] as const;
+export const OTHER_SESSION = "Other";
+const SESSIONS = opts(...SESSION_NAMES);
 
-// Airtable has five fields for each of the first four children.
-const CHILD_FIELDS = [
+export const FAMILY_FIELDS = {
+  name: "fldGLpEn4Bg00bnzo",
+  relationship: "fld0o0mWZeGE2bbqT",
+  email: "fldC3WWHFqQsm1FSl",
+  phone: "fldLdQNIQq48wqWCJ",
+  discord: "fld2rv0eiORYjCylO",
+  count: "fld6tSDSTGDIzfYIO",
+  moreChildren: "flde6wEG681bPeqjV",
+  anythingElse: "fldl4KxzyKfctsPVJ",
+} as const;
+
+// Airtable has five fields for each of the first four children:
+// name, age, sessions, medical, other.
+export const CHILD_FIELDS = [
   [
     "fldbwI0byxE0Ehe8F",
     "fldcFNTARVwgMalTM",
@@ -52,7 +66,7 @@ const childStep = (i: number): Step => {
   const n = i + 1;
   // "Other" opens a box; what's typed there joins the child's notes.
   const otherTimes: Option = {
-    value: "Other",
+    value: OTHER_SESSION,
     more: {
       key: `child${n}OtherTimes`,
       label: "Other times",
@@ -131,7 +145,7 @@ export const children: FormDef = {
       items: [
         {
           key: "name",
-          field: "fldGLpEn4Bg00bnzo",
+          field: FAMILY_FIELDS.name,
           fill: "name",
           type: "text",
           label: "Name",
@@ -141,7 +155,7 @@ export const children: FormDef = {
         },
         {
           key: "relationship",
-          field: "fld0o0mWZeGE2bbqT",
+          field: FAMILY_FIELDS.relationship,
           type: "text",
           label: "Relationship to the children",
           placeholder: "Parent, aunt, guardian…",
@@ -149,7 +163,7 @@ export const children: FormDef = {
         },
         {
           key: "email",
-          field: "fldC3WWHFqQsm1FSl",
+          field: FAMILY_FIELDS.email,
           fill: "email",
           type: "email",
           label: "Email address",
@@ -159,7 +173,7 @@ export const children: FormDef = {
         },
         {
           key: "phone",
-          field: "fldLdQNIQq48wqWCJ",
+          field: FAMILY_FIELDS.phone,
           type: "phone",
           label: "Phone number",
           required: true,
@@ -168,7 +182,7 @@ export const children: FormDef = {
         },
         {
           key: "discord",
-          field: "fld2rv0eiORYjCylO",
+          field: FAMILY_FIELDS.discord,
           fill: "discord",
           type: "text",
           label: "Discord handle",
@@ -184,7 +198,7 @@ export const children: FormDef = {
       items: [
         {
           key: "count",
-          field: "fld6tSDSTGDIzfYIO",
+          field: FAMILY_FIELDS.count,
           type: "number",
           label: "Children you're bringing",
           help: "Anyone under 18, whether or not they'll use childcare.",
@@ -203,7 +217,7 @@ export const children: FormDef = {
       items: [
         {
           key: "moreChildren",
-          field: "flde6wEG681bPeqjV",
+          field: FAMILY_FIELDS.moreChildren,
           type: "longtext",
           label:
             "Their names, ages, childcare sessions, and allergies or medical info",
@@ -217,7 +231,7 @@ export const children: FormDef = {
       items: [
         {
           key: "anythingElse",
-          field: "fldl4KxzyKfctsPVJ",
+          field: FAMILY_FIELDS.anythingElse,
           type: "longtext",
           label: "Anything else you'd like us to know, or questions for us?",
         },
