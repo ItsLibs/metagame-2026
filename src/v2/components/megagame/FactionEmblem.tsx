@@ -43,7 +43,7 @@ const THROB =
 const PULSE =
   "motion-safe:group-hover:animate-[mg-pulse_1.6s_ease-in-out_infinite] motion-safe:group-focus-visible:animate-[mg-pulse_1.6s_ease-in-out_infinite]";
 
-export const sparkle = (x: number, y: number, s: number) =>
+const sparkle = (x: number, y: number, s: number) =>
   `M${x} ${y - s}c${s * 0.12} ${s * 0.7} ${s * 0.3} ${s * 0.88} ${s} ${s}c${-s * 0.7} ${s * 0.12} ${-s * 0.88} ${s * 0.3} ${-s} ${s}c${-s * 0.12} ${-s * 0.7} ${-s * 0.3} ${-s * 0.88} ${-s} ${-s}c${s * 0.7} ${-s * 0.12} ${s * 0.88} ${-s * 0.3} ${s} ${-s}Z`;
 
 // [letter, x, y, size, rotation, colour]
@@ -173,19 +173,7 @@ function Pirate() {
           ))}
         </g>
       </g>
-      <MazeTile />
-    </>
-  );
-}
-
-/**
- * The pirates' treasure map: a pale tile turned 45° so its corners sit between
- * the bones, the maze on it, and the X where the treasure is. Centred on
- * (100, 106), 74 units a side before the turn.
- */
-export function MazeTile() {
-  return (
-    <>
+      {/* Turned 45° so its corners sit between the bones. */}
       <g transform="rotate(45 100 106)">
         <rect
           x="63"

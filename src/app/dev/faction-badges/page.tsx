@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { FACTION_NAMES, MEGAGAME_CLASSES } from "@/lib/megagame-levels";
-import FactionBadge from "@/v2/components/megagame/FactionBadge";
+import FactionPatch from "@/v2/components/megagame/FactionPatch";
 import SpeakerCard from "@/v2/components/SpeakerCard";
 
 export const metadata = { title: "Faction badges", robots: { index: false } };
@@ -23,8 +23,8 @@ const SAMPLES = [
 const CELL =
   "w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]";
 
-// Dev-only preview of the Megagame faction badges: each at a poster size and
-// at the sizes a speaker card uses, then on sample speaker cards. 404s in
+// Dev-only preview of the speaker cards' faction patches: each at a large size
+// and at the sizes a speaker card uses, then on sample speaker cards. 404s in
 // production builds.
 export default function FactionBadgesPage() {
   if (process.env.NODE_ENV === "production") notFound();
@@ -42,9 +42,9 @@ export default function FactionBadgesPage() {
           {MEGAGAME_CLASSES.map((c) => (
             <li key={c} className="flex flex-col items-center gap-3">
               <div className="flex items-end gap-4">
-                <FactionBadge faction={c} className="size-40" />
-                <FactionBadge faction={c} className="size-11" />
-                <FactionBadge faction={c} className="size-8" />
+                <FactionPatch faction={c} className="w-40" />
+                <FactionPatch faction={c} className="w-14" />
+                <FactionPatch faction={c} className="w-10" />
               </div>
               <span className="font-space-mono text-xs font-bold tracking-[0.12em] text-ink/70 uppercase">
                 {FACTION_NAMES[c]}

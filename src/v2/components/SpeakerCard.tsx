@@ -17,10 +17,10 @@ import {
   type Category,
   type HostedSession,
 } from "@/lib/schedule";
-import type { MegagameClass } from "@/lib/megagame-levels";
+import { FACTION_NAMES, type MegagameClass } from "@/lib/megagame-levels";
 import type { Speaker } from "@/v2/data/speakers";
 import HatImage from "@/v2/hat-trick/HatImage";
-import FactionBadge from "./megagame/FactionBadge";
+import FactionPatch from "./megagame/FactionPatch";
 import { HEADING } from "./styles";
 
 const CATEGORY_ICON: Record<Category, typeof Mic> = {
@@ -151,18 +151,24 @@ export default function SpeakerCard({
                   .toUpperCase()}
               </div>
             )}
-            {/* Stuck on the photo's bottom corner; the hats sit higher up, on
-                heads. Several overlap when a speaker has multiclassed. */}
+            {/* The faction patches from the Megagame tab, stuck on the photo's
+                bottom corner (the hats sit higher up, on heads). Several overlap
+                when a speaker has multiclassed. */}
             {factions.length > 0 && (
-              <span className="absolute right-1 bottom-1 flex -space-x-2 sm:right-2 sm:bottom-2 sm:-space-x-3">
+              <ul
+                aria-label="Megagame factions"
+                className="absolute right-1 bottom-1 flex -space-x-3 sm:right-2 sm:bottom-2 sm:-space-x-4"
+              >
                 {factions.map((f) => (
-                  <FactionBadge
-                    key={f}
-                    faction={f}
-                    className="size-8 drop-shadow-[0_2px_3px_rgba(23,48,89,0.35)] sm:size-11"
-                  />
+                  <li key={f} className="w-10 sm:w-14">
+                    <span className="sr-only">{FACTION_NAMES[f]}</span>
+                    <FactionPatch
+                      faction={f}
+                      className="drop-shadow-[0_2px_3px_rgba(23,48,89,0.35)]"
+                    />
+                  </li>
                 ))}
-              </span>
+              </ul>
             )}
           </div>
           <div className="flex flex-1 flex-col items-center px-1 py-2 text-center sm:px-4 sm:py-3">
