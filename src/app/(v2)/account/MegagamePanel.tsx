@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { chooseMegagameClass, type ClassState } from "./actions";
 import {
   activeClasses,
@@ -39,6 +39,13 @@ export default function MegagamePanel({
     chooseMegagameClass,
     {},
   );
+  // The link's #faction hash doesn't survive a login redirect, so scroll here.
+  useEffect(() => {
+    if (joining && levels[joining] === 0)
+      document
+        .getElementById(`faction-${joining}`)
+        ?.scrollIntoView({ block: "center" });
+  }, [joining, levels]);
   const joined = activeClasses(levels).length > 0;
   return (
     <div className="flex max-w-[960px] flex-col gap-10">

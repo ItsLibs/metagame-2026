@@ -28,17 +28,8 @@ export async function loadMegagameLevelsFor(
 export async function loadMegagameLevels(
   userId: string,
 ): Promise<MegagameLevels> {
-  const { user } = schema;
-  const [row] = await getDb()
-    .select({
-      wizard: user.wizardLevel,
-      pirate: user.pirateLevel,
-      alien: user.alienLevel,
-    })
-    .from(user)
-    .where(eq(user.id, userId))
-    .limit(1);
-  return row ?? NO_LEVELS;
+  const levels = await loadMegagameLevelsFor([userId]);
+  return levels.get(userId) ?? NO_LEVELS;
 }
 
 /** Callers check the levels are in range; the columns' checks back that up. */

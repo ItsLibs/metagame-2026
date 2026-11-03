@@ -273,12 +273,17 @@ export default async function Home() {
   // Public rooms only and no per-viewer state, so the page stays static. CI
   // prerenders it with no database (Vercel builds have one), so the grid is
   // skipped rather than failing the build.
-  // The speakers' Megagame levels come along: the factions they've joined
-  // on their own accounts are badges on their cards.
+  // The speakers' Megagame picks ride along for their cards' medals; they're
+  // decoration, so if that query fails the cards just go without.
   const [raw, levels] = env.DATABASE_URL
     ? await Promise.all([
         loadSchedule(),
-        loadMegagameLevelsFor(SPEAKERS.map((s) => s.userId)),
+        loadMegagameLevelsFor(SPEAKERS.map((s) => s.userId)).catch(
+          (e: unknown) => {
+            console.error("speaker megagame levels", e);
+            return null;
+          },
+        ),
       ])
     : [null, null];
   const schedule = raw && publicSchedule(raw, "public");
