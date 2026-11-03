@@ -20,7 +20,7 @@ import {
 import { FACTION_NAMES, type MegagameClass } from "@/lib/megagame-levels";
 import type { Speaker } from "@/v2/data/speakers";
 import HatImage from "@/v2/hat-trick/HatImage";
-import FactionPatch from "./megagame/FactionPatch";
+import { FactionMedal } from "./megagame/FactionPatch";
 import { HEADING } from "./styles";
 
 const CATEGORY_ICON: Record<Category, typeof Mic> = {
@@ -151,20 +151,29 @@ export default function SpeakerCard({
                   .toUpperCase()}
               </div>
             )}
-            {/* The faction patches from the Megagame tab, stuck on the photo's
-                bottom corner (the hats sit higher up, on heads). Several overlap
-                when a speaker has multiclassed. */}
+            {/* The factions a speaker has joined, as the medals from their level
+                badges, pinned to the photo's bottom-left corner: the Hat Trick's
+                hats sit higher up, on heads, and the flip corner is bottom-right.
+                A multiclasser's fan out to the right, the first on top. */}
             {factions.length > 0 && (
               <ul
                 aria-label="Megagame factions"
-                className="absolute right-1 bottom-1 flex -space-x-3 sm:right-2 sm:bottom-2 sm:-space-x-4"
+                className="absolute bottom-1.5 left-1.5 flex sm:bottom-2.5 sm:left-2.5"
               >
-                {factions.map((f) => (
-                  <li key={f} className="w-10 sm:w-14">
+                {factions.map((f, i) => (
+                  <li
+                    key={f}
+                    title={FACTION_NAMES[f]}
+                    className={`rounded-full shadow-[0_2px_6px_rgba(23,48,89,0.4)] ring-2 ring-[#FFFBF2] ${i > 0 ? "-ml-2.5 sm:-ml-3.5" : ""}`}
+                    style={{
+                      transform: `rotate(${i % 2 ? 7 : -7}deg)`,
+                      zIndex: factions.length - i,
+                    }}
+                  >
                     <span className="sr-only">{FACTION_NAMES[f]}</span>
-                    <FactionPatch
+                    <FactionMedal
                       faction={f}
-                      className="drop-shadow-[0_2px_3px_rgba(23,48,89,0.35)]"
+                      className="size-9 rounded-full sm:size-12"
                     />
                   </li>
                 ))}

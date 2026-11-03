@@ -1,36 +1,41 @@
 import { notFound } from "next/navigation";
-import { FACTION_NAMES, MEGAGAME_CLASSES } from "@/lib/megagame-levels";
-import FactionPatch from "@/v2/components/megagame/FactionPatch";
+import {
+  FACTION_NAMES,
+  MEGAGAME_CLASSES,
+  type MegagameClass,
+} from "@/lib/megagame-levels";
+import { FactionMedal } from "@/v2/components/megagame/FactionPatch";
 import SpeakerCard from "@/v2/components/SpeakerCard";
+import { SPEAKERS } from "@/v2/data/speakers";
 
 export const metadata = { title: "Faction badges", robots: { index: false } };
 
-// Stand-ins, not real speakers: a real card's badges come from the factions
-// that speaker has joined on their own account.
-const SAMPLES = [
-  { name: "Sample Speaker", title: FACTION_NAMES.wizard, factions: ["wizard"] },
-  { name: "Second Sample", title: FACTION_NAMES.pirate, factions: ["pirate"] },
-  { name: "Third Sample", title: FACTION_NAMES.alien, factions: ["alien"] },
-  {
-    name: "Multi Classer",
-    title: "Two factions",
-    factions: ["pirate", "alien"],
-  },
-  { name: "Not Chosen", title: "No pick yet", factions: [] },
-] as const;
+// Stand-in picks on the first few real speaker cards, so the medals can be
+// judged against photos. A real card's medals come from the factions that
+// speaker has joined on their own account.
+const STAND_INS: MegagameClass[][] = [
+  ["pirate"],
+  ["wizard"],
+  ["alien"],
+  ["pirate", "alien"],
+  ["wizard"],
+  ["wizard", "pirate", "alien"],
+  [],
+  ["alien"],
+];
 
 // The home page's speaker grid widths, so the cards here match it.
 const CELL =
   "w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]";
 
-// Dev-only preview of the speaker cards' faction patches: each at a large size
-// and at the sizes a speaker card uses, then on sample speaker cards. 404s in
+// Dev-only preview of the speaker cards' faction medals: each at a large size
+// and at the sizes a card uses, then pinned on real speaker cards. 404s in
 // production builds.
 export default function FactionBadgesPage() {
   if (process.env.NODE_ENV === "production") notFound();
   return (
     <main className="min-h-dvh bg-background px-4 py-12 font-[family-name:var(--font-inter)] text-ink">
-      <div className="mx-auto max-w-[1080px]">
+      <div className="mx-auto max-w-[1180px]">
         <p className="font-space-mono text-xs font-bold tracking-[0.16em] text-meeple uppercase">
           Megagame · Speakers
         </p>
@@ -42,9 +47,9 @@ export default function FactionBadgesPage() {
           {MEGAGAME_CLASSES.map((c) => (
             <li key={c} className="flex flex-col items-center gap-3">
               <div className="flex items-end gap-4">
-                <FactionPatch faction={c} className="w-40" />
-                <FactionPatch faction={c} className="w-14" />
-                <FactionPatch faction={c} className="w-10" />
+                <FactionMedal faction={c} className="size-40" />
+                <FactionMedal faction={c} className="size-12" />
+                <FactionMedal faction={c} className="size-9" />
               </div>
               <span className="font-space-mono text-xs font-bold tracking-[0.12em] text-ink/70 uppercase">
                 {FACTION_NAMES[c]}
@@ -56,13 +61,20 @@ export default function FactionBadgesPage() {
         <h2 className="mt-14 font-[family-name:var(--font-bebas)] text-4xl leading-none text-navy">
           On speaker cards
         </h2>
+        <p className="mt-2 text-sm text-ink/60">
+          Stand-in picks, not these speakers&apos; real ones.
+        </p>
         <div className="mt-6 flex flex-wrap gap-2 sm:gap-5">
-          {SAMPLES.map((p) => (
-            <div key={p.name} className={CELL}>
+          {SPEAKERS.slice(0, STAND_INS.length).map((s, i) => (
+            <div key={s.name} className={CELL}>
               <SpeakerCard
-                name={p.name}
-                title={p.title}
-                factions={[...p.factions]}
+                name={s.name}
+                title={s.title}
+                titleUrl={s.titleUrl}
+                photo={s.photo}
+                hats={s.hats}
+                logo={s.logo}
+                factions={STAND_INS[i]}
               />
             </div>
           ))}
