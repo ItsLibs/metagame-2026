@@ -59,6 +59,8 @@ import { HATS } from "@/v2/hat-trick/hats";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { env } from "@/env";
+import { activeFactions, NO_LEVELS } from "@/lib/megagame-levels";
+import { loadMegagameLevelsFor } from "@/lib/megagame-store";
 import { buildDays, hostedSessions, publicSchedule } from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
 import lighthavenCutout from "../../../../public/images/lighthaven_cutout.png";
@@ -271,7 +273,14 @@ export default async function Home() {
   // Public rooms only and no per-viewer state, so the page stays static. CI
   // prerenders it with no database (Vercel builds have one), so the grid is
   // skipped rather than failing the build.
-  const raw = env.DATABASE_URL ? await loadSchedule() : null;
+  // The speakers' Megagame levels come along: the factions they've joined
+  // on their own accounts are badges on their cards.
+  const [raw, levels] = env.DATABASE_URL
+    ? await Promise.all([
+        loadSchedule(),
+        loadMegagameLevelsFor(SPEAKERS.map((s) => s.userId)),
+      ])
+    : [null, null];
   const schedule = raw && publicSchedule(raw, "public");
   // The sessions each speaker hosts, for the backs of their cards.
   const speaking = raw && schedule && hostedSessions(raw, schedule);
@@ -323,6 +332,9 @@ export default async function Home() {
               >
                 <SpeakerCard
                   {...speaker}
+                  factions={activeFactions(
+                    levels?.get(speaker.userId) ?? NO_LEVELS,
+                  )}
                   sessions={speaking?.get(speaker.userId)}
                 />
               </div>

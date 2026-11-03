@@ -280,6 +280,8 @@ export async function chooseMegagameClass(
   await setMegagameLevels(session.user.id, starterLevels(chosen));
   revalidatePath("/account");
   revalidatePath(`/u/${session.user.id}`);
+  // A speaker's pick shows on their home-page card.
+  revalidatePath("/");
   return {};
 }
 

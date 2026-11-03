@@ -17,8 +17,10 @@ import {
   type Category,
   type HostedSession,
 } from "@/lib/schedule";
+import type { MegagameClass } from "@/lib/megagame-levels";
 import type { Speaker } from "@/v2/data/speakers";
 import HatImage from "@/v2/hat-trick/HatImage";
+import FactionBadge from "./megagame/FactionBadge";
 import { HEADING } from "./styles";
 
 const CATEGORY_ICON: Record<Category, typeof Mic> = {
@@ -67,7 +69,8 @@ function Corner({
 }
 
 // One speaker as a two-sided card: the photo on top (with any Hat Trick
-// hats), name and affiliation under it. Turn it over for their sessions, each
+// hats and the Megagame factions they've joined, as badges on its corner),
+// name and affiliation under it. Turn it over for their sessions, each
 // linking to its page. The front sets the height; the back lies over it and
 // scrolls if it has to. With no sessions there's nothing to turn to.
 export default function SpeakerCard({
@@ -77,8 +80,12 @@ export default function SpeakerCard({
   photo,
   hats,
   logo,
+  factions = [],
   sessions = [],
-}: Omit<Speaker, "userId"> & { sessions?: HostedSession[] }) {
+}: Omit<Speaker, "userId"> & {
+  factions?: MegagameClass[];
+  sessions?: HostedSession[];
+}) {
   const [flipped, setFlipped] = useState(false);
   const frontCorner = useRef<HTMLButtonElement>(null);
   const backCorner = useRef<HTMLButtonElement>(null);
@@ -115,34 +122,49 @@ export default function SpeakerCard({
           onClick={canFlip ? (e) => onFace(e, true) : undefined}
           className={`${FACE} relative bg-white ${canFlip ? "cursor-pointer" : ""}`}
         >
-          {photo && hats?.length ? (
-            <HatImage
-              src={photo}
-              alt={name}
-              hats={hats}
-              className="aspect-square w-full"
-              sizes={SIZES}
-            />
-          ) : photo ? (
-            <Image
-              src={photo}
-              alt={name}
-              className="aspect-square w-full object-cover"
-              sizes={SIZES}
-            />
-          ) : (
-            <div
-              aria-hidden
-              className={`${HEADING} flex aspect-square w-full items-center justify-center bg-navy text-3xl text-cream sm:text-6xl`}
-            >
-              {name
-                .split(/\s+/)
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </div>
-          )}
+          <div className="relative">
+            {photo && hats?.length ? (
+              <HatImage
+                src={photo}
+                alt={name}
+                hats={hats}
+                className="aspect-square w-full"
+                sizes={SIZES}
+              />
+            ) : photo ? (
+              <Image
+                src={photo}
+                alt={name}
+                className="aspect-square w-full object-cover"
+                sizes={SIZES}
+              />
+            ) : (
+              <div
+                aria-hidden
+                className={`${HEADING} flex aspect-square w-full items-center justify-center bg-navy text-3xl text-cream sm:text-6xl`}
+              >
+                {name
+                  .split(/\s+/)
+                  .map((w) => w[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+            )}
+            {/* Stuck on the photo's bottom corner; the hats sit higher up, on
+                heads. Several overlap when a speaker has multiclassed. */}
+            {factions.length > 0 && (
+              <span className="absolute right-1 bottom-1 flex -space-x-2 sm:right-2 sm:bottom-2 sm:-space-x-3">
+                {factions.map((f) => (
+                  <FactionBadge
+                    key={f}
+                    faction={f}
+                    className="size-8 drop-shadow-[0_2px_3px_rgba(23,48,89,0.35)] sm:size-11"
+                  />
+                ))}
+              </span>
+            )}
+          </div>
           <div className="flex flex-1 flex-col items-center px-1 py-2 text-center sm:px-4 sm:py-3">
             <h3
               className={`${HEADING} text-xs break-words text-navy sm:text-lg`}
