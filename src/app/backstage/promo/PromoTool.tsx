@@ -15,9 +15,6 @@ import { PURPOSES, type MintResult } from "@/lib/promo-codes";
 import type { Coupon, StripeCode } from "@/lib/promo-codes-stripe";
 import type { PromoMode } from "@/lib/stripe-promo";
 
-// New codes start at $80 off, not a free ticket.
-const DEFAULT_AMOUNT_OFF = 80;
-
 const CUSTOM = "__custom__";
 // Coupons are made by hand in the dashboard (the key is Coupons: Read only).
 const STRIPE_ACCOUNT = "acct_1QeQd1CtO443EG3n";
@@ -54,16 +51,6 @@ export default function PromoTool({
   const [listsError, setListsError] = useState<string | null>(null);
 
   const stripeReady = !couponError && coupons.length > 0;
-  const defaultCoupon =
-    coupons.find(
-      (c) =>
-        c.kind === "amount" &&
-        c.amountOff === DEFAULT_AMOUNT_OFF &&
-        c.currency === "usd",
-    ) ??
-    coupons.find((c) => c.isDefault) ??
-    coupons[0];
-
   const err = (field: string) =>
     state.field === field ? (state.error ?? null) : null;
 
@@ -110,20 +97,21 @@ export default function PromoTool({
               label="Coupon"
               required
               className="md:col-span-2"
-              hint="The discount tier the code attaches to. Defaults to the 100%-off comp coupon."
-              error={couponError}
+              hint="The discount tier the code attaches to."
+              error={couponError ?? err("couponId")}
             >
               <div className="flex flex-col gap-2 sm:flex-row">
                 <select
                   name="couponId"
-                  defaultValue={defaultCoupon?.id ?? ""}
+                  defaultValue=""
+                  required
                   disabled={!stripeReady}
                   className={`${selectClass} flex-1`}
                   style={selectStyle}
                 >
-                  {!stripeReady && (
-                    <option value="">No coupons available</option>
-                  )}
+                  <option value="" disabled>
+                    {stripeReady ? "Choose a coupon…" : "No coupons available"}
+                  </option>
                   {(
                     [
                       ["amount", "Dollar amount off"],
@@ -390,10 +378,10 @@ function CopyButtons({
       <button
         type="button"
         onClick={() => urlCopy.copy(codeUrl(origin, "buy", code))}
-        title="Lands on the home page with the code saved for checkout"
+        title="Lands on the site's tickets section with the code saved for checkout"
         className={smallButtonClass}
       >
-        {label(urlCopy.status, "Copy link")}
+        {label(urlCopy.status, "Copy site link")}
       </button>
       {checkout && (
         <button
@@ -403,7 +391,7 @@ function CopyButtons({
           className={`${smallButtonClass} inline-flex items-center gap-1.5`}
         >
           <FaStripeS aria-hidden className="text-[#635BFF]" />
-          {label(checkoutCopy.status, "Copy checkout link")}
+          {label(checkoutCopy.status, "Copy Stripe checkout link")}
         </button>
       )}
     </>
@@ -445,13 +433,21 @@ function Result({ minted, origin }: { minted: MintResult; origin: string }) {
       <p className="my-2 font-mono text-2xl break-all text-navy select-all">
         {minted.code}
       </p>
+      <p className="text-xs text-ink/60">
+        Site link · tickets section with the code saved for checkout
+      </p>
       <p className="font-mono text-sm break-all text-ink/70 select-all">
         {codeUrl(origin, "buy", minted.code)}
       </p>
       {checkout && (
-        <p className="font-mono text-sm break-all text-ink/70 select-all">
-          {codeUrl(origin, "ticket", minted.code)}
-        </p>
+        <>
+          <p className="mt-2 text-xs text-ink/60">
+            Checkout link · straight to Stripe with the code applied
+          </p>
+          <p className="font-mono text-sm break-all text-ink/70 select-all">
+            {codeUrl(origin, "ticket", minted.code)}
+          </p>
+        </>
       )}
       <div className="mt-2 flex flex-wrap gap-2">
         <CopyButtons code={minted.code} origin={origin} checkout={checkout} />

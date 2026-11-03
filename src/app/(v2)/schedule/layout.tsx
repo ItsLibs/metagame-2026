@@ -1,19 +1,11 @@
+import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { buildDays } from "@/lib/schedule";
+import { parseView, VIEW_COOKIE } from "@/lib/schedule-view";
 import ContentPage from "@/v2/components/ContentPage";
 import { ModalHost } from "@/v2/components/RouteModal";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
-import AccountWall from "@/v2/components/AccountWall";
-import {
-  loadBoard,
-  loadMySessionIds,
-  loadPublicSchedule,
-  scheduleGate,
-} from "./data";
-
-const CLOSED =
-  "The schedule isn’t public yet. Session hosts and the Metagame team can preview it — if you’re one of them and this is all you see, ask us to turn it on for your account.";
-const SIGNED_OUT =
-  "The schedule isn’t public yet. If you’re a session host or on the Metagame team, sign in to preview it.";
+import { loadBoard, loadMySessionIds, loadPublicSchedule } from "./data";
 
 // The schedule stays mounted under /schedule/<slug>, whose page is just the
 // session modal on top of it.
@@ -22,39 +14,21 @@ export default async function ScheduleLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const gate = await scheduleGate();
-  if (gate !== "ok") {
-    return (
-      <AccountWall
-        title="Schedule"
-        body={gate === "closed" ? CLOSED : SIGNED_OUT}
-        next={gate === "signed-out" ? "/schedule" : null}
-      />
-    );
-  }
-  const [{ locations, sessions }, board, mine] = await Promise.all([
-    loadPublicSchedule(),
-    loadBoard(),
-    loadMySessionIds(),
-  ]);
+  // Rendered per request: which rooms and plans show depends on the viewer,
+  // and a build has no database to prerender from.
+  await connection();
+  const [{ locations, sessions }, board, mine, cookieStore] = await Promise.all(
+    [loadPublicSchedule(), loadBoard(), loadMySessionIds(), cookies()],
+  );
   return (
     <ModalHost closeHref="/schedule">
-      <ContentPage
-        eyebrow="Nov 6–8 at Lighthaven"
-        title="Schedule"
-        intro={
-          <p>
-            Talks, workshops and games across three days. Tap any session for
-            details.
-          </p>
-        }
-        wide
-      >
+      <ContentPage eyebrow="Nov 6–8 at Lighthaven" title="Schedule" wide>
         <PublicSchedule
           days={buildDays(sessions)}
           locations={locations}
           board={board}
           mine={mine}
+          initialView={parseView(cookieStore.get(VIEW_COOKIE)?.value)}
         />
       </ContentPage>
       {children}

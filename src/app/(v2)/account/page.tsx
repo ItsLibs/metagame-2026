@@ -11,7 +11,6 @@ import MegagameSummary from "./MegagameSummary";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
-import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
@@ -55,7 +54,6 @@ export default async function AccountPage({
     schedule,
     plans,
     counts,
-    linkable,
     admin,
     backstage,
     levels,
@@ -70,7 +68,6 @@ export default async function AccountPage({
     loadSchedule(),
     loadViewerPlans(user.id),
     loadRsvpCounts(),
-    canSeeSchedule(),
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
     loadMegagameLevels(user.id),
@@ -102,10 +99,15 @@ export default async function AccountPage({
         initial={initialTab}
         trailing={
           backstage && (
-            <Button asChild variant="navy" size="sm">
+            <Button
+              asChild
+              variant="navy"
+              size="sm"
+              className="max-sm:size-8 max-sm:p-0 max-sm:[&_svg]:size-4"
+            >
               <Link href="/backstage">
                 <GiTheaterCurtains aria-hidden />
-                Backstage
+                <span className="sr-only sm:not-sr-only">Backstage</span>
               </Link>
             </Button>
           )
@@ -149,7 +151,7 @@ export default async function AccountPage({
           ),
           sessions: (
             <SessionsPanel
-              linkable={linkable}
+              linkable
               sessions={accountSessions(
                 user.id,
                 schedule.sessions,
