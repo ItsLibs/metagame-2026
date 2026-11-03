@@ -36,6 +36,46 @@ const FACE =
 const MONO =
   "font-space-mono text-[9px] uppercase sm:text-xs sm:tracking-[0.08em]";
 
+// Where a speaker's faction medals sit, in medal widths (--s) from the photo's
+// top-right corner: the first on the corner, the next two on an arc around it,
+// one along the top edge and one down the side. `spread` is how far each
+// slides outward while the arc is hovered, so stacked medals come apart.
+const ARC = [
+  { top: 0.12, right: 0.12, spread: 0, tilt: "rotate-[-6deg]" },
+  { top: 0.3, right: 0.74, spread: 0.42, tilt: "rotate-[7deg]" },
+  { top: 0.74, right: 0.3, spread: 0.42, tilt: "rotate-[-7deg]" },
+];
+
+// Each faction's own words on a medal's tooltip, and how its medal moves when
+// hovered: the College's lifts and glows, the Fleet's rolls like a ship, the
+// Survey's hovers like its saucer.
+const LORE: Record<
+  MegagameClass,
+  { line: (first: string) => string; cta: string; motion: string }
+> = {
+  wizard: {
+    line: (first) =>
+      `${first} studies with the wizards and witches, spelling their way through word puzzles.`,
+    cta: "Enrol too",
+    motion:
+      "hover:-translate-y-1.5 hover:rotate-0 hover:shadow-[0_0_16px_rgba(59,0,184,0.75)] focus-visible:-translate-y-1.5 focus-visible:rotate-0",
+  },
+  pirate: {
+    line: (first) =>
+      `${first} sails with the pirates, hunting the treasure hidden in Lighthaven.`,
+    cta: "Sign the articles too",
+    motion:
+      "motion-safe:hover:animate-[mg-roll_1.4s_ease-in-out_infinite] motion-safe:focus-visible:animate-[mg-roll_1.4s_ease-in-out_infinite]",
+  },
+  alien: {
+    line: (first) =>
+      `${first} is with the crashed survey crew, puzzling out the way home.`,
+    cta: "Beam aboard too",
+    motion:
+      "hover:rotate-0 focus-visible:rotate-0 motion-safe:hover:animate-[mg-hover_1.8s_ease-in-out_infinite] motion-safe:focus-visible:animate-[mg-hover_1.8s_ease-in-out_infinite]",
+  },
+};
+
 // The dog-eared corner that turns the card: a clipped triangle in the
 // bottom-right with a turn-over arrow on it.
 function Corner({
@@ -152,46 +192,53 @@ export default function SpeakerCard({
               </div>
             )}
             {/* The factions a speaker has joined, as the medals from their level
-                badges, pinned to the photo's top-right corner (the Hat Trick's
-                hats sit on heads). Hovering one brings its emblem to life, as
-                on the Megagame tab, and fans a multiclasser's medals apart;
-                clicking goes to the Megagame tab to join that faction. */}
+                badges, tucked around the photo's top-right corner in an arc so
+                they cover as little face as possible (the Hat Trick's hats sit
+                on heads). Hovering one wakes its emblem, as on the Megagame
+                tab, and moves it the way its faction would; hovering the arc
+                fans a multiclasser's medals apart. Clicking goes to the
+                Megagame tab to join that faction. */}
             {factions.length > 0 && (
               <ul
                 aria-label="Megagame factions"
-                className="group/medals absolute top-1.5 right-1.5 flex flex-row-reverse sm:top-2.5 sm:right-2.5"
+                className="absolute top-0 right-0 [--k:0] [--s:2.25rem] focus-within:[--k:1] hover:[--k:1] sm:[--s:3rem]"
               >
-                {factions.map((f, i) => (
-                  <li
-                    key={f}
-                    className={`transition-[margin] duration-300 motion-reduce:transition-none ${i > 0 ? "-mr-2.5 group-focus-within/medals:mr-1 group-hover/medals:mr-1 sm:-mr-3.5" : ""}`}
-                    style={{ zIndex: factions.length - i }}
-                  >
-                    <a
-                      href={`/account?tab=megagame&join=${f}#faction-${f}`}
-                      aria-label={`${FACTION_NAMES[f]}: a Megagame faction ${name.split(" ")[0]} has joined. Join it too`}
-                      className="group peer block rounded-full shadow-[0_2px_6px_rgba(23,48,89,0.4)] ring-2 ring-[#FFFBF2] transition-transform duration-300 outline-none hover:scale-110 hover:rotate-0 focus-visible:scale-110 focus-visible:ring-meeple motion-reduce:transition-none"
-                      style={{ transform: `rotate(${i % 2 ? 7 : -7}deg)` }}
+                {factions.map((f, i) => {
+                  const slot = ARC[Math.min(i, ARC.length - 1)];
+                  const lore = LORE[f];
+                  return (
+                    <li
+                      key={f}
+                      className="absolute transition-[top,right] duration-300 motion-reduce:transition-none"
+                      style={{
+                        zIndex: factions.length - i,
+                        top: `calc(var(--s) * (${slot.top} + ${slot.spread} * var(--k)))`,
+                        right: `calc(var(--s) * (${slot.right} + ${slot.spread} * var(--k)))`,
+                      }}
                     >
-                      <FactionMedal
-                        faction={f}
-                        className="size-9 rounded-full sm:size-12"
-                      />
-                    </a>
-                    <span
-                      role="tooltip"
-                      className="pointer-events-none absolute top-full right-0 z-10 mt-2 w-max max-w-[11rem] translate-y-1 rounded-lg bg-navy px-2.5 py-1.5 text-left text-[11px] leading-snug text-cream opacity-0 shadow-[0_4px_12px_rgba(23,48,89,0.35)] transition duration-200 peer-hover:translate-y-0 peer-hover:opacity-100 peer-focus-visible:translate-y-0 peer-focus-visible:opacity-100 motion-reduce:transition-none"
-                    >
-                      <b className="block font-[family-name:var(--font-bebas)] text-sm tracking-[0.04em]">
-                        {FACTION_NAMES[f]}
-                      </b>
-                      A Megagame faction {name.split(" ")[0]} has joined.
-                      <span className="block text-tan">
-                        Click to join too →
+                      <a
+                        href={`/account?tab=megagame&join=${f}#faction-${f}`}
+                        aria-label={`${FACTION_NAMES[f]}: ${lore.line(name.split(" ")[0])} ${lore.cta}`}
+                        className={`group peer block rounded-full shadow-[0_2px_6px_rgba(23,48,89,0.4)] ring-2 ring-[#FFFBF2] transition-[rotate,scale,translate,box-shadow] duration-300 outline-none hover:scale-110 focus-visible:scale-110 focus-visible:ring-meeple motion-reduce:transition-none ${slot.tilt} ${lore.motion}`}
+                      >
+                        <FactionMedal
+                          faction={f}
+                          className="size-[var(--s)] rounded-full"
+                        />
+                      </a>
+                      <span
+                        role="tooltip"
+                        className="pointer-events-none absolute top-full right-0 z-10 mt-2 w-max max-w-[11rem] translate-y-1 rounded-lg bg-navy px-2.5 py-1.5 text-left text-[11px] leading-snug text-cream opacity-0 shadow-[0_4px_12px_rgba(23,48,89,0.35)] transition duration-200 peer-hover:translate-y-0 peer-hover:opacity-100 peer-focus-visible:translate-y-0 peer-focus-visible:opacity-100 motion-reduce:transition-none"
+                      >
+                        <b className="block font-[family-name:var(--font-bebas)] text-sm tracking-[0.04em]">
+                          {FACTION_NAMES[f]}
+                        </b>
+                        {lore.line(name.split(" ")[0])}
+                        <span className="block text-tan">{lore.cta} →</span>
                       </span>
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

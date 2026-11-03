@@ -176,6 +176,26 @@ button:not(:disabled) {
     opacity: 0.6;
   }
 }
+/* Speaker cards' faction medals on hover: the Fleet's rolls like a ship at
+   sea, the Survey's hovers like its saucer (src/v2/components/SpeakerCard). */
+@keyframes mg-roll {
+  0%,
+  100% {
+    rotate: -9deg;
+  }
+  50% {
+    rotate: 9deg;
+  }
+}
+@keyframes mg-hover {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
 
 @keyframes shake {
   10%,
