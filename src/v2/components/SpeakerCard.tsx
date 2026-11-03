@@ -40,12 +40,12 @@ const MONO =
 // each in medal widths (--s) from the photo's top-right corner. One sits on
 // the corner; more wrap it in an arc, the next along the top edge and the
 // third down the side, overlapping a little like pins on a lapel. `spread` is
-// how far each springs out along the arc while the arc is hovered, so they
-// come apart; the later ones set off a beat after the first.
+// how far a medal eases out along the arc while it is hovered, clear of its
+// neighbours.
 type Slot = { x: number; y: number; spread: number; tilt: string };
 const CORNER: Slot = { x: 0.55, y: 0.55, spread: 0, tilt: "rotate-[-6deg]" };
-const ALONG: Slot = { x: 1.32, y: 0.68, spread: 0.5, tilt: "rotate-[6deg]" };
-const DOWN: Slot = { x: 0.68, y: 1.32, spread: 0.5, tilt: "rotate-[-6deg]" };
+const ALONG: Slot = { x: 1.32, y: 0.68, spread: 0.22, tilt: "rotate-[6deg]" };
+const DOWN: Slot = { x: 0.68, y: 1.32, spread: 0.22, tilt: "rotate-[-6deg]" };
 const ARCS: Slot[][] = [[], [CORNER], [CORNER, ALONG], [CORNER, ALONG, DOWN]];
 
 // Each faction's own words on a medal's tooltip, and how its medal moves when
@@ -197,13 +197,13 @@ export default function SpeakerCard({
                 badges, set around the photo's top-right corner in an arc so they
                 cover as little face as possible (the Hat Trick's hats sit
                 on heads). Hovering one wakes its emblem, as on the Megagame
-                tab, and moves it the way its faction would; hovering the arc
-                fans a multiclasser's medals apart. Clicking goes to the
+                tab, and moves it the way its faction would, easing it out from
+                its neighbours. Clicking goes to the
                 Megagame tab to join that faction. */}
             {factions.length > 0 && (
               <ul
                 aria-label="Megagame factions"
-                className="absolute top-0 right-0 [--k:0] [--s:1.75rem] focus-within:[--k:1] hover:[--k:1] sm:[--s:2.5rem]"
+                className="absolute top-0 right-0 [--s:1.75rem] sm:[--s:2.5rem]"
               >
                 {factions.map((f, i) => {
                   const slot = ARCS[Math.min(factions.length, 3)][i];
@@ -211,10 +211,9 @@ export default function SpeakerCard({
                   return (
                     <li
                       key={f}
-                      className="absolute transition-[top,right] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none"
+                      className="absolute transition-[top,right] duration-400 ease-[cubic-bezier(0.34,1.4,0.64,1)] [--k:0] focus-within:[--k:1] hover:[--k:1] motion-reduce:transition-none"
                       style={{
                         zIndex: factions.length - i,
-                        transitionDelay: `${i * 60}ms`,
                         top: `calc(var(--s) * (${slot.y - 0.5} + ${slot.spread} * var(--k)))`,
                         right: `calc(var(--s) * (${slot.x - 0.5} + ${slot.spread} * var(--k)))`,
                       }}
