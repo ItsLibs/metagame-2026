@@ -7,13 +7,8 @@ vi.mock("@/db", () => {
   return { getDb: () => anything, schema: anything };
 });
 
-const {
-  constraintMessage,
-  explainDbError,
-  OccupiedBoardError,
-  OccupiedRoomError,
-  roomHolds,
-} = await import("./schedule-store");
+const { constraintMessage, explainDbError, OccupiedRoomError, roomHolds } =
+  await import("./schedule-store");
 
 describe("constraintMessage", () => {
   // The attendee-facing note writes answer with this and a fixed string, so a
@@ -38,24 +33,6 @@ describe("constraintMessage", () => {
       error: "That spot is off the board.",
     });
     expect(explainDbError(err)).toEqual(constraintMessage(err));
-  });
-});
-
-describe("OccupiedBoardError", () => {
-  // A board window over sessions would leave them listed and searchable but
-  // drawn nowhere — the same hole BoardRoomError closes from the session
-  // side, so the room side has to refuse it too.
-  it("blames the board start, so the form marks the right control", () => {
-    expect(new OccupiedBoardError(3).field).toBe("boardStartsAt");
-  });
-
-  it("counts what is in the way, and reads correctly for one", () => {
-    expect(new OccupiedBoardError(1).message).toBe(
-      "1 session is in this room while the board would be up. Move it first, or start the board later.",
-    );
-    expect(new OccupiedBoardError(4).message).toBe(
-      "4 sessions are in this room while the board would be up. Move them first, or start the board later.",
-    );
   });
 });
 

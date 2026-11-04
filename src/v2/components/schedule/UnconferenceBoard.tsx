@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { noticeText } from "@/lib/notice-doc";
+import type { PublicSession } from "@/lib/schedule";
 import {
   clampNotePosition,
   firstFreeSpot,
@@ -18,6 +19,10 @@ import { NEEDS_TICKET_HINT, useNoteBoard } from "./NoteBoard";
 import NoticeCanvas from "./notice/NoticeCanvas";
 import { StickyPaper, tiltFor } from "./notice/Paper";
 import { ReactionPills } from "./notice/Reactions";
+import {
+  SessionPosterLayer,
+  SessionPosterPicker,
+} from "./notice/SessionPosters";
 import { EmptyPanel, ROW, SessionRows } from "./ScheduleViews";
 
 // The bulletin board a "board" room's column is drawn as: a cork board in a
@@ -138,12 +143,20 @@ type Drag = {
 export default function UnconferenceBoard({
   locationId,
   dayKey,
+  firstSlot,
+  sessions,
 }: {
   locationId: string;
   dayKey: string;
+  /** The day's first grid slot, in minutes, so posters line up with rows. */
+  firstSlot: number;
+  /** The day's sessions, for the team's session poster picker. */
+  sessions: PublicSession[];
 }) {
   const board = useNoteBoard();
-  const notes = board.notesIn(locationId, dayKey);
+  const all = board.notesIn(locationId, dayKey);
+  const notes = all.filter((n) => !n.session);
+  const team = board.isTeam && !board.readOnly;
   const surface = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   // Where the note under the pointer is right now. Local, not board state:
@@ -287,109 +300,134 @@ export default function UnconferenceBoard({
   }
 
   return (
-    // The frame: a wooden border with a dark ink outline, clipart-style.
-    <div className="absolute inset-0 flex flex-col overflow-hidden border-[7px] border-[#9a6430] shadow-[inset_0_0_0_2px_#1b1530,inset_3px_4px_0_8px_rgba(27,21,48,0.18)] outline-2 -outline-offset-2 outline-[#1b1530]">
-      {/* No button: a note goes up where the pin is. The bar stays only to
-          tell someone without a ticket why they can't put one up. */}
-      {!board.canPost && (
-        <div className={BAR}>
-          <PostHint className="text-[#1b1530]/55" />
-        </div>
-      )}
-      <div
-        ref={surface}
-        onPointerMove={trackPin}
-        onPointerLeave={dropPin}
-        onClick={pinHere}
-        style={{ ...CORK, ...(pinnable && { cursor: PIN_CURSOR }) }}
-        className="relative min-h-0 flex-1 shadow-[inset_2px_3px_6px_rgba(27,21,48,0.35)]"
-      >
-        <>
-          {notes.length === 0 && (
-            <p className="pointer-events-none mx-auto mt-4 w-fit rounded-[3px] border-[1.5px] border-[#1b1530]/40 bg-cream/90 px-2 py-1 text-center text-[11px] text-[#1b1530]/70 shadow-[2px_2px_0_rgba(27,21,48,0.25)]">
-              Nothing pinned up yet.
-              {board.canPost && " Click the cork to add one."}
-            </p>
-          )}
-          {/* Only after the pin has rested: following the cursor from the first
+    <div className="absolute inset-0">
+      {/* The frame: a wooden border with a dark ink outline, clipart-style. */}
+      <div className="absolute inset-0 flex flex-col overflow-hidden border-[7px] border-[#9a6430] shadow-[inset_0_0_0_2px_#1b1530,inset_3px_4px_0_8px_rgba(27,21,48,0.18)] outline-2 -outline-offset-2 outline-[#1b1530]">
+        {/* No button for notes: one goes up where the pin is. The bar tells
+          someone without a ticket why they can't, and holds the schedule
+          team's session poster picker. */}
+        {(!board.canPost || team) && (
+          <div className={BAR}>
+            {!board.canPost && <PostHint className="text-[#1b1530]/55" />}
+            {team && (
+              <SessionPosterPicker
+                sessions={sessions}
+                locationId={locationId}
+                taken={
+                  new Set(all.flatMap((n) => (n.session ? [n.session.id] : [])))
+                }
+                onPick={(sessionId) => board.pinSession(locationId, sessionId)}
+              />
+            )}
+          </div>
+        )}
+        <div
+          ref={surface}
+          onPointerMove={trackPin}
+          onPointerLeave={dropPin}
+          onClick={pinHere}
+          style={{ ...CORK, ...(pinnable && { cursor: PIN_CURSOR }) }}
+          className="relative min-h-0 flex-1 shadow-[inset_2px_3px_6px_rgba(27,21,48,0.35)]"
+        >
+          <>
+            {notes.length === 0 && (
+              <p className="pointer-events-none mx-auto mt-4 w-fit rounded-[3px] border-[1.5px] border-[#1b1530]/40 bg-cream/90 px-2 py-1 text-center text-[11px] text-[#1b1530]/70 shadow-[2px_2px_0_rgba(27,21,48,0.25)]">
+                Nothing pinned up yet.
+                {board.canPost && " Click the cork to add one."}
+              </p>
+            )}
+            {/* Only after the pin has rested: following the cursor from the first
             pixel would flicker across the board on the way to a note. */}
-          {pin && resting && (
-            <span
-              aria-hidden
-              style={{ left: pin.x + 14, top: pin.y + 6 }}
-              className="pointer-events-none absolute rounded-[2px] bg-[#1b1530] px-1.5 py-0.5 text-[10px] whitespace-nowrap text-cream shadow-sm"
-            >
-              Add a note
-            </span>
-          )}
-          {/* Back to front: the newest note is last, so it paints on top. No
-            z-index anywhere, including mid-drag — that order is the point. */}
-          {notesInPaintOrder(notes).map((note) => {
-            const at = sliding?.noteId === note.id ? sliding : note;
-            return (
-              <div
-                key={note.id}
-                style={{
-                  left: offset(at.x, TILE_PX),
-                  top: offset(at.y, NOTE_H),
-                  width: TILE_PX,
-                  transform: `rotate(${tiltFor(note.id)}deg)`,
-                }}
-                className="group absolute"
+            {pin && resting && (
+              <span
+                aria-hidden
+                style={{ left: pin.x + 14, top: pin.y + 6 }}
+                className="pointer-events-none absolute rounded-[2px] bg-[#1b1530] px-1.5 py-0.5 text-[10px] whitespace-nowrap text-cream shadow-sm"
               >
-                <button
-                  type="button"
-                  title={note.title ?? "A drawing"}
-                  aria-label={`${note.title ?? "A drawing"}, by ${note.author.name}`}
-                  aria-haspopup="dialog"
-                  onPointerDown={(e) => grab(e, note)}
-                  onPointerMove={slide}
-                  onPointerUp={release}
-                  onPointerCancel={release}
-                  onLostPointerCapture={abandon}
-                  onClick={() => {
-                    if (dragged.current) {
-                      dragged.current = false;
-                      return;
-                    }
-                    board.open(note.id);
+                Add a note
+              </span>
+            )}
+            {/* Back to front: the newest note is last, so it paints on top. No
+            z-index anywhere, including mid-drag — that order is the point. */}
+            {notesInPaintOrder(notes).map((note) => {
+              const at = sliding?.noteId === note.id ? sliding : note;
+              return (
+                <div
+                  key={note.id}
+                  style={{
+                    left: offset(at.x, TILE_PX),
+                    top: offset(at.y, NOTE_H),
+                    width: TILE_PX,
+                    transform: `rotate(${tiltFor(note.id)}deg)`,
                   }}
-                  style={{ width: TILE_PX, height: TILE_PX }}
-                  className={`block text-left select-none ${
-                    board.canMove(note) ? "cursor-grab" : "cursor-pointer"
-                  }`}
+                  className="group absolute"
                 >
-                  <StickyPaper
-                    color={note.color}
-                    size={TILE_PX}
-                    outline={1.75}
-                    className="transition-transform group-hover:-translate-y-0.5"
+                  <button
+                    type="button"
+                    title={note.title ?? "A drawing"}
+                    aria-label={`${note.title ?? "A drawing"}, by ${note.author.name}`}
+                    aria-haspopup="dialog"
+                    onPointerDown={(e) => grab(e, note)}
+                    onPointerMove={slide}
+                    onPointerUp={release}
+                    onPointerCancel={release}
+                    onLostPointerCapture={abandon}
+                    onClick={() => {
+                      if (dragged.current) {
+                        dragged.current = false;
+                        return;
+                      }
+                      board.open(note.id);
+                    }}
+                    style={{ width: TILE_PX, height: TILE_PX }}
+                    className={`block text-left select-none ${
+                      board.canMove(note) ? "cursor-grab" : "cursor-pointer"
+                    }`}
                   >
-                    <NoticeCanvas
-                      face="sticky"
-                      doc={note.sticky}
-                      width={TILE_PX}
-                    />
-                  </StickyPaper>
-                </button>
-                {/* Beside the note, not inside its button: each pill is its own
+                    <StickyPaper
+                      color={note.color}
+                      size={TILE_PX}
+                      outline={1.75}
+                      className="transition-transform group-hover:-translate-y-0.5"
+                    >
+                      <NoticeCanvas
+                        face="sticky"
+                        doc={note.sticky}
+                        width={TILE_PX}
+                      />
+                      {/* Small print on the glue strip: who put it up. */}
+                      <span className="pointer-events-none absolute top-[2px] right-1.5 left-1.5 truncate text-[7.5px] leading-[11px] font-semibold text-[#1b1530]/55">
+                        {note.author.name}
+                      </span>
+                    </StickyPaper>
+                  </button>
+                  {/* Beside the note, not inside its button: each pill is its own
                   button, toggling the viewer's reaction. */}
-                <div className="relative -mt-1.5 pl-1">
-                  <ReactionPills
-                    reactions={note.reactions}
-                    onToggle={
-                      board.canPost
-                        ? (emoji) => board.react(note.id, emoji)
-                        : undefined
-                    }
-                    onMore={() => board.open(note.id)}
-                  />
+                  <div className="relative -mt-1.5 pl-1">
+                    <ReactionPills
+                      reactions={note.reactions}
+                      onToggle={
+                        board.canPost
+                          ? (emoji) => board.react(note.id, emoji)
+                          : undefined
+                      }
+                      onMore={() => board.open(note.id)}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </>
+              );
+            })}
+          </>
+        </div>
       </div>
+      {/* Over the frame, not inside the cork, so each poster sits on its
+        session's rows whatever the bar above the cork adds. */}
+      <SessionPosterLayer
+        notes={all}
+        firstSlot={firstSlot}
+        canTakeDown={team}
+        onTakeDown={(noteId) => void board.takeDown(noteId)}
+      />
     </div>
   );
 }
@@ -408,7 +446,8 @@ export function NoteList({
   height: number;
 }) {
   const board = useNoteBoard();
-  const notes = board.notesIn(locationId, dayKey);
+  // Session posters are on the schedule already, as their sessions.
+  const notes = board.notesIn(locationId, dayKey).filter((n) => !n.session);
   return (
     <section className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">

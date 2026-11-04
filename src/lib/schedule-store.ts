@@ -19,13 +19,11 @@ import { can } from "./access";
 import { currentSession, getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
 import {
-  BOARD_ROOM_REFUSAL,
   clashDescription,
   fromPacificWall,
   movedTimes,
   outsideHours,
   roomAllowsOverlap,
-  clashesWithBoard,
   summarizeRsvps,
   toRoomClash,
   type Attendance,
@@ -172,22 +170,6 @@ export type SessionInput = Omit<
   hostIds: string[];
 };
 
-/**
- * Inserts or, with an id, replaces the session and its host list. Refuses a
- * clash in its room unless `allowOverlap`; a clash let through comes back.
- * Only a change of time or room is checked, so editing the rest of a session
- * that already overlaps doesn't ask again.
- */
-/** A board window refused because sessions in the room fall inside it. */
-export class OccupiedBoardError extends Error {
-  readonly field = "boardStartsAt";
-  constructor(readonly held: number) {
-    super(
-      `${held} session${held === 1 ? " is" : "s are"} in this room while the board would be up. Move ${held === 1 ? "it" : "them"} first, or start the board later.`,
-    );
-  }
-}
-
 /** English for what a room still holds, so a refusal can name it. */
 export function roomHolds(held: {
   sessions: number;
@@ -216,50 +198,18 @@ export class OccupiedRoomError extends Error {
   }
 }
 
-/** A save refused because the board has the room at that time. */
-export class BoardRoomError extends Error {
-  readonly field = "locationId";
-  constructor() {
-    super(BOARD_ROOM_REFUSAL);
-  }
-}
-
-/** Throws when the session would sit under the room's bulletin board. */
-export async function assertClearOfBoard(
-  locationId: string | null,
-  startsAt: Date | null,
-  endsAt: Date | null,
-): Promise<void> {
-  if (!locationId || !startsAt || !endsAt) return;
-  const [room] = await getDb()
-    .select({
-      boardStartsAt: locations.boardStartsAt,
-      boardEndsAt: locations.boardEndsAt,
-    })
-    .from(locations)
-    .where(eq(locations.id, locationId));
-  if (
-    room &&
-    clashesWithBoard(
-      {
-        boardStartsAt: room.boardStartsAt?.toISOString() ?? null,
-        boardEndsAt: room.boardEndsAt?.toISOString() ?? null,
-      },
-      startsAt,
-      endsAt,
-    )
-  ) {
-    throw new BoardRoomError();
-  }
-}
-
+/**
+ * Inserts or, with an id, replaces the session and its host list. Refuses a
+ * clash in its room unless `allowOverlap`; a clash let through comes back.
+ * Only a change of time or room is checked, so editing the rest of a session
+ * that already overlaps doesn't ask again.
+ */
 export async function upsertSession(
   input: SessionInput,
   { allowOverlap = false }: { allowOverlap?: boolean } = {},
 ): Promise<{ id: string; clash: RoomClash | null }> {
   const db = getDb();
   const { id, hostIds, ...row } = input;
-  await assertClearOfBoard(row.locationId, row.startsAt, row.endsAt);
   const clash =
     row.startsAt && row.endsAt && (await placementChanged(id, row))
       ? await assertSlotFree(
@@ -419,7 +369,6 @@ export async function moveSessionTo(
         start,
       );
   if (endsAt <= startsAt) throw new Error("End must be after start.");
-  await assertClearOfBoard(locationId, startsAt, endsAt);
   await assertSlotFree(id, startsAt, endsAt, locationId, allowOverlap);
   await db
     .update(sessions)
@@ -802,38 +751,9 @@ export type LocationInput = Omit<
   boardEndsAt: Date | null;
 };
 
-/** How many sessions in a room overlap the window — the board would hide them. */
-export async function sessionsUnderBoard(
-  locationId: string,
-  from: Date,
-  until: Date | null,
-): Promise<number> {
-  const [row] = await getDb()
-    .select({ n: count() })
-    .from(sessions)
-    .where(
-      and(
-        eq(sessions.locationId, locationId),
-        gt(sessions.endsAt, from),
-        until ? lt(sessions.startsAt, until) : undefined,
-      ),
-    );
-  return row?.n ?? 0;
-}
-
 export async function upsertLocation(input: LocationInput): Promise<string> {
   const db = getDb();
   const { id, ...row } = input;
-  // A board window over sessions would leave them listed and searchable but
-  // drawn nowhere, so it is refused until they move.
-  if (id && row.boardStartsAt) {
-    const held = await sessionsUnderBoard(
-      id,
-      row.boardStartsAt,
-      row.boardEndsAt,
-    );
-    if (held > 0) throw new OccupiedBoardError(held);
-  }
   if (id) {
     const [updated] = await db
       .update(locations)
@@ -978,6 +898,10 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
   unconference_note_reactions_emoji_length: {
     field: "emoji",
     error: "That isn't an emoji.",
+  },
+  unconference_notes_sessionId_unique: {
+    field: "sessionId",
+    error: "That session already has a poster on the board.",
   },
   unconference_notes_x_fraction: {
     field: "position",

@@ -274,6 +274,12 @@ export const unconferenceNotes = pgTable(
     // Which day's board the notice is on, as a Pacific date: each day the
     // board is up it starts fresh.
     boardDay: date({ mode: "string" }).notNull(),
+    // Set on a session poster: the team's full-width notice that sits at the
+    // session's own time rows and opens the session. Its documents, colour
+    // and position go unused; the session supplies all of that.
+    sessionId: uuid()
+      .unique()
+      .references(() => sessions.id, { onDelete: "cascade" }),
     // Derived from the documents on save, for the list view and search;
     // null when the notice is only drawings.
     title: text(),

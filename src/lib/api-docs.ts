@@ -130,12 +130,12 @@ const LOCATION_FIELDS: Field[] = [
   {
     name: "boardStartsAt",
     type: "string | null",
-    note: 'Pacific wall clock, "2026-11-06T22:00". When the unconference bulletin board takes over this room; sessions can\'t overlap it.',
+    note: 'Pacific date, "2026-11-06": the first day the unconference bulletin board takes over this room\'s whole column. Sessions may still be placed here.',
   },
   {
     name: "boardEndsAt",
     type: "string | null",
-    note: "When the board comes down; null runs it to the end of the schedule.",
+    note: "Pacific date: the board's last day; null runs it to the end of the schedule. Read back as the instant the following day starts.",
   },
 ];
 

@@ -20,7 +20,6 @@ import {
   overlapWarning,
   boardOnDay,
   boardRows,
-  clashesWithBoard,
   planConflicts,
   rsvpPrompt,
   slotLabel,
@@ -614,50 +613,15 @@ describe("nowLinePx", () => {
   });
 });
 
-// Friday Nov 6, 10pm Pacific, open-ended.
+// Rat Park: Friday to Sunday, whole days (Fri 00:00 to Mon 00:00 Pacific).
 const ratPark = {
-  boardStartsAt: "2026-11-07T06:00:00.000Z",
-  boardEndsAt: null,
+  boardStartsAt: "2026-11-06T08:00:00.000Z",
+  boardEndsAt: "2026-11-09T08:00:00.000Z",
 };
 
-describe("clashesWithBoard", () => {
-  // The grid draws the board over its rows with no cells, so a session under
-  // it would be listed and searchable but drawn nowhere.
-  it("refuses a session overlapping the window and allows one before it", () => {
-    const at = (h: number) => `2026-11-07T0${h}:00:00.000Z`;
-    expect(clashesWithBoard(ratPark, at(3), at(6))).toBe(false); // 7–10pm
-    expect(clashesWithBoard(ratPark, at(5), at(7))).toBe(true); // 9–11pm
-    expect(
-      clashesWithBoard(ratPark, "2026-11-08T20:00:00Z", "2026-11-08T21:00:00Z"),
-    ).toBe(true);
-    expect(
-      clashesWithBoard(
-        { ...ratPark, boardEndsAt: "2026-11-08T06:00:00.000Z" },
-        "2026-11-08T20:00:00Z",
-        "2026-11-08T21:00:00Z",
-      ),
-    ).toBe(false);
-    expect(
-      clashesWithBoard(
-        { boardStartsAt: null, boardEndsAt: null },
-        at(5),
-        at(7),
-      ),
-    ).toBe(false);
-  });
-});
-
-describe("boardRows", () => {
-  const slots = Array.from({ length: 28 }, (_, i) => 600 + i * 30); // 10:00–24:00
-  it("covers only the window's rows on its first day", () => {
-    expect(boardRows(ratPark, "2026-11-06", slots)).toEqual([24, 28]);
-  });
-  it("covers whole days after that, and nothing before", () => {
-    expect(boardRows(ratPark, "2026-11-07", slots)).toEqual([0, 28]);
-    expect(boardRows(ratPark, "2026-11-05", slots)).toBeNull();
-  });
-  it("makes three boards of a window ending at Sunday midnight", () => {
-    const weekend = { ...ratPark, boardEndsAt: "2026-11-09T08:00:00.000Z" };
+describe("boardOnDay / boardRows", () => {
+  const slots = Array.from({ length: 28 }, (_, i) => 600 + i * 30);
+  it("makes one whole-column board per day, ending at Sunday midnight", () => {
     expect(
       [
         "2026-11-05",
@@ -665,13 +629,16 @@ describe("boardRows", () => {
         "2026-11-07",
         "2026-11-08",
         "2026-11-09",
-      ].map((d) => boardOnDay(weekend, d)),
+      ].map((d) => boardOnDay(ratPark, d)),
     ).toEqual([false, true, true, true, false]);
-    expect(boardRows(weekend, "2026-11-08", slots)).toEqual([0, 28]);
+    expect(boardRows(ratPark, "2026-11-06", slots)).toEqual([0, 28]);
+    expect(boardRows(ratPark, "2026-11-09", slots)).toBeNull();
   });
-  it("stops at the end of the window", () => {
-    const until = { ...ratPark, boardEndsAt: "2026-11-08T22:00:00.000Z" }; // Sun 2pm
-    expect(boardRows(until, "2026-11-08", slots)).toEqual([0, 8]);
-    expect(boardRows(until, "2026-11-09", slots)).toBeNull();
+  it("runs to the end of the schedule with no end set", () => {
+    const open = { ...ratPark, boardEndsAt: null };
+    expect(boardOnDay(open, "2026-11-09")).toBe(true);
+    expect(
+      boardOnDay({ boardStartsAt: null, boardEndsAt: null }, "2026-11-07"),
+    ).toBe(false);
   });
 });

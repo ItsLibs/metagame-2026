@@ -172,10 +172,6 @@ export default function SessionForm({
   // Set only when moving the start cut the end back to midnight.
   const [shortened, setShortened] = useState(false);
 
-  // The board's room is offered like any other: it takes sessions outside the
-  // board's window, and the save refuses one that lands inside it.
-  const roomOptions = locations;
-
   const dayOptions: { key: string; label: string }[] = EDITOR_DAYS.map((d) => ({
     key: d.key,
     label: `${d.name} ${monthSlashDay(d.key)}`,
@@ -442,7 +438,7 @@ export default function SessionForm({
               style={selectStyle}
             >
               <option value="">No room yet</option>
-              {roomOptions.map((l) => (
+              {locations.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
                   {l.capacity ? ` · 👤 ${l.capacity}` : ""}

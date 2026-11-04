@@ -614,30 +614,10 @@ export const hostsBoard = (room: BoardWindow): boolean =>
   room.boardStartsAt !== null;
 
 /**
- * Whether a session at these times would sit under the room's board. Grid
- * view draws the board over those rows with no cells, so such a session
- * would be listed and searchable but drawn nowhere; the pairing is refused
- * instead, in the form, on the backstage grid and in the store.
- */
-export function clashesWithBoard(
-  room: BoardWindow,
-  startsAt: string | Date | null,
-  endsAt: string | Date | null,
-): boolean {
-  if (!room.boardStartsAt || !startsAt || !endsAt) return false;
-  const from = Date.parse(room.boardStartsAt);
-  const until = room.boardEndsAt ? Date.parse(room.boardEndsAt) : Infinity;
-  return (
-    new Date(startsAt).getTime() < until && new Date(endsAt).getTime() > from
-  );
-}
-
-export const BOARD_ROOM_REFUSAL =
-  "The unconference board has that room then, so it holds no sessions.";
-
-/**
- * Whether the board is up at some point on this Pacific day. Each such day
- * is its own board, with its own notes.
+ * Whether the board is up on this Pacific day. Each such day is its own
+ * board, with its own notes, over the room's whole column. Sessions may
+ * still be scheduled in the room; the grid just doesn't draw them, and the
+ * team pins a session poster up for the ones the board should show.
  */
 export function boardOnDay(room: BoardWindow, dayKey: string): boolean {
   if (!room.boardStartsAt) return false;
@@ -650,27 +630,16 @@ export function boardOnDay(room: BoardWindow, dayKey: string): boolean {
 
 /**
  * The slot rows the board covers on one day, as [first, end) indexes into
- * `slots`; null when the board isn't up that day. A slot counts when its
- * start falls inside the window.
+ * `slots`: all of them on a board day, null otherwise.
  */
 export function boardRows(
   room: BoardWindow,
   dayKey: string,
   slots: readonly number[],
 ): [number, number] | null {
-  if (!room.boardStartsAt || !boardOnDay(room, dayKey)) return null;
-  const startDay = pacificDayKey(room.boardStartsAt);
-  const endDay = room.boardEndsAt ? pacificDayKey(room.boardEndsAt) : null;
-  const from = dayKey === startDay ? pacificMinutes(room.boardStartsAt) : 0;
-  const until =
-    endDay && dayKey === endDay && room.boardEndsAt
-      ? pacificMinutes(room.boardEndsAt)
-      : Infinity;
-  const first = slots.findIndex((m) => m >= from && m < until);
-  if (first < 0) return null;
-  let end = first;
-  while (end < slots.length && slots[end] < until) end++;
-  return [first, end];
+  return boardOnDay(room, dayKey) && slots.length > 0
+    ? [0, slots.length]
+    : null;
 }
 
 /** Volunteer shifts hand off with some overlap; a double-booked real room is a mistake. */

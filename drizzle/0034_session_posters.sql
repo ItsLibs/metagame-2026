@@ -1,0 +1,3 @@
+ALTER TABLE "unconference_notes" ADD COLUMN "session_id" uuid;--> statement-breakpoint
+ALTER TABLE "unconference_notes" ADD CONSTRAINT "unconference_notes_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "unconference_notes" ADD CONSTRAINT "unconference_notes_sessionId_unique" UNIQUE("session_id");

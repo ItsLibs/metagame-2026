@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { FaListUl, FaPencilAlt, FaThLarge } from "react-icons/fa";
 import {
-  BOARD_ROOM_REFUSAL,
   cellSessions,
   capAtMidnight,
   findClash,
@@ -19,7 +18,6 @@ import {
   offsetPx,
   outsideHours,
   overlapLanes,
-  clashesWithBoard,
   NO_ROOM,
   openingDayKey,
   selectedDay,
@@ -240,13 +238,6 @@ function GridDay({
     slotStart: number;
     colId: string;
   } | null>(null);
-  // While the bulletin board has a room, nothing drops in its column there,
-  // and a click opens the form with no room rather than with that one.
-  const isBoard = (colId: string, startsAt: Date, endsAt: Date) =>
-    colId !== NO_ROOM &&
-    locations.some(
-      (l) => l.id === colId && clashesWithBoard(l, startsAt, endsAt),
-    );
   const target = (slotStart: number, colId: string) => {
     if (!carrying) return null;
     const start = fromPacificWall(`${day.key}T${minutesToHHMM(slotStart)}`);
@@ -270,9 +261,6 @@ function GridDay({
       locations,
     );
     const overlaps = clash && `Overlaps ${clash.title}`;
-    const board = isBoard(colId, times.startsAt, times.endsAt)
-      ? BOARD_ROOM_REFUSAL
-      : null;
     const hint = [cut && "Shortened at midnight", overlaps]
       .filter(Boolean)
       .join(" · ");
@@ -283,7 +271,6 @@ function GridDay({
       clash,
       cut,
       blocked:
-        board ??
         outsideHours(times.startsAt, times.endsAt)?.error ??
         (confirmClash ? null : overlaps),
       hint: confirmClash ? hint || null : null,
@@ -400,21 +387,10 @@ function GridDay({
                       }}
                       onClick={() => {
                         if (!carrying) {
-                          const at = fromPacificWall(
-                            `${day.key}T${minutesToHHMM(slotStart)}`,
-                          );
-                          const underBoard =
-                            at &&
-                            isBoard(
-                              col.id,
-                              at,
-                              new Date(at.getTime() + 30 * 60_000),
-                            );
                           onCreate?.({
                             day: day.key,
                             startMin: slotStart,
-                            locationId:
-                              col.id === NO_ROOM || underBoard ? null : col.id,
+                            locationId: col.id === NO_ROOM ? null : col.id,
                           });
                           return;
                         }

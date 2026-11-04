@@ -12,6 +12,7 @@ import Link from "next/link";
 import {
   noteReactors,
   pinNote,
+  pinSessionPoster,
   reactToNote,
   repinNote,
   saveNote,
@@ -50,6 +51,10 @@ export type NoteBoard = {
   notesIn: (locationId: string, day: string) => BoardNote[];
   /** Adds or takes back the viewer's emoji; shown at once, then saved. */
   react: (noteId: string, emoji: string) => void;
+  /** The team pins a session's poster up on its day's board. */
+  pinSession: (locationId: string, sessionId: string) => Promise<NoteState>;
+  /** Takes a notice down; for a session poster, which opens no dialog. */
+  takeDown: (noteId: string) => Promise<NoteState>;
   /** Whether this viewer may drag a note around, by the server's own rule. */
   canMove: (note: BoardNote) => boolean;
   open: (noteId: string) => void;
@@ -246,6 +251,17 @@ export default function BoardNotes({
     setError(result.error ?? FAILED);
   }
 
+  async function pinSession(
+    locationId: string,
+    sessionId: string,
+  ): Promise<NoteState> {
+    setError(null);
+    const result = await safely(() => pinSessionPoster(locationId, sessionId));
+    if (result.note) adopt(result.note);
+    else setError(result.error ?? FAILED);
+    return result;
+  }
+
   async function remove(noteId: string) {
     setError(null);
     setState((s) => ({ ...s, shown: without(s.shown, noteId) }));
@@ -301,6 +317,8 @@ export default function BoardNotes({
         readOnly: !!board.readOnly,
         notesIn,
         react: (noteId, emoji) => void react(noteId, emoji),
+        pinSession,
+        takeDown: remove,
         // canPost as well as authorship: every write re-checks the permission,
         // so an author who has lost it is offered no drag it can only refuse.
         canMove: (note) => board.canPost && canMoveNote(editorOf(note)),

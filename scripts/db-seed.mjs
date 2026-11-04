@@ -308,8 +308,8 @@ const profile = (u) => {
 const ROOMS = [
   ["foodtruck", "Food Truck Parking", null, "Behind E", 0, "hidden"],
   // The bulletin board, where anyone with a ticket pitches something, takes
-  // over Rat Park after the Friday night market and stays to Sunday night.
-  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "public", false, [at(6, 22), at(9, 0)]],
+  // over Rat Park's whole column Friday to Sunday, one board a day.
+  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "public", false, [at(6, 0), at(9, 0)]],
   ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
   ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
   ["glass", "Glass Hall", 35, "Building A, 1st floor", 4],
@@ -419,6 +419,20 @@ const NOTES = [
     updated_at: at(day, hour),
   };
 });
+// A session poster: the team's full-width notice, drawn at Night Market's
+// own time on Friday's board and opening the session. Its documents and
+// position go unused.
+const POSTERS = [
+  {
+    id: uuid(1810),
+    location_id: locations.ratpark.id,
+    board_day: "2026-11-06",
+    session_id: uuid(135),
+    author_user_id: users.admin.id,
+    title: "Night Market",
+    color: "butter",
+  },
+];
 
 const slugify = (title) =>
   `seed-${title
@@ -1047,7 +1061,7 @@ for (const table of ["session_hosts"]) {
 await sql.query(
   `delete from unconference_notes where id::text like $1
    and not (id::text = any($2::text[]))`,
-  [SEED_UUID, pgArray(NOTES.map((n) => n.id))],
+  [SEED_UUID, pgArray([...NOTES, ...POSTERS].map((n) => n.id))],
 );
 await sql.query(`delete from session_grades where id::text like $1`, [
   SEED_UUID,
@@ -1176,6 +1190,12 @@ counts.locations = await upsert(
 );
 counts.unconference_notes = await upsert("unconference_notes", ["id"], NOTES);
 counts.sessions = await upsert("sessions", ["id"], sessions);
+// After the sessions, which they point at.
+counts.unconference_notes += await upsert(
+  "unconference_notes",
+  ["id"],
+  POSTERS,
+);
 counts.session_hosts = await upsert(
   "session_hosts",
   ["session_id", "position"],

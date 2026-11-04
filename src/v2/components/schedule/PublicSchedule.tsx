@@ -216,7 +216,15 @@ export default function PublicSchedule({
           board={
             board
               ? ({ column, dayKey }) => (
-                  <UnconferenceBoard locationId={column.id} dayKey={dayKey} />
+                  <UnconferenceBoard
+                    locationId={column.id}
+                    dayKey={dayKey}
+                    firstSlot={day.slots[0]}
+                    // Every session that day, not just "My sessions".
+                    sessions={
+                      days.find((d) => d.key === dayKey)?.sessions ?? []
+                    }
+                  />
                 )
               : undefined
           }

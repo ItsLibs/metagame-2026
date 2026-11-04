@@ -31,9 +31,23 @@ export type Reaction = {
   names: string[];
 };
 
+/** The session a session poster stands for, as the board draws it. */
+export type PosterSession = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  /** ISO. */
+  startsAt: string;
+  endsAt: string;
+  hosts: string[];
+};
+
 /**
  * A notice: a sticky note, which is what the board draws, and the poster it
- * opens into. Both are NoticeDocs; see notice-doc.ts.
+ * opens into. Both are NoticeDocs; see notice-doc.ts. A session poster
+ * (`session` set) is the team's instead: drawn full width at the session's
+ * own time, over every sticky, and it opens the session.
  */
 export type UnconferenceNote = {
   id: string;
@@ -51,6 +65,7 @@ export type UnconferenceNote = {
   y: number;
   author: { userId: string; name: string };
   reactions: Reaction[];
+  session: PosterSession | null;
   /** ISO strings. */
   createdAt: string;
   updatedAt: string;

@@ -7,7 +7,7 @@ import {
   parseNoticeDoc,
   type NoticeDoc,
 } from "@/lib/notice-doc";
-import { boardOnDay } from "@/lib/schedule";
+import { boardOnDay, pacificDayKey } from "@/lib/schedule";
 import { constraintMessage } from "@/lib/schedule-store";
 import {
   boardNote,
@@ -26,6 +26,7 @@ import {
 } from "@/lib/unconference";
 import {
   createNote,
+  createSessionPoster,
   deleteNote,
   distinctEmojiCount,
   moveNote,
@@ -37,7 +38,7 @@ import {
   toggleReaction,
   updateNote,
 } from "@/lib/unconference-store";
-import { boardRooms } from "./data";
+import { boardRooms, loadRawSchedule } from "./data";
 
 // No revalidatePath: /schedule reloads the whole schedule, which is far too
 // much work behind a drag. The board updates in place from these results.
@@ -174,6 +175,47 @@ export async function pinNote(
       y: input.y,
     });
     return { note: boardNote(note, who), savedAt: Date.now() };
+  });
+}
+
+/**
+ * Pin a session poster up: the full-width notice at the session's own time
+ * on that day's board, opening the session. The schedule team's alone, and
+ * only for a published, placed session on a day the board is up.
+ */
+export async function pinSessionPoster(
+  locationId: string,
+  sessionId: string,
+): Promise<NoteState> {
+  const session = await can("schedule.manage");
+  if (!session) {
+    return { error: "Only the schedule team can pin a session poster up." };
+  }
+  if (!UUID.test(sessionId)) return { error: "That session doesn't exist." };
+
+  return act(async () => {
+    const [rooms, raw] = await Promise.all([boardRooms(), loadRawSchedule()]);
+    const room = rooms.find((r) => r.id === locationId);
+    if (!room) return { error: "That board isn't on the schedule." };
+    const target = raw.sessions.find((s) => s.id === sessionId);
+    if (!target || target.status !== "published") {
+      return { error: "Only a published session can have a poster." };
+    }
+    if (!target.startsAt || !target.endsAt) {
+      return { error: "Give the session a time first." };
+    }
+    const day = pacificDayKey(target.startsAt);
+    if (!boardOnDay(room, day)) {
+      return { error: "The board isn't up the day that session is on." };
+    }
+    const note = await createSessionPoster({
+      locationId,
+      sessionId,
+      day,
+      authorUserId: session.user.id,
+      title: target.title,
+    });
+    return { note: boardNote(note, session.user.id), savedAt: Date.now() };
   });
 }
 

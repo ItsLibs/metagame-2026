@@ -12,8 +12,6 @@ import {
   type Raw,
 } from "@/lib/schedule-input";
 import {
-  BoardRoomError,
-  OccupiedBoardError,
   OccupiedRoomError,
   cancelRsvp,
   ensureAccount,
@@ -47,9 +45,6 @@ const refused = (err: unknown): FormState => {
   if (err instanceof OverlapError) return { conflict: err.clash };
   // Deleting is not one field's fault, so this one carries no field.
   if (err instanceof OccupiedRoomError) return { error: err.message };
-  if (err instanceof BoardRoomError || err instanceof OccupiedBoardError) {
-    return { field: err.field, error: err.message };
-  }
   return explainDbError(err);
 };
 

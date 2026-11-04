@@ -3,6 +3,7 @@ import { getDb, schema } from "@/db";
 import { can } from "./access";
 import { currentSession } from "./auth";
 import type { NoticeDoc } from "./notice-doc";
+import { pacificDayKey } from "./schedule";
 import {
   clampNotePosition,
   noteEditor,
@@ -15,8 +16,14 @@ import {
   type UnconferenceNote,
 } from "./unconference";
 
-const { unconferenceNotes, unconferenceNoteReactions, user, verification } =
-  schema;
+const {
+  sessionHosts,
+  sessions,
+  unconferenceNotes,
+  unconferenceNoteReactions,
+  user,
+  verification,
+} = schema;
 
 // Notes are read by anyone who can see the schedule, so the author's email is
 // never part of the name; a code sign-in can leave the account name blank.
@@ -26,6 +33,13 @@ const noteColumns = {
   id: unconferenceNotes.id,
   locationId: unconferenceNotes.locationId,
   boardDay: unconferenceNotes.boardDay,
+  sessionId: unconferenceNotes.sessionId,
+  sessionSlug: sessions.slug,
+  sessionTitle: sessions.title,
+  sessionDescription: sessions.description,
+  sessionStatus: sessions.status,
+  sessionStartsAt: sessions.startsAt,
+  sessionEndsAt: sessions.endsAt,
   title: unconferenceNotes.title,
   sticky: unconferenceNotes.sticky,
   poster: unconferenceNotes.poster,
@@ -42,6 +56,13 @@ type NoteRow = {
   id: string;
   locationId: string;
   boardDay: string;
+  sessionId: string | null;
+  sessionSlug: string | null;
+  sessionTitle: string | null;
+  sessionDescription: string | null;
+  sessionStatus: "draft" | "published" | null;
+  sessionStartsAt: Date | null;
+  sessionEndsAt: Date | null;
   title: string | null;
   sticky: NoticeDoc;
   poster: NoticeDoc;
@@ -54,10 +75,46 @@ type NoteRow = {
   updatedAt: Date;
 };
 
-const toNote = (row: NoteRow, reactions: Reaction[]): UnconferenceNote => ({
+/**
+ * Whether a session poster has a session the board may show: published and
+ * placed. One whose session is a draft, or has lost its time, stays in the
+ * table but off every board.
+ */
+const shownPoster = (row: NoteRow) =>
+  !row.sessionId ||
+  (row.sessionStatus === "published" &&
+    !!row.sessionStartsAt &&
+    !!row.sessionEndsAt);
+
+const toNote = (
+  row: NoteRow,
+  reactions: Reaction[],
+  hosts: string[] = [],
+): UnconferenceNote => ({
   id: row.id,
   locationId: row.locationId,
-  day: row.boardDay,
+  // A session poster is on whichever day its session is, so moving the
+  // session moves the poster with it.
+  day:
+    row.sessionId && row.sessionStartsAt
+      ? pacificDayKey(row.sessionStartsAt.toISOString())
+      : row.boardDay,
+  session:
+    row.sessionId &&
+    row.sessionSlug &&
+    row.sessionTitle &&
+    row.sessionStartsAt &&
+    row.sessionEndsAt
+      ? {
+          id: row.sessionId,
+          slug: row.sessionSlug,
+          title: row.sessionTitle,
+          description: row.sessionDescription,
+          startsAt: row.sessionStartsAt.toISOString(),
+          endsAt: row.sessionEndsAt.toISOString(),
+          hosts,
+        }
+      : null,
   title: row.title,
   sticky: row.sticky,
   poster: row.poster,
@@ -98,23 +155,62 @@ async function reactionsFor(
   return out;
 }
 
+/** Each session's host names, lead first, for the posters that name them. */
+async function hostsFor(
+  sessionIds: readonly string[],
+): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (sessionIds.length === 0) return out;
+  const rows = await getDb()
+    .select({ sessionId: sessionHosts.sessionId, name: authorName })
+    .from(sessionHosts)
+    .innerJoin(user, eq(user.id, sessionHosts.userId))
+    .where(inArray(sessionHosts.sessionId, [...sessionIds]))
+    .orderBy(asc(sessionHosts.position));
+  for (const r of rows) {
+    out.set(r.sessionId, [...(out.get(r.sessionId) ?? []), r.name]);
+  }
+  return out;
+}
+
+/** Rows to notes, with their reactions and their sessions' hosts. */
+async function hydrate(
+  rows: NoteRow[],
+  viewerId: string | null,
+): Promise<UnconferenceNote[]> {
+  const [reactions, hosts] = await Promise.all([
+    reactionsFor(
+      rows.map((r) => r.id),
+      viewerId,
+    ),
+    hostsFor(rows.flatMap((r) => (r.sessionId ? [r.sessionId] : []))),
+  ]);
+  return rows.map((r) =>
+    toNote(
+      r,
+      reactions.get(r.id) ?? [],
+      r.sessionId ? (hosts.get(r.sessionId) ?? []) : [],
+    ),
+  );
+}
+
+const selectNotes = () =>
+  getDb()
+    .select(noteColumns)
+    .from(unconferenceNotes)
+    .innerJoin(user, eq(user.id, unconferenceNotes.authorUserId))
+    .leftJoin(sessions, eq(sessions.id, unconferenceNotes.sessionId));
+
 /** Every note in these rooms, oldest first. The board restacks for painting. */
 export async function listNotesIn(
   locationIds: readonly string[],
   viewerId: string | null,
 ): Promise<UnconferenceNote[]> {
   if (locationIds.length === 0) return [];
-  const rows = await getDb()
-    .select(noteColumns)
-    .from(unconferenceNotes)
-    .innerJoin(user, eq(user.id, unconferenceNotes.authorUserId))
+  const rows = await selectNotes()
     .where(inArray(unconferenceNotes.locationId, [...locationIds]))
     .orderBy(asc(unconferenceNotes.createdAt), asc(unconferenceNotes.id));
-  const reactions = await reactionsFor(
-    rows.map((r) => r.id),
-    viewerId,
-  );
-  return rows.map((r) => toNote(r, reactions.get(r.id) ?? []));
+  return hydrate(rows.filter(shownPoster), viewerId);
 }
 
 /**
@@ -125,15 +221,12 @@ export async function noteById(
   noteId: string,
   viewerId: string | null = null,
 ): Promise<UnconferenceNote | null> {
-  const [row] = await getDb()
-    .select(noteColumns)
-    .from(unconferenceNotes)
-    .innerJoin(user, eq(user.id, unconferenceNotes.authorUserId))
+  const [row] = await selectNotes()
     .where(eq(unconferenceNotes.id, noteId))
     .limit(1);
   if (!row) return null;
-  const reactions = await reactionsFor([noteId], viewerId);
-  return toNote(row, reactions.get(noteId) ?? []);
+  const [note] = await hydrate([row], viewerId);
+  return note ?? null;
 }
 
 export type NewNote = NoteFields & {
@@ -145,31 +238,51 @@ export type NewNote = NoteFields & {
 };
 
 export async function createNote(note: NewNote): Promise<UnconferenceNote> {
-  const db = getDb();
   const { x, y } = clampNotePosition(note.x, note.y);
-  const [[row], [who]] = await Promise.all([
-    db
-      .insert(unconferenceNotes)
-      .values({
-        locationId: note.locationId,
-        boardDay: note.day,
-        authorUserId: note.authorUserId,
-        title: note.title,
-        sticky: note.sticky,
-        poster: note.poster,
-        color: note.color,
-        x,
-        y,
-      })
-      .returning(),
-    db
-      .select({ authorName })
-      .from(user)
-      .where(eq(user.id, note.authorUserId))
-      .limit(1),
-  ]);
-  if (!row) throw new Error("That note could not be pinned up.");
-  return toNote({ ...row, authorName: who?.authorName ?? "Someone" }, []);
+  const [row] = await getDb()
+    .insert(unconferenceNotes)
+    .values({
+      locationId: note.locationId,
+      boardDay: note.day,
+      authorUserId: note.authorUserId,
+      title: note.title,
+      sticky: note.sticky,
+      poster: note.poster,
+      color: note.color,
+      x,
+      y,
+    })
+    .returning({ id: unconferenceNotes.id });
+  const created = row && (await noteById(row.id, note.authorUserId));
+  if (!created) throw new Error("That note could not be pinned up.");
+  return created;
+}
+
+/**
+ * Pins a session poster up on the board in `locationId`. One per session:
+ * a second for the same session is refused by the column's unique key.
+ */
+export async function createSessionPoster(poster: {
+  locationId: string;
+  sessionId: string;
+  day: string;
+  authorUserId: string;
+  title: string;
+}): Promise<UnconferenceNote> {
+  const [row] = await getDb()
+    .insert(unconferenceNotes)
+    .values({
+      locationId: poster.locationId,
+      sessionId: poster.sessionId,
+      boardDay: poster.day,
+      authorUserId: poster.authorUserId,
+      title: poster.title.slice(0, 120),
+      color: "butter",
+    })
+    .returning({ id: unconferenceNotes.id });
+  const created = row && (await noteById(row.id, poster.authorUserId));
+  if (!created) throw new Error("That poster could not be pinned up.");
+  return created;
 }
 
 /**

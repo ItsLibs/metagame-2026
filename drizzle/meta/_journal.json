@@ -239,6 +239,13 @@
       "when": 1793756666724,
       "tag": "0033_note_day_no_default",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793759032583,
+      "tag": "0034_session_posters",
+      "breakpoints": true
     }
   ]
 }
