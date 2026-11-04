@@ -1,63 +1,29 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useEffect,
-  useRef,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { FaTimes } from "react-icons/fa";
 
-type Host = { closeHref: string; navigated: RefObject<boolean> };
-
-const HostContext = createContext<Host | null>(null);
-
 /**
- * Wraps the page a route modal sits on. Until something navigates within it,
- * the modal was the landing page, so closing replaces to `closeHref` instead
- * of going back (off the site).
+ * A session's details over the page. Closing replaces the URL with `closeHref`
+ * (the page without its ?session= param, or /schedule from the session's own
+ * page), so nothing underneath remounts.
  */
-export function ModalHost({
+export default function SessionModal({
   closeHref,
-  children,
-}: {
-  closeHref: string;
-  children: ReactNode;
-}) {
-  const pathname = usePathname();
-  const landedOn = useRef(pathname);
-  const navigated = useRef(false);
-  useEffect(() => {
-    if (pathname !== landedOn.current) navigated.current = true;
-  }, [pathname]);
-  const host = useMemo(() => ({ closeHref, navigated }), [closeHref]);
-  return <HostContext value={host}>{children}</HostContext>;
-}
-
-/** A modal over the page for a route; closing goes back (see ModalHost). */
-export default function RouteModal({
   labelledBy,
   children,
 }: {
+  closeHref: string;
   labelledBy: string;
   children: ReactNode;
 }) {
   const router = useRouter();
-  const host = useContext(HostContext);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
-    if (host && !host.navigated.current) {
-      router.replace(host.closeHref, { scroll: false });
-    } else {
-      router.back();
-    }
-  }, [router, host]);
+    router.replace(closeHref, { scroll: false });
+  }, [router, closeHref]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
