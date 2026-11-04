@@ -225,6 +225,20 @@
       "when": 1793751900626,
       "tag": "0031_levels_to_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793756660952,
+      "tag": "0032_board_window",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793756666724,
+      "tag": "0033_note_day_no_default",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import {
   parseNoticeDoc,
   type NoticeDoc,
 } from "@/lib/notice-doc";
+import { boardOnDay } from "@/lib/schedule";
 import { constraintMessage } from "@/lib/schedule-store";
 import {
   boardNote,
@@ -30,6 +31,7 @@ import {
   moveNote,
   noteAccess,
   noteById,
+  reactorsOf,
   recentNoteCount,
   recordNotePost,
   toggleReaction,
@@ -120,9 +122,13 @@ function parseFaces(sticky: unknown, poster: unknown): Faces | NoteState {
 
 const isFaces = (v: Faces | NoteState): v is Faces => "sticky" in v;
 
-/** Pin a new notice up, at a spot the board measured as fractions of itself. */
+/**
+ * Pin a new notice up on one day's board, at a spot the board measured as
+ * fractions of itself.
+ */
 export async function pinNote(
   locationId: string,
+  day: string,
   input: {
     sticky: unknown;
     poster: unknown;
@@ -137,8 +143,10 @@ export async function pinNote(
   // The room has to be a board this viewer can see, or the schedule's room
   // visibility would be a suggestion.
   const rooms = await boardRooms();
-  if (!rooms.some((r) => r.id === locationId)) {
-    return { error: "That board isn't on the schedule." };
+  const room = rooms.find((r) => r.id === locationId);
+  if (!room) return { error: "That board isn't on the schedule." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !boardOnDay(room, day)) {
+    return { error: "The board isn't up that day." };
   }
   const faces = parseFaces(input.sticky, input.poster);
   if (!isFaces(faces)) return faces;
@@ -156,6 +164,7 @@ export async function pinNote(
     await recordNotePost(who);
     const note = await createNote({
       locationId,
+      day,
       authorUserId: who,
       ...faces,
       color: isNoteColor(input.color)
@@ -235,6 +244,20 @@ export async function reactToNote(
     const { reactions } = await toggleReaction(noteId, who, parsed);
     return { reactions, savedAt: Date.now() };
   });
+}
+
+/**
+ * Who reacted with what, for the poster's "View reactions". Readable by
+ * anyone who can see the board the notice is on, as the names already are
+ * on the chips' tooltips.
+ */
+export async function noteReactors(
+  noteId: string,
+): Promise<{ emoji: string; names: string[] }[]> {
+  if (!UUID.test(noteId)) return [];
+  const [note, rooms] = await Promise.all([noteById(noteId), boardRooms()]);
+  if (!note || !rooms.some((r) => r.id === note.locationId)) return [];
+  return reactorsOf(noteId);
 }
 
 /** Take a note down. The author, or the team clearing the board. */

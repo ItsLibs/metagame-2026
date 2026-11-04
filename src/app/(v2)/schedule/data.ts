@@ -3,6 +3,7 @@ import { can, teamAccess } from "@/lib/access";
 import { currentSession } from "@/lib/auth";
 import { ticketStep } from "@/lib/first-signin";
 import {
+  hostsBoard,
   publicSchedule,
   viewerSessionIds,
   type PublicLocation,
@@ -32,10 +33,10 @@ export const loadPublicSchedule = cache(async () =>
   publicSchedule(await loadRawSchedule(), await scheduleViewer()),
 );
 
-/** The rooms drawn as bulletin boards, as much as this viewer may see. */
+/** The rooms that host the bulletin board, as much as this viewer may see. */
 export const boardRooms = cache(async (): Promise<PublicLocation[]> => {
   const { locations } = await loadPublicSchedule();
-  return locations.filter((l) => l.layout === "board");
+  return locations.filter(hostsBoard);
 });
 
 /**

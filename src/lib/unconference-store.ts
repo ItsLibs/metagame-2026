@@ -25,6 +25,7 @@ const authorName = sql<string>`coalesce(nullif(trim(${user.name}), ''), 'Someone
 const noteColumns = {
   id: unconferenceNotes.id,
   locationId: unconferenceNotes.locationId,
+  boardDay: unconferenceNotes.boardDay,
   title: unconferenceNotes.title,
   sticky: unconferenceNotes.sticky,
   poster: unconferenceNotes.poster,
@@ -40,6 +41,7 @@ const noteColumns = {
 type NoteRow = {
   id: string;
   locationId: string;
+  boardDay: string;
   title: string | null;
   sticky: NoticeDoc;
   poster: NoticeDoc;
@@ -55,6 +57,7 @@ type NoteRow = {
 const toNote = (row: NoteRow, reactions: Reaction[]): UnconferenceNote => ({
   id: row.id,
   locationId: row.locationId,
+  day: row.boardDay,
   title: row.title,
   sticky: row.sticky,
   poster: row.poster,
@@ -135,6 +138,7 @@ export async function noteById(
 
 export type NewNote = NoteFields & {
   locationId: string;
+  day: string;
   authorUserId: string;
   x: number;
   y: number;
@@ -148,6 +152,7 @@ export async function createNote(note: NewNote): Promise<UnconferenceNote> {
       .insert(unconferenceNotes)
       .values({
         locationId: note.locationId,
+        boardDay: note.day,
         authorUserId: note.authorUserId,
         title: note.title,
         sticky: note.sticky,
@@ -231,6 +236,21 @@ export async function noteAccess(noteId: string): Promise<NoteEditor | null> {
   ]);
   if (!authorId) return null;
   return noteEditor(session?.user.id ?? null, authorId, !!team);
+}
+
+/** Everyone who reacted, per emoji, in the order the emoji first appeared. */
+export async function reactorsOf(
+  noteId: string,
+): Promise<{ emoji: string; names: string[] }[]> {
+  const rows = await getDb()
+    .select({ emoji: unconferenceNoteReactions.emoji, name: authorName })
+    .from(unconferenceNoteReactions)
+    .innerJoin(user, eq(user.id, unconferenceNoteReactions.userId))
+    .where(eq(unconferenceNoteReactions.noteId, noteId))
+    .orderBy(asc(unconferenceNoteReactions.createdAt));
+  const out = new Map<string, string[]>();
+  for (const r of rows) out.set(r.emoji, [...(out.get(r.emoji) ?? []), r.name]);
+  return [...out].map(([emoji, names]) => ({ emoji, names }));
 }
 
 /** How many different emoji a notice already carries. */

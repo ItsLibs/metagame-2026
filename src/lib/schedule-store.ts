@@ -25,7 +25,7 @@ import {
   movedTimes,
   outsideHours,
   roomAllowsOverlap,
-  roomTakesSessions,
+  clashesWithBoard,
   summarizeRsvps,
   toRoomClash,
   type Attendance,
@@ -113,7 +113,8 @@ export async function querySchedule(): Promise<Schedule> {
       description: l.description,
       displayOrder: l.displayOrder,
       visibility: l.visibility,
-      layout: l.layout,
+      boardStartsAt: l.boardStartsAt?.toISOString() ?? null,
+      boardEndsAt: l.boardEndsAt?.toISOString() ?? null,
       thumbnailUrl: l.thumbnailUrl,
       imageUrl: l.imageUrl,
     })),
@@ -177,12 +178,12 @@ export type SessionInput = Omit<
  * Only a change of time or room is checked, so editing the rest of a session
  * that already overlaps doesn't ask again.
  */
-/** A room refused the switch to a board because sessions are still in it. */
+/** A board window refused because sessions in the room fall inside it. */
 export class OccupiedBoardError extends Error {
-  readonly field = "layout";
+  readonly field = "boardStartsAt";
   constructor(readonly held: number) {
     super(
-      `${held} session${held === 1 ? " is" : "s are"} still in this room. Move ${held === 1 ? "it" : "them"} before drawing it as a bulletin board.`,
+      `${held} session${held === 1 ? " is" : "s are"} in this room while the board would be up. Move ${held === 1 ? "it" : "them"} first, or start the board later.`,
     );
   }
 }
@@ -215,7 +216,7 @@ export class OccupiedRoomError extends Error {
   }
 }
 
-/** A save refused because the room is a bulletin board, not a time column. */
+/** A save refused because the board has the room at that time. */
 export class BoardRoomError extends Error {
   readonly field = "locationId";
   constructor() {
@@ -223,16 +224,33 @@ export class BoardRoomError extends Error {
   }
 }
 
-/** Throws when the room is drawn as a bulletin board, which holds no sessions. */
-export async function assertRoomTakesSessions(
+/** Throws when the session would sit under the room's bulletin board. */
+export async function assertClearOfBoard(
   locationId: string | null,
+  startsAt: Date | null,
+  endsAt: Date | null,
 ): Promise<void> {
-  if (!locationId) return;
+  if (!locationId || !startsAt || !endsAt) return;
   const [room] = await getDb()
-    .select({ layout: locations.layout })
+    .select({
+      boardStartsAt: locations.boardStartsAt,
+      boardEndsAt: locations.boardEndsAt,
+    })
     .from(locations)
     .where(eq(locations.id, locationId));
-  if (room && !roomTakesSessions(room.layout)) throw new BoardRoomError();
+  if (
+    room &&
+    clashesWithBoard(
+      {
+        boardStartsAt: room.boardStartsAt?.toISOString() ?? null,
+        boardEndsAt: room.boardEndsAt?.toISOString() ?? null,
+      },
+      startsAt,
+      endsAt,
+    )
+  ) {
+    throw new BoardRoomError();
+  }
 }
 
 export async function upsertSession(
@@ -241,7 +259,7 @@ export async function upsertSession(
 ): Promise<{ id: string; clash: RoomClash | null }> {
   const db = getDb();
   const { id, hostIds, ...row } = input;
-  await assertRoomTakesSessions(row.locationId);
+  await assertClearOfBoard(row.locationId, row.startsAt, row.endsAt);
   const clash =
     row.startsAt && row.endsAt && (await placementChanged(id, row))
       ? await assertSlotFree(
@@ -386,7 +404,6 @@ export async function moveSessionTo(
   end?: Date,
 ): Promise<void> {
   const db = getDb();
-  await assertRoomTakesSessions(locationId);
   const [row] = await db
     .select({ startsAt: sessions.startsAt, endsAt: sessions.endsAt })
     .from(sessions)
@@ -402,6 +419,7 @@ export async function moveSessionTo(
         start,
       );
   if (endsAt <= startsAt) throw new Error("End must be after start.");
+  await assertClearOfBoard(locationId, startsAt, endsAt);
   await assertSlotFree(id, startsAt, endsAt, locationId, allowOverlap);
   await db
     .update(sessions)
@@ -775,32 +793,45 @@ export async function removeSession(id: string): Promise<void> {
   invalidateSchedule();
 }
 
-export type LocationInput = Omit<ScheduleLocation, "id"> & { id?: string };
+export type LocationInput = Omit<
+  ScheduleLocation,
+  "id" | "boardStartsAt" | "boardEndsAt"
+> & {
+  id?: string;
+  boardStartsAt: Date | null;
+  boardEndsAt: Date | null;
+};
 
-/** How many sessions sit in a room — for refusing to turn an occupied one into a board. */
-export async function sessionsInRoom(locationId: string): Promise<number> {
+/** How many sessions in a room overlap the window — the board would hide them. */
+export async function sessionsUnderBoard(
+  locationId: string,
+  from: Date,
+  until: Date | null,
+): Promise<number> {
   const [row] = await getDb()
     .select({ n: count() })
     .from(sessions)
-    .where(eq(sessions.locationId, locationId));
+    .where(
+      and(
+        eq(sessions.locationId, locationId),
+        gt(sessions.endsAt, from),
+        until ? lt(sessions.startsAt, until) : undefined,
+      ),
+    );
   return row?.n ?? 0;
 }
 
 export async function upsertLocation(input: LocationInput): Promise<string> {
   const db = getDb();
   const { id, ...row } = input;
-  // Turning an occupied room into a board would leave its sessions listed and
-  // searchable but drawn nowhere. Only the TRANSITION is refused: a room that
-  // is already a board can still have its name, or its place in the lineup,
-  // edited — which a blanket check wrongly blocked, with a message about
-  // "drawing it as a bulletin board" that described nothing the editor did.
-  if (id && !roomTakesSessions(row.layout)) {
-    const [before] = await db
-      .select({ layout: locations.layout })
-      .from(locations)
-      .where(eq(locations.id, id));
-    const becoming = !before || roomTakesSessions(before.layout);
-    const held = becoming ? await sessionsInRoom(id) : 0;
+  // A board window over sessions would leave them listed and searchable but
+  // drawn nowhere, so it is refused until they move.
+  if (id && row.boardStartsAt) {
+    const held = await sessionsUnderBoard(
+      id,
+      row.boardStartsAt,
+      row.boardEndsAt,
+    );
     if (held > 0) throw new OccupiedBoardError(held);
   }
   if (id) {

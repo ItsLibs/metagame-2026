@@ -42,19 +42,19 @@ describe("constraintMessage", () => {
 });
 
 describe("OccupiedBoardError", () => {
-  // Turning an occupied room into a board would leave its sessions listed and
-  // searchable but drawn nowhere — the same hole BoardRoomError closes from
-  // the session side, so the room side has to refuse it too.
-  it("blames the layout field, so the form marks the right control", () => {
-    expect(new OccupiedBoardError(3).field).toBe("layout");
+  // A board window over sessions would leave them listed and searchable but
+  // drawn nowhere — the same hole BoardRoomError closes from the session
+  // side, so the room side has to refuse it too.
+  it("blames the board start, so the form marks the right control", () => {
+    expect(new OccupiedBoardError(3).field).toBe("boardStartsAt");
   });
 
   it("counts what is in the way, and reads correctly for one", () => {
     expect(new OccupiedBoardError(1).message).toBe(
-      "1 session is still in this room. Move it before drawing it as a bulletin board.",
+      "1 session is in this room while the board would be up. Move it first, or start the board later.",
     );
     expect(new OccupiedBoardError(4).message).toBe(
-      "4 sessions are still in this room. Move them before drawing it as a bulletin board.",
+      "4 sessions are in this room while the board would be up. Move them first, or start the board later.",
     );
   });
 });

@@ -38,6 +38,8 @@ export type Reaction = {
 export type UnconferenceNote = {
   id: string;
   locationId: string;
+  /** The Pacific day ("2026-11-07") whose board it is on. */
+  day: string;
   /** Plain text standing in for the notice, derived on save; null if only drawings. */
   title: string | null;
   sticky: NoticeDoc;
@@ -98,6 +100,11 @@ export type BoardData = {
   canPost: boolean;
   /** Holds schedule.manage, so may take anyone's note down. */
   isTeam: boolean;
+  /**
+   * A copy with no viewer behind it (the static home page): nothing can be
+   * posted or reacted to there, and the board says to use /schedule.
+   */
+  readOnly?: boolean;
 };
 
 /**

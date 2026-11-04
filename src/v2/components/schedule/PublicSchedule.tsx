@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import {
   onlySessions,
   openingDayKey,
+  boardRows,
+  hostsBoard,
+  SLOT_PX,
   selectedDay,
   type Day,
   type PublicLocation,
@@ -111,14 +114,24 @@ export default function PublicSchedule({
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
   const day = selectedDay(shownDays, dayKey);
-  // A board spans the whole day and has no time, so the same notes show on
-  // every day tab in every view.
-  const boardRooms = board ? locations.filter((l) => l.layout === "board") : [];
-  // Notes aren't sessions, so they can't go through ListDay (shared with the
-  // profile pages) or Moments.
-  const noteLists = boardRooms.map((room) => (
-    <NoteList key={room.id} locationId={room.id} name={room.name} />
-  ));
+  // Each day the board is up is its own board. Notes aren't sessions, so
+  // they can't go through ListDay (shared with the profile pages) or Moments.
+  const noteLists = (board ? locations.filter(hostsBoard) : []).flatMap(
+    (room) => {
+      const rows = boardRows(room, day.key, day.slots);
+      return rows
+        ? [
+            <NoteList
+              key={room.id}
+              locationId={room.id}
+              dayKey={day.key}
+              name={room.name}
+              height={(rows[1] - rows[0]) * SLOT_PX}
+            />,
+          ]
+        : [];
+    },
+  );
 
   const schedule = (
     <div className="flex flex-col gap-5">
@@ -202,7 +215,9 @@ export default function PublicSchedule({
           href={(s) => href(s.slug)}
           board={
             board
-              ? ({ column }) => <UnconferenceBoard locationId={column.id} />
+              ? ({ column, dayKey }) => (
+                  <UnconferenceBoard locationId={column.id} dayKey={dayKey} />
+                )
               : undefined
           }
         />

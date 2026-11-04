@@ -161,6 +161,7 @@ describe("boardNote", () => {
   const stored = {
     id: "n1",
     locationId: "room",
+    day: "2026-11-07",
     title: "Lightning chess",
     sticky: EMPTY_DOC,
     poster: EMPTY_DOC,

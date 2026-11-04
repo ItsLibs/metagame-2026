@@ -5,7 +5,6 @@
 import {
   AGES,
   CATEGORIES,
-  LOCATION_LAYOUTS,
   LOCATION_VISIBILITIES,
   STATUSES,
   fromPacificWall,
@@ -48,8 +47,8 @@ export type SessionFields = {
 
 export type LocationFields = Omit<
   ScheduleLocation,
-  "id" | "thumbnailUrl" | "imageUrl"
->;
+  "id" | "thumbnailUrl" | "imageUrl" | "boardStartsAt" | "boardEndsAt"
+> & { boardStartsAt: Date | null; boardEndsAt: Date | null };
 
 /**
  * What a session's own host may change. Placement, status and slug are the
@@ -311,14 +310,24 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       error: `One of ${LOCATION_VISIBILITIES.join(", ")}.`,
     };
   }
-  const layoutRaw = str(raw, "layout");
-  const layout = oneOf(layoutRaw, LOCATION_LAYOUTS);
-  if (layoutRaw && !layout) {
+  // Pacific wall-clock strings, like a session's times. Empty means no board.
+  const boardFromRaw = str(raw, "boardStartsAt");
+  const boardUntilRaw = str(raw, "boardEndsAt");
+  const boardStartsAt = boardFromRaw ? fromPacificWall(boardFromRaw) : null;
+  const boardEndsAt = boardUntilRaw ? fromPacificWall(boardUntilRaw) : null;
+  if (boardFromRaw && !boardStartsAt)
+    return { ok: false, field: "boardStartsAt", error: "Not a time." };
+  if (boardUntilRaw && !boardEndsAt)
+    return { ok: false, field: "boardEndsAt", error: "Not a time." };
+  if (boardEndsAt && !boardStartsAt) {
     return {
       ok: false,
-      field: "layout",
-      error: `One of ${LOCATION_LAYOUTS.join(", ")}.`,
+      field: "boardStartsAt",
+      error: "Give the board a start too.",
     };
+  }
+  if (boardStartsAt && boardEndsAt && boardEndsAt <= boardStartsAt) {
+    return { ok: false, field: "boardEndsAt", error: "End after the start." };
   }
   return {
     ok: true,
@@ -329,7 +338,8 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       description: optional(raw, "description"),
       displayOrder,
       visibility: visibility ?? "hidden",
-      layout: layout ?? "grid",
+      boardStartsAt,
+      boardEndsAt,
     },
   };
 }

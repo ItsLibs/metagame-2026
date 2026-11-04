@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -84,9 +85,6 @@ export const locationVisibility = pgEnum("location_visibility", [
   "volunteer",
   "hidden",
 ]);
-// How a room's column is drawn: the usual time grid, or the free-form
-// unconference bulletin board, where vertical position carries no time.
-export const locationLayout = pgEnum("location_layout", ["grid", "board"]);
 // The post-it palette. An enum so a note can only ever carry a colour the
 // board knows how to paint.
 export const unconferenceNoteColor = pgEnum("unconference_note_color", [
@@ -108,7 +106,11 @@ export const locations = pgTable(
     description: text(),
     displayOrder: integer().notNull().default(100),
     visibility: locationVisibility().notNull().default("hidden"),
-    layout: locationLayout().notNull().default("grid"),
+    // When the unconference bulletin board takes over this room's column;
+    // null for a room that never hosts it. A null end runs it to the end of
+    // the schedule. Sessions may not overlap the window.
+    boardStartsAt: timestamp({ withTimezone: true }),
+    boardEndsAt: timestamp({ withTimezone: true }),
     // Vercel Blob URLs; images never live in the database. The thumbnail is
     // what the schedule shows; image_url is a large copy for detail views.
     thumbnailUrl: text(),
@@ -119,6 +121,10 @@ export const locations = pgTable(
   },
   (t) => [
     check("locations_capacity_positive", sql`${t.capacity} > 0`),
+    check(
+      "locations_board_window",
+      sql`${t.boardEndsAt} is null OR (${t.boardStartsAt} is not null AND ${t.boardEndsAt} > ${t.boardStartsAt})`,
+    ),
     check(
       "locations_thumbnail_url_https",
       sql`${t.thumbnailUrl} like 'https://%'`,
@@ -250,7 +256,7 @@ export const bookmarks = pgTable(
   ],
 );
 
-// Notices on a board room (locations.layout = 'board'), written by any
+// Notices on the board room (locations.board_starts_at set), written by any
 // ticket holder: a sticky note the board draws and a poster it opens into.
 // x and y are fractions of the board so it reflows at any width; y is free
 // placement, not a time.
@@ -265,6 +271,9 @@ export const unconferenceNotes = pgTable(
     authorUserId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Which day's board the notice is on, as a Pacific date: each day the
+    // board is up it starts fresh.
+    boardDay: date({ mode: "string" }).notNull(),
     // Derived from the documents on save, for the list view and search;
     // null when the notice is only drawings.
     title: text(),
@@ -278,7 +287,7 @@ export const unconferenceNotes = pgTable(
     ...timestamps,
   },
   (t) => [
-    index("unconference_notes_location_id_idx").on(t.locationId),
+    index("unconference_notes_location_id_idx").on(t.locationId, t.boardDay),
     index("unconference_notes_author_user_id_idx").on(t.authorUserId),
     check(
       "unconference_notes_title_length",

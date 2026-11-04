@@ -20,9 +20,8 @@ import {
 import { downscaleImage } from "@/lib/downscale-image";
 import { UnsavedChangesDialog, useUnsavedChanges } from "./UnsavedChanges";
 import {
-  LAYOUT_LABEL,
-  LOCATION_LAYOUTS,
   LOCATION_VISIBILITIES,
+  toPacificWall,
   VISIBILITY_LABEL,
   type ScheduleLocation,
 } from "@/lib/schedule";
@@ -298,22 +297,42 @@ export default function LocationForm({
             </select>
           </Field>
 
-          {/* A save replaces the whole row, so this has to be submitted even
-              when untouched or a board would drop back to the time grid. */}
-          <Field label="How its column is drawn" name="layout" state={state}>
-            <select
-              name="layout"
-              defaultValue={location?.layout ?? "grid"}
-              className={selectClass}
-              style={selectStyle}
+          {/* A save replaces the whole row, so these are submitted even when
+              untouched or the board would come down. Pacific time. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Unconference board from"
+              name="boardStartsAt"
+              state={state}
             >
-              {LOCATION_LAYOUTS.map((l) => (
-                <option key={l} value={l}>
-                  {LAYOUT_LABEL[l]}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <input
+                type="datetime-local"
+                name="boardStartsAt"
+                defaultValue={
+                  location?.boardStartsAt
+                    ? toPacificWall(location.boardStartsAt)
+                    : ""
+                }
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Board until" name="boardEndsAt" state={state}>
+              <input
+                type="datetime-local"
+                name="boardEndsAt"
+                defaultValue={
+                  location?.boardEndsAt
+                    ? toPacificWall(location.boardEndsAt)
+                    : ""
+                }
+                className={fieldClass}
+              />
+            </Field>
+          </div>
+          <p className="-mt-2 text-xs text-ink/55">
+            Leave both empty for a room that never hosts the board, and the end
+            empty to keep it up until the schedule ends.
+          </p>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">

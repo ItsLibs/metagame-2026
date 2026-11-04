@@ -18,13 +18,7 @@ import {
   SHEPHERD_MATCH_LABELS,
   TOPIC_AREA_LABELS,
 } from "./rfp-labels";
-import {
-  AGES,
-  CATEGORIES,
-  LOCATION_LAYOUTS,
-  LOCATION_VISIBILITIES,
-  STATUSES,
-} from "./schedule";
+import { AGES, CATEGORIES, LOCATION_VISIBILITIES, STATUSES } from "./schedule";
 import { PERMISSIONS, type Permission } from "./permissions";
 
 export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -134,9 +128,14 @@ const LOCATION_FIELDS: Field[] = [
     note: 'Default "hidden" (team only).',
   },
   {
-    name: "layout",
-    type: oneOf(LOCATION_LAYOUTS),
-    note: 'Default "grid"; "board" draws the unconference bulletin board.',
+    name: "boardStartsAt",
+    type: "string | null",
+    note: 'Pacific wall clock, "2026-11-06T22:00". When the unconference bulletin board takes over this room; sessions can\'t overlap it.',
+  },
+  {
+    name: "boardEndsAt",
+    type: "string | null",
+    note: "When the board comes down; null runs it to the end of the schedule.",
   },
 ];
 
@@ -197,7 +196,7 @@ export const TYPES: { name: string; shape: string }[] = [
   },
   {
     name: "Location",
-    shape: `{ id, name, capacity: number | null, campusLocation, description, displayOrder: number, visibility: ${oneOf(LOCATION_VISIBILITIES)}, layout: ${oneOf(LOCATION_LAYOUTS)}, thumbnailUrl, imageUrl }`,
+    shape: `{ id, name, capacity: number | null, campusLocation, description, displayOrder: number, visibility: ${oneOf(LOCATION_VISIBILITIES)}, boardStartsAt: string | null, boardEndsAt: string | null, thumbnailUrl, imageUrl }`,
   },
   {
     name: "Session",

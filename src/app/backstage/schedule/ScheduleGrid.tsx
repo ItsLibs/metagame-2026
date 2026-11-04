@@ -19,7 +19,7 @@ import {
   offsetPx,
   outsideHours,
   overlapLanes,
-  roomTakesSessions,
+  clashesWithBoard,
   NO_ROOM,
   openingDayKey,
   selectedDay,
@@ -240,11 +240,13 @@ function GridDay({
     slotStart: number;
     colId: string;
   } | null>(null);
-  // A bulletin-board room holds no sessions: nothing drops in its column, and
-  // a click there opens the form with no room rather than with that one.
-  const isBoard = (colId: string) =>
+  // While the bulletin board has a room, nothing drops in its column there,
+  // and a click opens the form with no room rather than with that one.
+  const isBoard = (colId: string, startsAt: Date, endsAt: Date) =>
     colId !== NO_ROOM &&
-    locations.some((l) => l.id === colId && !roomTakesSessions(l.layout));
+    locations.some(
+      (l) => l.id === colId && clashesWithBoard(l, startsAt, endsAt),
+    );
   const target = (slotStart: number, colId: string) => {
     if (!carrying) return null;
     const start = fromPacificWall(`${day.key}T${minutesToHHMM(slotStart)}`);
@@ -268,7 +270,9 @@ function GridDay({
       locations,
     );
     const overlaps = clash && `Overlaps ${clash.title}`;
-    const board = isBoard(colId) ? BOARD_ROOM_REFUSAL : null;
+    const board = isBoard(colId, times.startsAt, times.endsAt)
+      ? BOARD_ROOM_REFUSAL
+      : null;
     const hint = [cut && "Shortened at midnight", overlaps]
       .filter(Boolean)
       .join(" · ");
@@ -396,13 +400,21 @@ function GridDay({
                       }}
                       onClick={() => {
                         if (!carrying) {
+                          const at = fromPacificWall(
+                            `${day.key}T${minutesToHHMM(slotStart)}`,
+                          );
+                          const underBoard =
+                            at &&
+                            isBoard(
+                              col.id,
+                              at,
+                              new Date(at.getTime() + 30 * 60_000),
+                            );
                           onCreate?.({
                             day: day.key,
                             startMin: slotStart,
                             locationId:
-                              col.id === NO_ROOM || isBoard(col.id)
-                                ? null
-                                : col.id,
+                              col.id === NO_ROOM || underBoard ? null : col.id,
                           });
                           return;
                         }

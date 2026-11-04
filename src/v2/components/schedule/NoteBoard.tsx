@@ -8,7 +8,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import {
+  noteReactors,
   pinNote,
   reactToNote,
   repinNote,
@@ -43,11 +45,15 @@ export type NoteBoard = {
   signedIn: boolean;
   canPost: boolean;
   isTeam: boolean;
-  notesIn: (locationId: string) => BoardNote[];
+  /** The static home page's copy: look, don't touch. */
+  readOnly: boolean;
+  notesIn: (locationId: string, day: string) => BoardNote[];
+  /** Adds or takes back the viewer's emoji; shown at once, then saved. */
+  react: (noteId: string, emoji: string) => void;
   /** Whether this viewer may drag a note around, by the server's own rule. */
   canMove: (note: BoardNote) => boolean;
   open: (noteId: string) => void;
-  compose: (locationId: string, spot: Spot) => void;
+  compose: (locationId: string, day: string, spot: Spot) => void;
   /** Where a drag let go of a note: shown at once, then saved. */
   commit: (noteId: string, x: number, y: number) => void;
 };
@@ -107,6 +113,7 @@ type Pending =
   | {
       kind: "new";
       locationId: string;
+      day: string;
       spot: Spot;
       color: NoteColor;
       createdId?: string;
@@ -145,7 +152,8 @@ export default function BoardNotes({
   }
 
   const notesIn = useCallback(
-    (locationId: string) => shown.filter((n) => n.locationId === locationId),
+    (locationId: string, day: string) =>
+      shown.filter((n) => n.locationId === locationId && n.day === day),
     [shown],
   );
 
@@ -188,9 +196,9 @@ export default function BoardNotes({
       // No id means the first save of a notice being composed, which only
       // ever happens under a "new" pending.
       if (pending?.kind !== "new") return { error: "That note is gone." };
-      const { locationId, spot } = pending;
+      const { locationId, day, spot } = pending;
       const result = await safely(() =>
-        pinNote(locationId, { ...draft, ...spot }),
+        pinNote(locationId, day, { ...draft, ...spot }),
       );
       if (result.note) {
         adopt(result.note);
@@ -266,21 +274,42 @@ export default function BoardNotes({
 
   const editor = openNote ? editorOf(openNote) : null;
 
+  // What to do instead of reacting, for a viewer who can't.
+  const reactHint = board.canPost ? null : board.readOnly ? (
+    <Link href="/schedule" className="underline underline-offset-2">
+      React on the full schedule
+    </Link>
+  ) : board.signedIn ? (
+    <Link href="/account?tab=tickets" className="underline underline-offset-2">
+      Claim your ticket to react
+    </Link>
+  ) : (
+    <Link
+      href="/login?next=%2Fschedule"
+      className="underline underline-offset-2"
+    >
+      Sign in to react
+    </Link>
+  );
+
   return (
     <Context.Provider
       value={{
         signedIn: board.signedIn,
         canPost: board.canPost,
         isTeam: board.isTeam,
+        readOnly: !!board.readOnly,
         notesIn,
+        react: (noteId, emoji) => void react(noteId, emoji),
         // canPost as well as authorship: every write re-checks the permission,
         // so an author who has lost it is offered no drag it can only refuse.
         canMove: (note) => board.canPost && canMoveNote(editorOf(note)),
         open: (noteId) => setPending({ kind: "open", noteId }),
-        compose: (locationId, spot) =>
+        compose: (locationId, day, spot) =>
           setPending({
             kind: "new",
             locationId,
+            day,
             spot,
             color: pickNoteColor(
               Math.floor(Math.random() * NOTE_COLORS.length),
@@ -320,10 +349,12 @@ export default function BoardNotes({
           // holds no ticket, and the action allows them without one.
           canDelete={!!openNote && canDeleteNote(editor)}
           canReact={board.canPost}
+          reactHint={reactHint}
           onClose={() => setPending(null)}
           onSave={save}
           onDelete={remove}
           onReact={(id, emoji) => void react(id, emoji)}
+          loadReactors={noteReactors}
         />
       )}
     </Context.Provider>

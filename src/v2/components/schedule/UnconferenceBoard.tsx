@@ -17,7 +17,7 @@ import {
 import { NEEDS_TICKET_HINT, useNoteBoard } from "./NoteBoard";
 import NoticeCanvas from "./notice/NoticeCanvas";
 import { StickyPaper, tiltFor } from "./notice/Paper";
-import { ReactionCrumbs } from "./notice/Reactions";
+import { ReactionPills } from "./notice/Reactions";
 import { EmptyPanel, ROW, SessionRows } from "./ScheduleViews";
 
 // The bulletin board a "board" room's column is drawn as: a cork board in a
@@ -44,12 +44,15 @@ const CORK: React.CSSProperties = {
 const DRAG_SLOP = 3;
 
 /**
- * The board at its narrowest, for placing a note with no surface to measure:
- * list view draws no board, and the notes it pins up land on one this wide.
- * The width is the --board-w token GridDay sets on a phone; a bigger guess
- * would put notes on top of each other there.
+ * The width of the board at its narrowest, for placing a note with no
+ * surface to measure: list view draws no board, and the notes it pins up land
+ * on one this wide. It is the --board-w token GridDay sets on a phone; a
+ * bigger guess would put notes on top of each other there.
  */
-const BOARD_MIN = { width: 232, height: 12 * TILE_PX, tile: TILE_PX };
+const BOARD_MIN_W = 232;
+
+/** A note's height with its row of reaction pills, so they stay on the cork. */
+const NOTE_H = TILE_PX + 14;
 
 /**
  * A fraction of the board as a CSS offset that keeps the whole tile on it:
@@ -91,7 +94,14 @@ function PostHint({ className }: { className: string }) {
   const board = useNoteBoard();
   return (
     <span className={className}>
-      {board.signedIn ? (
+      {board.readOnly ? (
+        <>
+          <Link href="/schedule" className={HINT_LINK}>
+            Open the full schedule
+          </Link>{" "}
+          to pin a note up or react.
+        </>
+      ) : board.signedIn ? (
         <>
           {NEEDS_TICKET_HINT}{" "}
           <Link href="/account?tab=tickets" className={HINT_LINK}>
@@ -124,13 +134,16 @@ type Drag = {
   moved: boolean;
 };
 
+/** One day's board: its own notes, at whatever height that day gives it. */
 export default function UnconferenceBoard({
   locationId,
+  dayKey,
 }: {
   locationId: string;
+  dayKey: string;
 }) {
   const board = useNoteBoard();
-  const notes = board.notesIn(locationId);
+  const notes = board.notesIn(locationId, dayKey);
   const surface = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   // Where the note under the pointer is right now. Local, not board state:
@@ -151,8 +164,8 @@ export default function UnconferenceBoard({
   const fractionAt = (clientX: number, clientY: number, d: Drag) => {
     const rect = surface.current?.getBoundingClientRect();
     if (!rect) return d.from;
-    // The tile's own width is the part of the board its left edge can't
-    // reach, which is exactly what `offset` takes out again.
+    // The tile's own size is the part of the board its corner can't reach,
+    // which is exactly what `offset` takes out again.
     const spanX = rect.width - TILE_PX;
     const spanY = rect.height - TILE_PX;
     return clampNotePosition(
@@ -169,11 +182,14 @@ export default function UnconferenceBoard({
     dragged.current = false;
     if (e.pointerType !== "mouse" || e.button !== 0) return;
     if (!board.canMove(note)) return;
-    const rect = e.currentTarget.getBoundingClientRect();
+    // Measured from the note's unrotated spot on the cork, not the tilted
+    // tile's bounding box, or the note jumps when the drag begins.
+    const cork = surface.current?.getBoundingClientRect();
+    if (!cork) return;
     drag.current = {
       noteId: note.id,
-      dx: e.clientX - rect.left,
-      dy: e.clientY - rect.top,
+      dx: e.clientX - cork.left - (cork.width - TILE_PX) * note.x,
+      dy: e.clientY - cork.top - (cork.height - TILE_PX) * note.y,
       origin: { x: e.clientX, y: e.clientY },
       from: { x: note.x, y: note.y },
       moved: false,
@@ -256,11 +272,12 @@ export default function UnconferenceBoard({
     const rect = surface.current?.getBoundingClientRect();
     if (!rect) return;
     const spanX = rect.width - TILE_PX;
-    const spanY = rect.height - TILE_PX;
+    const spanY = rect.height - NOTE_H;
     // The point lands where the pin was, so the tile hangs below and right of
     // it the way a real one would.
     board.compose(
       locationId,
+      dayKey,
       clampNotePosition(
         spanX > 0 ? (e.clientX - rect.left) / spanX : 0,
         spanY > 0 ? (e.clientY - rect.top) / spanY : 0,
@@ -287,95 +304,130 @@ export default function UnconferenceBoard({
         style={{ ...CORK, ...(pinnable && { cursor: PIN_CURSOR }) }}
         className="relative min-h-0 flex-1 shadow-[inset_2px_3px_6px_rgba(27,21,48,0.35)]"
       >
-        {notes.length === 0 && (
-          <p className="pointer-events-none mx-auto mt-4 w-fit rounded-[3px] border-[1.5px] border-[#1b1530]/40 bg-cream/90 px-2 py-1 text-center text-[11px] text-[#1b1530]/70 shadow-[2px_2px_0_rgba(27,21,48,0.25)]">
-            Nothing pinned up yet.
-            {board.canPost && " Click the cork to add one."}
-          </p>
-        )}
-        {/* Only after the pin has rested: following the cursor from the first
+        <>
+          {notes.length === 0 && (
+            <p className="pointer-events-none mx-auto mt-4 w-fit rounded-[3px] border-[1.5px] border-[#1b1530]/40 bg-cream/90 px-2 py-1 text-center text-[11px] text-[#1b1530]/70 shadow-[2px_2px_0_rgba(27,21,48,0.25)]">
+              Nothing pinned up yet.
+              {board.canPost && " Click the cork to add one."}
+            </p>
+          )}
+          {/* Only after the pin has rested: following the cursor from the first
             pixel would flicker across the board on the way to a note. */}
-        {pin && resting && (
-          <span
-            aria-hidden
-            style={{ left: pin.x + 14, top: pin.y + 6 }}
-            className="pointer-events-none absolute rounded-[2px] bg-[#1b1530] px-1.5 py-0.5 text-[10px] whitespace-nowrap text-cream shadow-sm"
-          >
-            Add a note
-          </span>
-        )}
-        {/* Back to front: the newest note is last, so it paints on top. No
-            z-index anywhere, including mid-drag — that order is the point. */}
-        {notesInPaintOrder(notes).map((note) => {
-          const at = sliding?.noteId === note.id ? sliding : note;
-          return (
-            <button
-              key={note.id}
-              type="button"
-              title={note.title ?? "A drawing"}
-              aria-label={`${note.title ?? "A drawing"}, by ${note.author.name}`}
-              aria-haspopup="dialog"
-              onPointerDown={(e) => grab(e, note)}
-              onPointerMove={slide}
-              onPointerUp={release}
-              onPointerCancel={release}
-              onLostPointerCapture={abandon}
-              onClick={() => {
-                if (dragged.current) {
-                  dragged.current = false;
-                  return;
-                }
-                board.open(note.id);
-              }}
-              style={{
-                left: offset(at.x, TILE_PX),
-                top: offset(at.y, TILE_PX),
-                width: TILE_PX,
-                height: TILE_PX,
-                transform: `rotate(${tiltFor(note.id)}deg)`,
-              }}
-              className={`group absolute text-left select-none ${
-                board.canMove(note) ? "cursor-grab" : "cursor-pointer"
-              }`}
+          {pin && resting && (
+            <span
+              aria-hidden
+              style={{ left: pin.x + 14, top: pin.y + 6 }}
+              className="pointer-events-none absolute rounded-[2px] bg-[#1b1530] px-1.5 py-0.5 text-[10px] whitespace-nowrap text-cream shadow-sm"
             >
-              <StickyPaper
-                color={note.color}
-                size={TILE_PX}
-                outline={1.75}
-                className="transition-transform group-hover:-translate-y-0.5"
+              Add a note
+            </span>
+          )}
+          {/* Back to front: the newest note is last, so it paints on top. No
+            z-index anywhere, including mid-drag — that order is the point. */}
+          {notesInPaintOrder(notes).map((note) => {
+            const at = sliding?.noteId === note.id ? sliding : note;
+            return (
+              <div
+                key={note.id}
+                style={{
+                  left: offset(at.x, TILE_PX),
+                  top: offset(at.y, NOTE_H),
+                  width: TILE_PX,
+                  transform: `rotate(${tiltFor(note.id)}deg)`,
+                }}
+                className="group absolute"
               >
-                <NoticeCanvas face="sticky" doc={note.sticky} width={TILE_PX} />
-              </StickyPaper>
-              <div className="absolute -bottom-2 left-1">
-                <ReactionCrumbs reactions={note.reactions} />
+                <button
+                  type="button"
+                  title={note.title ?? "A drawing"}
+                  aria-label={`${note.title ?? "A drawing"}, by ${note.author.name}`}
+                  aria-haspopup="dialog"
+                  onPointerDown={(e) => grab(e, note)}
+                  onPointerMove={slide}
+                  onPointerUp={release}
+                  onPointerCancel={release}
+                  onLostPointerCapture={abandon}
+                  onClick={() => {
+                    if (dragged.current) {
+                      dragged.current = false;
+                      return;
+                    }
+                    board.open(note.id);
+                  }}
+                  style={{ width: TILE_PX, height: TILE_PX }}
+                  className={`block text-left select-none ${
+                    board.canMove(note) ? "cursor-grab" : "cursor-pointer"
+                  }`}
+                >
+                  <StickyPaper
+                    color={note.color}
+                    size={TILE_PX}
+                    outline={1.75}
+                    className="transition-transform group-hover:-translate-y-0.5"
+                  >
+                    <NoticeCanvas
+                      face="sticky"
+                      doc={note.sticky}
+                      width={TILE_PX}
+                    />
+                  </StickyPaper>
+                </button>
+                {/* Beside the note, not inside its button: each pill is its own
+                  button, toggling the viewer's reaction. */}
+                <div className="relative -mt-1.5 pl-1">
+                  <ReactionPills
+                    reactions={note.reactions}
+                    onToggle={
+                      board.canPost
+                        ? (emoji) => board.react(note.id, emoji)
+                        : undefined
+                    }
+                    onMore={() => board.open(note.id)}
+                  />
+                </div>
               </div>
-            </button>
-          );
-        })}
+            );
+          })}
+        </>
       </div>
     </div>
   );
 }
 
-/** One board room's notes as plain rows, for the view phones land on. */
+/** One day's board as plain rows, for the view phones land on. */
 export function NoteList({
   locationId,
+  dayKey,
   name,
+  height,
 }: {
   locationId: string;
+  dayKey: string;
   name: string;
+  /** That day's board height in grid view, so a note added here fits it. */
+  height: number;
 }) {
   const board = useNoteBoard();
-  const notes = board.notesIn(locationId);
+  const notes = board.notesIn(locationId, dayKey);
   return (
     <section className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-grotesk text-sm font-bold text-navy">{name}</h3>
+        <h3 className="font-grotesk text-sm font-bold text-navy">
+          {name}: unconference board
+        </h3>
         {board.canPost ? (
           <button
             type="button"
             onClick={() =>
-              board.compose(locationId, firstFreeSpot(notes, BOARD_MIN))
+              board.compose(
+                locationId,
+                dayKey,
+                firstFreeSpot(notes, {
+                  width: BOARD_MIN_W,
+                  height,
+                  tile: NOTE_H,
+                }),
+              )
             }
             className={`${ADD} text-xs`}
           >
@@ -433,7 +485,7 @@ function NoteRow({
           )}
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-[#1b1530]/65">
             {note.author.name}
-            <ReactionCrumbs reactions={note.reactions} max={5} />
+            <ReactionPills reactions={note.reactions} max={6} />
           </div>
         </div>
       </button>

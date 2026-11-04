@@ -307,9 +307,9 @@ const profile = (u) => {
 // prettier-ignore
 const ROOMS = [
   ["foodtruck", "Food Truck Parking", null, "Behind E", 0, "hidden"],
-  // The bulletin board, where anyone with a ticket pitches something. Rat
-  // Park for now; the board follows whichever room carries layout "board".
-  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "public", false, "board"],
+  // The bulletin board, where anyone with a ticket pitches something, takes
+  // over Rat Park after the Friday night market and stays to Sunday night.
+  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "public", false, [at(6, 22), at(9, 0)]],
   ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
   ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
   ["glass", "Glass Hall", 35, "Building A, 1st floor", 4],
@@ -337,7 +337,7 @@ const locations = Object.fromEntries(
         display_order,
         visibility = "public",
         synced = true,
-        layout = "grid",
+        [board_starts_at, board_ends_at] = [null, null],
       ],
       k,
     ) => [
@@ -349,7 +349,8 @@ const locations = Object.fromEntries(
         campus_location,
         display_order,
         visibility,
-        layout,
+        board_starts_at,
+        board_ends_at,
         airtable_record_id: synced
           ? `recSEEDLOC${String(k + 1).padStart(7, "0")}`
           : null,
@@ -368,18 +369,19 @@ for (const { id, name } of await sql.query(
   room.id = id;
   reusedRooms.add(room);
 }
-// Pitches on the bulletin board. created_at is spelled out because the board
-// paints the NEWEST note on top, so the stack is only worth looking at when
-// the times differ. x/y are fractions of the board.
+// Pitches on the bulletin board, one board per day it is up (Fri–Sun of
+// November). created_at is spelled out because the board paints the NEWEST
+// note on top, so the stack is only worth looking at when the times differ.
+// x/y are fractions of that day's board.
 // prettier-ignore
 const NOTES = [
-  [1801, "attendee", "butter", 0, 0, 6, 10, "Diplomacy, 3 hours", "I'll bring the map and the grudges. Need six more."],
-  [1802, "host", "rose", 0.5, 0, 6, 11, "Lightning talks", "Five minutes each, no slides. Sign up underneath this one."],
-  [1803, "attendee", "sky", 1, 0, 6, 14, "Megagame prediction market", "I have whiteboard markers and too many opinions."],
-  [1804, "newcomer", "mint", 0, 0.2, 6, 17, "Walking tour of campus?", "First Metagame — would love one from someone who knows the place."],
-  [1805, "team", "tangerine", 0.5, 0.2, 7, 9, "Teaching Hanabi, all weekend", null],
-  [1806, "attendee", "lilac", 1, 0.35, 7, 13, "Werewolf at 10pm — need a co-moderator", "Happy to run it if someone else takes the night phase."],
-].map(([n, who, color, x, y, day, hour, title, body]) => {
+  [1801, "attendee", "butter", 6, 0, 0, 6, 10, "Diplomacy, 3 hours", "I'll bring the map and the grudges. Need six more."],
+  [1802, "host", "rose", 6, 1, 0, 6, 11, "Lightning talks", "Five minutes each, no slides. Sign up underneath this one."],
+  [1803, "attendee", "sky", 7, 1, 0, 6, 14, "Megagame prediction market", "I have whiteboard markers and too many opinions."],
+  [1804, "newcomer", "mint", 7, 0, 0.2, 6, 17, "Walking tour of campus?", "First Metagame — would love one from someone who knows the place."],
+  [1805, "team", "tangerine", 8, 0.5, 0.1, 7, 9, "Teaching Hanabi, all weekend", null],
+  [1806, "attendee", "lilac", 8, 1, 0.35, 7, 13, "Werewolf at 10pm — need a co-moderator", "Happy to run it if someone else takes the night phase."],
+].map(([n, who, color, boardDay, x, y, day, hour, title, body]) => {
   // Fixed item ids, so a re-run writes the same documents.
   const fixed = (doc, tag) => ({
     ...doc,
@@ -405,6 +407,7 @@ const NOTES = [
   return {
     id: uuid(n),
     location_id: locations.ratpark.id,
+    board_day: `2026-11-0${boardDay}`,
     author_user_id: users[who].id,
     title,
     sticky: JSON.stringify(sticky),
@@ -559,6 +562,7 @@ const program = [
   [132, 8, 14, 60, "gardens", "game", "Kids vs Grownups Relay", "A relay. The kids usually win.", "all", 40],
   [133, 8, 15, 60, "courtyard", "talk", "Closing Ceremony & Awards", "Prizes, confessions, and the last hot sauce.", "all", 80],
   [134, 8, 16, 120, "gardens", "other", "Teardown & Pickup Soccer", "Fold a chair, kick a ball.", "all", 40],
+  [135, 6, 19, 180, "ratpark", "other", "Night Market", "Booths, snacks and games from attendees and friends, open to the public.", "all", 300],
 ].map(([n, day, hour, minutes, room, category, title, description, ages, cap, extra]) => ({
   id: uuid(n),
   slug: slugify(title),

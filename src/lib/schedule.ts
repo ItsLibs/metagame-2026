@@ -7,25 +7,17 @@ export const CATEGORIES = ["talk", "workshop", "game", "other"] as const;
 export const AGES = ["all", "kids", "adults"] as const;
 export const STATUSES = ["draft", "published"] as const;
 export const LOCATION_VISIBILITIES = ["public", "volunteer", "hidden"] as const;
-export const LOCATION_LAYOUTS = ["grid", "board"] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Ages = (typeof AGES)[number];
 export type Status = (typeof STATUSES)[number];
 export type LocationVisibility = (typeof LOCATION_VISIBILITIES)[number];
-export type LocationLayout = (typeof LOCATION_LAYOUTS)[number];
 
 /** Who a room is for, as the backstage room list and form say it. */
 export const VISIBILITY_LABEL: Record<LocationVisibility, string> = {
   public: "Everyone",
   volunteer: "Volunteers and team",
   hidden: "Team only",
-};
-
-/** How a room's column is drawn, as the backstage room form says it. */
-export const LAYOUT_LABEL: Record<LocationLayout, string> = {
-  grid: "Time grid",
-  board: "Bulletin board",
 };
 
 export type ScheduleLocation = {
@@ -36,8 +28,13 @@ export type ScheduleLocation = {
   description: string | null;
   displayOrder: number;
   visibility: LocationVisibility;
-  /** How the room's column is drawn; "board" is the unconference bulletin board. */
-  layout: LocationLayout;
+  /**
+   * When the unconference bulletin board takes over this room's column (ISO);
+   * null for a room that never hosts it. Sessions can't overlap the window.
+   */
+  boardStartsAt: string | null;
+  /** When the board comes down; null runs it to the end of the schedule. */
+  boardEndsAt: string | null;
   /** Public Vercel Blob URL, already thumbnail-sized. */
   thumbnailUrl: string | null;
   /** Public Vercel Blob URL, about 1600px, for detail views. */
@@ -610,18 +607,71 @@ export function movedTimes(
   return { startsAt: start, endsAt: new Date(start.getTime() + ms) };
 }
 
+type BoardWindow = Pick<ScheduleLocation, "boardStartsAt" | "boardEndsAt">;
+
+/** Whether the unconference board ever takes over this room's column. */
+export const hostsBoard = (room: BoardWindow): boolean =>
+  room.boardStartsAt !== null;
+
 /**
- * A board room is a bulletin board, not a time column: grid view draws one
- * full-height surface for it and no per-slot cells, so a session placed there
- * would be listed and searchable but drawn nowhere. The pairing is refused
+ * Whether a session at these times would sit under the room's board. Grid
+ * view draws the board over those rows with no cells, so such a session
+ * would be listed and searchable but drawn nowhere; the pairing is refused
  * instead, in the form, on the backstage grid and in the store.
  */
-export function roomTakesSessions(layout: LocationLayout): boolean {
-  return layout !== "board";
+export function clashesWithBoard(
+  room: BoardWindow,
+  startsAt: string | Date | null,
+  endsAt: string | Date | null,
+): boolean {
+  if (!room.boardStartsAt || !startsAt || !endsAt) return false;
+  const from = Date.parse(room.boardStartsAt);
+  const until = room.boardEndsAt ? Date.parse(room.boardEndsAt) : Infinity;
+  return (
+    new Date(startsAt).getTime() < until && new Date(endsAt).getTime() > from
+  );
 }
 
 export const BOARD_ROOM_REFUSAL =
-  "That room is a bulletin board, so it holds no sessions.";
+  "The unconference board has that room then, so it holds no sessions.";
+
+/**
+ * Whether the board is up at some point on this Pacific day. Each such day
+ * is its own board, with its own notes.
+ */
+export function boardOnDay(room: BoardWindow, dayKey: string): boolean {
+  if (!room.boardStartsAt) return false;
+  if (dayKey < pacificDayKey(room.boardStartsAt)) return false;
+  if (!room.boardEndsAt) return true;
+  // An end at midnight closes the day before, not the day it falls on.
+  const lastMoment = new Date(Date.parse(room.boardEndsAt) - 1).toISOString();
+  return dayKey <= pacificDayKey(lastMoment);
+}
+
+/**
+ * The slot rows the board covers on one day, as [first, end) indexes into
+ * `slots`; null when the board isn't up that day. A slot counts when its
+ * start falls inside the window.
+ */
+export function boardRows(
+  room: BoardWindow,
+  dayKey: string,
+  slots: readonly number[],
+): [number, number] | null {
+  if (!room.boardStartsAt || !boardOnDay(room, dayKey)) return null;
+  const startDay = pacificDayKey(room.boardStartsAt);
+  const endDay = room.boardEndsAt ? pacificDayKey(room.boardEndsAt) : null;
+  const from = dayKey === startDay ? pacificMinutes(room.boardStartsAt) : 0;
+  const until =
+    endDay && dayKey === endDay && room.boardEndsAt
+      ? pacificMinutes(room.boardEndsAt)
+      : Infinity;
+  const first = slots.findIndex((m) => m >= from && m < until);
+  if (first < 0) return null;
+  let end = first;
+  while (end < slots.length && slots[end] < until) end++;
+  return [first, end];
+}
 
 /** Volunteer shifts hand off with some overlap; a double-booked real room is a mistake. */
 export function roomAllowsOverlap(visibility: LocationVisibility): boolean {
@@ -869,7 +919,8 @@ export type PublicLocation = Pick<
   | "name"
   | "capacity"
   | "campusLocation"
-  | "layout"
+  | "boardStartsAt"
+  | "boardEndsAt"
   | "thumbnailUrl"
   | "imageUrl"
 >;
@@ -934,10 +985,14 @@ export function publicSchedule(
     name: l.name,
     capacity: l.capacity,
     campusLocation: l.campusLocation,
-    layout: l.layout,
+    boardStartsAt: l.boardStartsAt,
+    boardEndsAt: l.boardEndsAt,
     thumbnailUrl: l.thumbnailUrl,
     imageUrl: l.imageUrl,
   }));
+  // The board's room leads the lineup wherever the schedule is shown, ahead
+  // of the team's own room order. Stable, so the rest keep theirs.
+  locations.sort((a, b) => Number(hostsBoard(b)) - Number(hostsBoard(a)));
   return { locations, sessions };
 }
 

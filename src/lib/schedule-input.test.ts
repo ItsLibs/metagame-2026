@@ -163,19 +163,42 @@ describe("parseLocationFields", () => {
     expect(
       blamed(parseLocationFields({ name: "Hall", visibility: "on" })),
     ).toBe("visibility");
-    expect(blamed(parseLocationFields({ name: "Hall", layout: "cork" }))).toBe(
-      "layout",
-    );
+    expect(
+      blamed(parseLocationFields({ name: "Hall", boardStartsAt: "soon" })),
+    ).toBe("boardStartsAt");
+    expect(
+      blamed(
+        parseLocationFields({ name: "Hall", boardEndsAt: "2026-11-08T23:00" }),
+      ),
+    ).toBe("boardStartsAt");
+    expect(
+      blamed(
+        parseLocationFields({
+          name: "Hall",
+          boardStartsAt: "2026-11-06T22:00",
+          boardEndsAt: "2026-11-06T21:00",
+        }),
+      ),
+    ).toBe("boardEndsAt");
   });
 
-  // A save replaces the whole row, so a form that drops `layout` turns the
-  // unconference board back into an ordinary time grid.
-  it("keeps the board layout, defaulting to the time grid", () => {
+  // A save replaces the whole row, so a form that drops the window takes the
+  // board down.
+  it("reads the board window in Pacific time, or none at all", () => {
     expect(
-      parseLocationFields({ name: "Park", layout: "board" }),
-    ).toMatchObject({ value: { layout: "board" } });
+      parseLocationFields({
+        name: "Rat Park",
+        boardStartsAt: "2026-11-06T22:00",
+        boardEndsAt: "2026-11-09T00:00",
+      }),
+    ).toMatchObject({
+      value: {
+        boardStartsAt: new Date("2026-11-07T06:00:00Z"),
+        boardEndsAt: new Date("2026-11-09T08:00:00Z"),
+      },
+    });
     expect(parseLocationFields({ name: "Hall" })).toMatchObject({
-      value: { layout: "grid" },
+      value: { boardStartsAt: null, boardEndsAt: null },
     });
   });
 });

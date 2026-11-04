@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
 import NoticeCanvas, { type Editing, type Tool } from "./NoticeCanvas";
 import NoticeToolbar from "./NoticeToolbar";
 import { PosterPaper, StickyPaper } from "./Paper";
-import { ReactionBar } from "./Reactions";
+import { ReactionBar, type Reactors } from "./Reactions";
 
 // A notice blown up: the poster taped to the wall with its sticky note
 // beside it, the author and the reactions underneath. The author edits both
@@ -57,10 +57,12 @@ export default function NoticeDialog({
   canEdit,
   canDelete,
   canReact,
+  reactHint,
   onClose,
   onSave,
   onDelete,
   onReact,
+  loadReactors,
 }: {
   /** Null while composing a new notice. */
   note: BoardNote | null;
@@ -68,11 +70,14 @@ export default function NoticeDialog({
   canEdit: boolean;
   canDelete: boolean;
   canReact: boolean;
+  /** What to offer instead of reacting, for a viewer who can't. */
+  reactHint?: React.ReactNode;
   onClose: () => void;
   /** With no id, this is the first save and pins the notice up. */
   onSave: (draft: Draft, id: string | null) => Promise<NoteState>;
   onDelete: (id: string) => Promise<NoteState>;
   onReact: (id: string, emoji: string) => void;
+  loadReactors: (id: string) => Promise<Reactors>;
 }) {
   const initial: Draft = {
     sticky: note?.sticky ?? EMPTY_DOC,
@@ -105,6 +110,13 @@ export default function NoticeDialog({
   // first save created. The ref is for handlers mid-save; the state renders.
   const idRef = useRef<string | null>(note?.id ?? null);
   const [liveId, setLiveId] = useState<string | null>(note?.id ?? null);
+  // Rebuilt whenever the chips change, so an open "View reactions" reloads
+  // with the viewer's own tap in it.
+  const chips = note?.reactions;
+  const reactors = useCallback(
+    () => (liveId && chips ? loadReactors(liveId) : Promise.resolve([])),
+    [liveId, chips, loadReactors],
+  );
   const stored = useRef(JSON.stringify(initial));
   const inFlight = useRef<Promise<void> | null>(null);
 
@@ -460,7 +472,9 @@ export default function NoticeDialog({
               <ReactionBar
                 reactions={note.reactions}
                 canReact={canReact}
+                signInHint={reactHint}
                 onToggle={(emoji) => onReact(liveId, emoji)}
+                loadReactors={reactors}
               />
             )}
             {canDelete && liveId && (

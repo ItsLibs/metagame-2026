@@ -19,7 +19,7 @@ import {
   type Ages,
   type Category,
   type Lane,
-  type LocationLayout,
+  boardRows,
   type PublicLocation,
 } from "@/lib/schedule";
 import {
@@ -63,8 +63,9 @@ export type Column = {
   name: string;
   campusLocation: string | null;
   capacity: number | null;
-  /** "board" columns have no time rows; see GridDay's `board` prop. */
-  layout: LocationLayout;
+  /** When the bulletin board has this column; see GridDay's `board` prop. */
+  boardStartsAt: string | null;
+  boardEndsAt: string | null;
   thumbnailUrl: string | null;
 };
 
@@ -78,7 +79,8 @@ export function buildColumns(
     name: l.name,
     campusLocation: l.campusLocation,
     capacity: l.capacity,
-    layout: l.layout,
+    boardStartsAt: l.boardStartsAt,
+    boardEndsAt: l.boardEndsAt,
     thumbnailUrl: l.thumbnailUrl,
   }));
   if (roomless) {
@@ -87,7 +89,8 @@ export function buildColumns(
       name: "Room TBA",
       campusLocation: null,
       capacity: null,
-      layout: "grid",
+      boardStartsAt: null,
+      boardEndsAt: null,
       thumbnailUrl: null,
     });
   }
@@ -255,16 +258,16 @@ function SessionBlock<S extends ViewSession>({
 
 /**
  * The seam a free-form board plugs into. GridDay hands a board column one
- * full-height surface and knows nothing else about it — not what a note is,
- * nor how it is dragged. A grid with no `board` renderer draws every column
- * as time rows, whatever its layout says, so the profile grids and the
- * backstage editor are untouched.
+ * surface over the rows the board's window covers that day, and knows
+ * nothing else about it — not what a note is, nor how it is dragged. A grid
+ * with no `board` renderer draws every column as time rows, so the profile
+ * grids and the backstage editor are untouched.
  */
 export type BoardSurface = (surface: {
   column: Column;
   /** The day tab this is being drawn under; the board itself has no day. */
   dayKey: string;
-  /** The surface's height in pixels: the whole day's worth of rows. */
+  /** The surface's height in pixels: the rows the board has that day. */
   height: number;
 }) => ReactNode;
 
@@ -297,21 +300,28 @@ export function GridDay<S extends ViewSession>({
   board?: BoardSurface;
 }) {
   const lanes = useMemo(() => overlapLanes(day.sessions), [day.sessions]);
+  // The rows each board covers today, as [first, end) slot indexes. Outside
+  // them the column is an ordinary room.
   const boards = board
-    ? columns.flatMap((col, i) => (col.layout === "board" ? [i] : []))
+    ? columns.flatMap((col, i) => {
+        const rows = boardRows(col, day.key, day.slots);
+        return rows ? [{ i, rows }] : [];
+      })
     : [];
+  const boardAt = (i: number) => boards.find((b) => b.i === i);
+  const underBoard = (i: number, row: number) => {
+    const b = boardAt(i);
+    return !!b && row >= b.rows[0] && row < b.rows[1];
+  };
   // One template string for both grids, or the headers drift out of line with
   // their columns. A board gets a wider track: post-its are useless in the
   // 104px a room column gets.
   const gridCols = [
     "var(--time-w)",
     ...columns.map((_, i) =>
-      boards.includes(i)
-        ? "minmax(var(--board-w), 2fr)"
-        : "minmax(var(--col-w), 1fr)",
+      boardAt(i) ? "minmax(var(--board-w), 2fr)" : "minmax(var(--col-w), 1fr)",
     ),
   ].join(" ");
-  const boardHeight = day.slots.length * SLOT_PX;
   // The rightmost column's right border would otherwise come from
   // `last:border-r-0`, which moves to the wrong cell once a board column
   // stops emitting one per row.
@@ -383,7 +393,7 @@ export function GridDay<S extends ViewSession>({
               style={{ top: nowTop, transitionDuration: `${NOW_TICK_MS}ms` }}
             />
           )}
-          {day.slots.map((slotStart) => (
+          {day.slots.map((slotStart, row) => (
             <div key={slotStart} className="contents">
               <div
                 className="sticky left-0 z-20 flex justify-center border-r border-b border-[#1b1530]/15 bg-background pt-1 text-[11px] text-[#1b1530]/55"
@@ -392,7 +402,7 @@ export function GridDay<S extends ViewSession>({
                 {slotLabel(slotStart, { period: false })}
               </div>
               {columns.map((col, i) =>
-                boards.includes(i) ? null : (
+                underBoard(i, row) ? null : (
                   <div
                     key={col.id}
                     className={`relative border-b border-[#1b1530]/10 ${edge(i)}`}
@@ -413,28 +423,28 @@ export function GridDay<S extends ViewSession>({
               )}
             </div>
           ))}
-          {boards.map((i) => (
-            <div
-              key={columns[i].id}
-              // Definitely placed, so grid sets this before auto-placement
-              // and the per-slot cells flow around it on their own. min-w-0
-              // keeps it from widening its track out of step with the header.
-              style={{
-                gridColumn: `${i + 2}`,
-                gridRow: `1 / span ${day.slots.length}`,
-                height: boardHeight,
-              }}
-              className={`relative min-w-0 overflow-hidden border-b border-[#1b1530]/10 ${edge(i)}`}
-            >
-              <div className="absolute inset-0">
-                {board?.({
-                  column: columns[i],
-                  dayKey: day.key,
-                  height: boardHeight,
-                })}
+          {boards.map(({ i, rows: [first, end] }) => {
+            const height = (end - first) * SLOT_PX;
+            return (
+              <div
+                key={columns[i].id}
+                // Definitely placed, so grid sets this before auto-placement
+                // and the per-slot cells flow around it on their own. min-w-0
+                // keeps it from widening its track out of step with the
+                // header.
+                style={{
+                  gridColumn: `${i + 2}`,
+                  gridRow: `${first + 1} / span ${end - first}`,
+                  height,
+                }}
+                className={`relative min-w-0 overflow-hidden border-b border-[#1b1530]/10 ${edge(i)}`}
+              >
+                <div className="absolute inset-0">
+                  {board?.({ column: columns[i], dayKey: day.key, height })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

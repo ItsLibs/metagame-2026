@@ -111,7 +111,6 @@ describe("describeSchema", () => {
       "session_dropins",
       "discord_status",
       "location_visibility",
-      "location_layout",
       "unconference_note_color",
       "rubric_grade",
       "shepherd_match",
@@ -146,8 +145,10 @@ describe("describeSchema", () => {
     ).toBe("cascade");
     expect(column("unconference_notes", "x").type).toBe("real");
     expect(column("unconference_notes", "x").default).toBe("0");
-    expect(column("locations", "layout").default).toBe("'grid'");
-    expect(column("locations", "layout").enumValues).toEqual(["grid", "board"]);
+    expect(column("unconference_notes", "board_day").type).toBe("date");
+    expect(column("locations", "board_starts_at").type).toBe(
+      "timestamp with time zone",
+    );
   });
 
   it("marks keys and uniqueness", () => {
