@@ -22,7 +22,6 @@ import Highlights2025 from "@/v2/components/Highlights2025";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
 import SiteHero from "@/v2/components/SiteHero";
-import SpeakerCard from "@/v2/components/SpeakerCard";
 import PlayWeb from "@/v2/components/PlayWeb";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import {
@@ -42,7 +41,7 @@ import {
   SILVER_SPONSORS,
 } from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
-import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
+import SpeakersSection from "@/v2/components/SpeakersSection";
 import {
   HOTELS_SEARCH_URL,
   HOUSING_URL,
@@ -59,6 +58,8 @@ import { HATS } from "@/v2/hat-trick/hats";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { env } from "@/env";
+import { activeFactions, NO_LEVELS } from "@/lib/megagame-levels";
+import { loadMegagameLevelsFor } from "@/lib/megagame-store";
 import { buildDays, hostedSessions, publicSchedule } from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
@@ -271,7 +272,19 @@ export default async function Home() {
   // Public rooms only and no per-viewer state, so the page stays static. CI
   // prerenders it with no database (Vercel builds have one), so the grid is
   // skipped rather than failing the build.
-  const raw = env.DATABASE_URL ? await loadSchedule() : null;
+  // The speakers' Megagame picks ride along for their cards' medals; they're
+  // decoration, so if that query fails the cards just go without.
+  const [raw, levels] = env.DATABASE_URL
+    ? await Promise.all([
+        loadSchedule(),
+        loadMegagameLevelsFor(SPEAKERS.map((s) => s.userId)).catch(
+          (e: unknown) => {
+            console.error("speaker megagame levels", e);
+            return null;
+          },
+        ),
+      ])
+    : [null, null];
   const schedule = raw && publicSchedule(raw, "public");
   // The sessions each speaker hosts, for the backs of their cards.
   const speaking = raw && schedule && hostedSessions(raw, schedule);
@@ -311,31 +324,12 @@ export default async function Home() {
       <CastlingDivider />
 
       {/* speakers */}
-      <section id="speakers" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading eyebrow="Who will be there?" title="Speakers" />
-          {/* Wrapping flex, not a grid, so a short last row centers. */}
-          <div className="mt-10 flex flex-wrap justify-center gap-2 sm:gap-5">
-            {SPEAKERS.map((speaker) => (
-              <div
-                key={speaker.name}
-                className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(20%-1rem)]"
-              >
-                <SpeakerCard
-                  {...speaker}
-                  sessions={speaking?.get(speaker.userId)}
-                />
-              </div>
-            ))}
-            <div className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(20%-1rem)]">
-              <SpeakerCtaCard href={RFP_FORM_URL} />
-            </div>
-          </div>
-          <p className="mt-8 text-center text-base text-ink/70">
-            And many more coming soon&hellip;
-          </p>
-        </div>
-      </section>
+      <SpeakersSection
+        factionsFor={(speaker) =>
+          activeFactions(levels?.get(speaker.userId) ?? NO_LEVELS)
+        }
+        sessionsFor={(speaker) => speaking?.get(speaker.userId)}
+      />
 
       <CardSuitsDivider />
 

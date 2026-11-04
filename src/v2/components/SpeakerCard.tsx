@@ -16,8 +16,10 @@ import {
   type Category,
   type HostedSession,
 } from "@/lib/schedule";
+import { FACTION_NAMES, type MegagameClass } from "@/lib/megagame-levels";
 import type { Speaker } from "@/v2/data/speakers";
 import HatImage from "@/v2/hat-trick/HatImage";
+import { FactionMedal } from "./megagame/FactionPatch";
 import { useSessionHref } from "./schedule/SessionModalHost";
 import { HEADING } from "./styles";
 
@@ -30,9 +32,38 @@ const CATEGORY_ICON: Record<Category, typeof Mic> = {
 
 const SIZES = "(min-width: 1024px) 220px, 33vw";
 const FACE =
-  "flex h-full flex-col overflow-hidden rounded-lg border border-navy/[0.16] shadow-[0_8px_24px_rgba(23,48,89,0.08)] [backface-visibility:hidden]";
+  "flex h-full flex-col rounded-lg border border-navy/[0.16] shadow-[0_8px_24px_rgba(23,48,89,0.08)] [backface-visibility:hidden]";
 const MONO =
   "font-space-mono text-[9px] uppercase sm:text-xs sm:tracking-[0.08em]";
+
+// Medals sit on a quarter-arc around the photo's top-right corner, overlapping
+// like a hand of coins; hovering the group fans them apart along the arc with
+// only a little push outward. Angles are degrees from the top edge, radii in
+// medal widths (--s) from the corner.
+type Arc = { rest: number[]; fanned: number[] };
+const ARCS: Arc[] = [
+  { rest: [], fanned: [] },
+  { rest: [45], fanned: [45] },
+  { rest: [34, 56], fanned: [14, 76] },
+  { rest: [30, 45, 60], fanned: [6, 45, 84] },
+];
+const RADIUS = { rest: 0.58, fanned: 0.82 };
+const TILTS = ["rotate-[-6deg]", "rotate-[6deg]", "rotate-[-4deg]"];
+// Centre offsets (right, top) from the corner for an angle and radius.
+const polar = (deg: number, r: number) => {
+  const a = (deg * Math.PI) / 180;
+  return { x: r * Math.cos(a), y: r * Math.sin(a) };
+};
+
+// Each faction's hover motion: lift and glow, roll like a ship, hover like a saucer.
+const MOTION: Record<MegagameClass, string> = {
+  wizard:
+    "hover:-translate-y-1.5 hover:rotate-0 hover:shadow-[0_0_16px_rgba(59,0,184,0.75)] focus-visible:-translate-y-1.5 focus-visible:rotate-0",
+  pirate:
+    "motion-safe:hover:animate-[mg-roll_1.4s_ease-in-out_infinite] motion-safe:focus-visible:animate-[mg-roll_1.4s_ease-in-out_infinite]",
+  alien:
+    "hover:rotate-0 focus-visible:rotate-0 motion-safe:hover:animate-[mg-hover_1.8s_ease-in-out_infinite] motion-safe:focus-visible:animate-[mg-hover_1.8s_ease-in-out_infinite]",
+};
 
 // The dog-eared corner that turns the card: a clipped triangle in the
 // bottom-right with a turn-over arrow on it.
@@ -67,7 +98,8 @@ function Corner({
 }
 
 // One speaker as a two-sided card: the photo on top (with any Hat Trick
-// hats), name and affiliation under it. Turn it over for their sessions, each
+// hats and the Megagame factions they've joined, as badges on its corner),
+// name and affiliation under it. Turn it over for their sessions, each
 // linking to its page. The front sets the height; the back lies over it and
 // scrolls if it has to. With no sessions there's nothing to turn to.
 export default function SpeakerCard({
@@ -77,8 +109,12 @@ export default function SpeakerCard({
   photo,
   hats,
   logo,
+  factions = [],
   sessions = [],
-}: Omit<Speaker, "userId"> & { sessions?: HostedSession[] }) {
+}: Omit<Speaker, "userId"> & {
+  factions?: MegagameClass[];
+  sessions?: HostedSession[];
+}) {
   const [flipped, setFlipped] = useState(false);
   const sessionHref = useSessionHref();
   const frontCorner = useRef<HTMLButtonElement>(null);
@@ -116,34 +152,89 @@ export default function SpeakerCard({
           onClick={canFlip ? (e) => onFace(e, true) : undefined}
           className={`${FACE} relative bg-white ${canFlip ? "cursor-pointer" : ""}`}
         >
-          {photo && hats?.length ? (
-            <HatImage
-              src={photo}
-              alt={name}
-              hats={hats}
-              className="aspect-square w-full"
-              sizes={SIZES}
-            />
-          ) : photo ? (
-            <Image
-              src={photo}
-              alt={name}
-              className="aspect-square w-full object-cover"
-              sizes={SIZES}
-            />
-          ) : (
-            <div
-              aria-hidden
-              className={`${HEADING} flex aspect-square w-full items-center justify-center bg-navy text-3xl text-cream sm:text-6xl`}
-            >
-              {name
-                .split(/\s+/)
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
+          <div className="relative">
+            <div className="overflow-hidden rounded-t-lg">
+              {photo && hats?.length ? (
+                <HatImage
+                  src={photo}
+                  alt={name}
+                  hats={hats}
+                  className="aspect-square w-full"
+                  sizes={SIZES}
+                />
+              ) : photo ? (
+                <Image
+                  src={photo}
+                  alt={name}
+                  className="aspect-square w-full object-cover"
+                  sizes={SIZES}
+                />
+              ) : (
+                <div
+                  aria-hidden
+                  className={`${HEADING} flex aspect-square w-full items-center justify-center bg-navy text-3xl text-cream sm:text-6xl`}
+                >
+                  {name
+                    .split(/\s+/)
+                    .map((w) => w[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </div>
+              )}
             </div>
-          )}
+            {/* Medals for the factions joined, on the corner so they cover
+                little face; each links to the Megagame tab to join. */}
+            {factions.length > 0 && (
+              <ul
+                aria-label="Megagame factions"
+                className="absolute top-0 right-0 [--k:0] [--s:1.75rem] focus-within:[--k:1] hover:[--k:1] sm:[--s:2.5rem]"
+              >
+                {factions.map((f, i) => {
+                  const arc = ARCS[Math.min(factions.length, 3)];
+                  const at = polar(arc.rest[i], RADIUS.rest);
+                  const to = polar(arc.fanned[i], RADIUS.fanned);
+                  // The li holds the rest position; the wrapper inside eases
+                  // along the arc as the group's --k goes to 1.
+                  return (
+                    <li
+                      key={f}
+                      className="absolute"
+                      style={{
+                        zIndex: factions.length - i,
+                        top: `calc(var(--s) * ${at.y - 0.5})`,
+                        right: `calc(var(--s) * ${at.x - 0.5})`,
+                      }}
+                    >
+                      <div
+                        className="transition-[translate] duration-400 ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none"
+                        style={{
+                          translate: `calc(var(--s) * ${(at.x - to.x).toFixed(3)} * var(--k)) calc(var(--s) * ${(to.y - at.y).toFixed(3)} * var(--k))`,
+                        }}
+                      >
+                        <a
+                          href="/account?tab=megagame"
+                          aria-label={`${FACTION_NAMES[f]} · Megagame`}
+                          className={`group peer block rounded-full shadow-[0_2px_6px_rgba(23,48,89,0.4)] ring-2 ring-[#FFFBF2] transition-[rotate,scale,translate,box-shadow] duration-300 outline-none hover:scale-110 focus-visible:scale-110 focus-visible:ring-meeple motion-reduce:transition-none ${TILTS[i]} ${MOTION[f]}`}
+                        >
+                          <FactionMedal
+                            faction={f}
+                            className="size-[var(--s)] rounded-full"
+                          />
+                        </a>
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute top-full right-0 z-10 mt-2 translate-y-1 rounded-md bg-navy px-2 py-1 font-[family-name:var(--font-bebas)] text-sm tracking-[0.04em] whitespace-nowrap text-cream opacity-0 shadow-[0_4px_12px_rgba(23,48,89,0.35)] transition duration-200 peer-hover:translate-y-0 peer-hover:opacity-100 peer-focus-visible:translate-y-0 peer-focus-visible:opacity-100 motion-reduce:transition-none"
+                        >
+                          {FACTION_NAMES[f]}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
           <div className="flex flex-1 flex-col items-center px-1 py-2 text-center sm:px-4 sm:py-3">
             <h3
               className={`${HEADING} text-xs break-words text-navy sm:text-lg`}
@@ -190,7 +281,7 @@ export default function SpeakerCard({
           <div
             inert={!flipped}
             onClick={(e) => onFace(e, false)}
-            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 text-cream sm:p-3`}
+            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer overflow-hidden bg-navy p-2 text-cream sm:p-3`}
           >
             <span
               className={`${MONO} block truncate font-bold tracking-[0.1em] text-tan`}
