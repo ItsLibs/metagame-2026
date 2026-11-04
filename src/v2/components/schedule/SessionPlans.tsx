@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type {
   PlanConflict,
@@ -14,6 +15,7 @@ export default function SessionPlans({
   sessionId,
   capacity,
   commitment,
+  open,
   conflicts,
   rsvps: initial,
   ticket,
@@ -23,6 +25,7 @@ export default function SessionPlans({
   sessionId: string;
   capacity: number | null;
   commitment: boolean;
+  open: boolean;
   conflicts: PlanConflict[];
   rsvps: SessionRsvps;
   ticket?: RsvpTicket;
@@ -30,6 +33,7 @@ export default function SessionPlans({
   plan: { status: RsvpStatus | null; bookmarked: boolean } | null;
   signIn: ReactNode;
 }) {
+  const router = useRouter();
   const [rsvps, setRsvps] = useState(initial);
   const [prev, setPrev] = useState(initial);
   if (prev !== initial) {
@@ -39,6 +43,12 @@ export default function SessionPlans({
 
   return (
     <>
+      {commitment && (
+        <p className="text-sm text-[#1b1530]/70">
+          Spots are limited and the host is counting on you, so only RSVP if
+          you&rsquo;ll be there.
+        </p>
+      )}
       {plan ? (
         <PlanButtons
           sessionId={sessionId}
@@ -46,9 +56,15 @@ export default function SessionPlans({
           bookmarked={plan.bookmarked}
           full={capacity !== null && rsvps.going >= capacity}
           commitment={commitment}
+          open={open}
           conflicts={conflicts}
           ticket={ticket}
-          onSettled={(result) => result.rsvps && setRsvps(result.rsvps)}
+          onSettled={(result) => {
+            if (result.rsvps) setRsvps(result.rsvps);
+            // The page underneath (My sessions, the account lists) didn't
+            // see the change.
+            router.refresh();
+          }}
         />
       ) : (
         signIn

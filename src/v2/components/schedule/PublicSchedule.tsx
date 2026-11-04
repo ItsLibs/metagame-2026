@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { toast } from "sonner";
 import {
@@ -12,8 +12,11 @@ import {
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
+import { SESSION_PARAM, sessionPageSlug } from "@/lib/session-link";
 import type { BoardData } from "@/lib/unconference";
-import { LEGEND } from "@/v2/lib/schedule-styles";
+import { readViewCookie, writeViewCookie } from "@/lib/schedule-view";
+import { ScheduleLegend } from "./SessionBits";
+import { useSessionHref } from "./SessionModalHost";
 import {
   buildColumns,
   DayTabs,
@@ -32,81 +35,79 @@ import UnconferenceBoard, { NoteList } from "./UnconferenceBoard";
 
 type PublicDay = Day<PublicSession>;
 
-const href = (s: PublicSession) => `/schedule/${encodeURIComponent(s.slug)}`;
-
-export function CategoryLegend() {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
-      {LEGEND.slice(0, 4).map((entry) => (
-        <span key={entry.label} className="flex items-center gap-1.5 text-xs">
-          <span
-            aria-hidden
-            className="h-3.5 w-3.5 rounded-sm border"
-            style={entry.style}
-          />
-          {entry.label}
-        </span>
-      ))}
-    </div>
-  );
+/** The day the session with `slug` is on, if it's one of these. */
+function sessionDayKey(days: PublicDay[], slug: string | null) {
+  if (!slug) return undefined;
+  return days.find((d) => d.sessions.some((s) => s.slug === slug))?.key;
 }
 
-/** The published schedule, a day at a time; every session links to its page. */
+/** The published schedule, a day at a time; every session opens over it. */
 export default function PublicSchedule({
   days,
   locations,
   mine,
+  initialView,
   board,
 }: {
   days: PublicDay[];
   locations: PublicLocation[];
   /** Ids of the viewer's own sessions; null when signed out. */
   mine: string[] | null;
+  /** The view cookie as read on the server; undefined where the page is
+   *  cached and the cookie has to be read after mount instead. */
+  initialView?: View;
   /** The unconference notes, or null when no room this viewer sees is a board. */
   board?: BoardData | null;
 }) {
-  const [dayKey, setDayKey] = useState(() => openingDayKey(days));
-  const [view, setView] = useState<View>("grid");
-  const [onlyMine, setOnlyMine] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const href = useSessionHref();
+  // A session's own page shows its day underneath.
+  const [dayKey, setDayKey] = useState(
+    () => sessionDayKey(days, sessionPageSlug(pathname)) ?? openingDayKey(days),
+  );
+  const [view, setView] = useState<View>(initialView ?? "grid");
+  const selectView = (v: View) => {
+    setView(v);
+    writeViewCookie(v);
+  };
 
-  // Whichever session page is open, show its day underneath: a search pick,
-  // a shared link, or the back button all land on the right tab. State is
-  // adjusted during render on a path change rather than in an effect, so the
-  // first paint is already on the right day.
-  const [seenPath, setSeenPath] = useState(pathname);
-  if (pathname !== seenPath) {
-    setSeenPath(pathname);
-    const slug = decodeURIComponent(pathname.split("/")[2] ?? "");
-    const found = slug
-      ? days.find((d) => d.sessions.some((s) => s.slug === slug))
-      : undefined;
-    if (found) setDayKey(found.key);
-  }
-
-  // Phones start on moments; deferred so server and first client render match.
+  // Without a server-read view, pick up the one stored in the browser;
+  // deferred so server and first client render match.
   useEffect(() => {
-    if (!window.matchMedia("(max-width: 767px)").matches) return;
-    const t = setTimeout(() => setView("moments"), 0);
+    if (initialView) return;
+    const stored = readViewCookie();
+    if (!stored) return;
+    const t = setTimeout(() => setView(stored), 0);
     return () => clearTimeout(t);
-  }, []);
+  }, [initialView]);
+  const [onlyMine, setOnlyMine] = useState(false);
 
-  // The layout isn't re-rendered when a session modal closes, so an RSVP or
-  // bookmark made in one wouldn't reach `mine` without this.
+  // Landing with ?session= open (coming back from sign-in) shows that day
+  // too. Read off the location: useSearchParams would need a Suspense
+  // boundary, and the home page would lose its prerendered schedule. Once
+  // only: on the home page a refresh hands over a new `days`.
+  const landed = useRef(false);
   useEffect(() => {
-    if (onlyMine && pathname === "/schedule") router.refresh();
-  }, [onlyMine, pathname, router]);
+    if (landed.current) return;
+    landed.current = true;
+    const slug = new URLSearchParams(window.location.search).get(SESSION_PARAM);
+    const key = sessionDayKey(days, slug);
+    if (!key) return;
+    const t = setTimeout(() => setDayKey(key), 0);
+    return () => clearTimeout(t);
+  }, [days]);
+
+  const open = (s: PublicSession) => {
+    router.push(href(s.slug), { scroll: false });
+  };
 
   const shownDays = useMemo(
     () => (onlyMine && mine ? onlySessions(days, new Set(mine)) : days),
     [days, mine, onlyMine],
   );
 
-  const columns = buildColumns(
-    locations,
-    days.some((d) => d.sessions.some((s) => s.locationId === null)),
-  );
+  const columns = buildColumns(locations);
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
   const day = selectedDay(shownDays, dayKey);
@@ -121,11 +122,20 @@ export default function PublicSchedule({
 
   const schedule = (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
+      {/* On a phone the view toggle shares this row as icons, and the My
+          sessions button keeps only its star; both get their words back from
+          the sm breakpoint. */}
+      <div className="flex items-center gap-2 sm:gap-3">
         <ScheduleSearch
           sessions={days.flatMap((d) => d.sessions)}
           roomName={(s) => roomName(s.locationId)}
-          onPick={(s) => router.push(href(s), { scroll: false })}
+          onPick={(s) => {
+            // Its day underneath, so closing lands on the right tab.
+            const key = sessionDayKey(days, s.slug);
+            if (key) setDayKey(key);
+            open(s);
+          }}
+          className="min-w-0"
         />
         {mine && (
           <button
@@ -140,32 +150,42 @@ export default function PublicSchedule({
                 { id: "schedule-filter" },
               );
             }}
+            title="Only my sessions"
             className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
           >
             <FaStar size={12} />
-            My sessions
+            <span className="sr-only sm:not-sr-only">My sessions</span>
           </button>
-        )}
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        {view !== "moments" && (
-          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
         )}
         <ViewToggle
           view={view}
-          onSelect={setView}
+          onSelect={selectView}
           views={["grid", "list", "moments"]}
+          iconsOnly
+          className={`${mine ? "" : "ml-auto"} shrink-0 sm:hidden`}
         />
       </div>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
+        <div className="hidden sm:block">
+          <ViewToggle
+            view={view}
+            onSelect={selectView}
+            views={["grid", "list", "moments"]}
+          />
+        </div>
+      </div>
 
-      <CategoryLegend />
+      <ScheduleLegend />
 
       {view === "moments" ? (
         <>
           <ScheduleMoments
             days={shownDays}
             columns={columns}
-            onOpen={(s) => router.push(href(s), { scroll: false })}
+            onOpen={open}
+            dayKey={day.key}
+            onDayChange={setDayKey}
           />
           {noteLists}
         </>
@@ -179,7 +199,7 @@ export default function PublicSchedule({
         <GridDay
           day={day}
           columns={columns}
-          href={href}
+          href={(s) => href(s.slug)}
           board={
             board
               ? ({ column }) => <UnconferenceBoard locationId={column.id} />
@@ -188,7 +208,7 @@ export default function PublicSchedule({
         />
       ) : (
         <>
-          <ListDay day={day} roomName={roomName} href={href} />
+          <ListDay day={day} roomName={roomName} href={(s) => href(s.slug)} />
           {noteLists}
         </>
       )}

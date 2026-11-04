@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activeClasses,
+  activeFactions,
   classLevelLabel,
   isMegagameClass,
   NO_LEVELS,
@@ -10,6 +11,14 @@ import {
 describe("activeClasses", () => {
   it("is empty at level 0 everywhere", () => {
     expect(activeClasses(NO_LEVELS)).toEqual([]);
+  });
+
+  it("names the joined factions without their levels", () => {
+    expect(activeFactions(NO_LEVELS)).toEqual([]);
+    expect(activeFactions({ wizard: 0, pirate: 2, alien: 1 })).toEqual([
+      "pirate",
+      "alien",
+    ]);
   });
 
   it("keeps only non-zero classes, in class order", () => {

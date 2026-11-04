@@ -79,7 +79,10 @@ export default function FirstSigninFlow() {
         showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
-        className="flex max-h-[calc(100dvh-2rem)] max-w-[560px] flex-col gap-6 overflow-y-auto px-6 py-7 sm:px-9 sm:py-8"
+        // Above the SessionModal (z-[100]): landing on a session, signed in
+        // for the first time, must still show this first.
+        overlayClassName="z-[110]"
+        className="z-[110] flex max-h-[calc(100dvh-2rem)] max-w-[560px] flex-col gap-6 overflow-y-auto px-6 py-7 sm:px-9 sm:py-8"
       >
         <div>
           <DialogTitle className={`${HEADING} text-[28px] text-cream`}>
@@ -172,6 +175,20 @@ function InfoForm({
         />
       </label>
 
+      <label className={cn("flex items-start gap-2.5", LABEL)}>
+        <input
+          type="checkbox"
+          name="shareWithRecruiters"
+          defaultChecked={prefill.shareWithRecruiters}
+          className="mt-0.5 size-4 shrink-0 accent-meeple"
+        />
+        <span className="flex flex-col gap-0.5">
+          Share contact info with recruiters?
+          <span className="text-sm font-normal text-cream/65">
+            {RECRUITERS_INFO}
+          </span>
+        </span>
+      </label>
       <span className={cn(SECTION, "mt-2")}>Optional</span>
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4">
@@ -208,20 +225,6 @@ function InfoForm({
           className="size-4 accent-meeple"
         />
         Show profile publicly?
-      </label>
-      <label className={cn("flex items-start gap-2.5", LABEL)}>
-        <input
-          type="checkbox"
-          name="shareWithRecruiters"
-          defaultChecked={prefill.shareWithRecruiters}
-          className="mt-0.5 size-4 shrink-0 accent-meeple"
-        />
-        <span className="flex flex-col gap-0.5">
-          Share contact info with recruiters?
-          <span className="text-sm font-normal text-cream/65">
-            {RECRUITERS_INFO}
-          </span>
-        </span>
       </label>
       {state.error && (
         <p aria-live="polite" className="text-sm text-salmon">

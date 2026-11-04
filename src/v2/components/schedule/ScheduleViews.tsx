@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FaClock, FaListUl, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
   formatPacificTime,
   heightPx,
+  titleLines,
   hostNames,
   laneInset,
   NO_ROOM,
@@ -21,7 +22,13 @@ import {
   type LocationLayout,
   type PublicLocation,
 } from "@/lib/schedule";
-import { AgeMark, BlockSummary, blockStyle, SponsorTag } from "./SessionBits";
+import {
+  BlockSummary,
+  blockStyle,
+  SessionMarks,
+  SponsorTag,
+} from "./SessionBits";
+import SessionPreview, { PREVIEW_ATTR } from "./SessionPreview";
 
 // The day grid, the day list and the toggles the schedule is built from,
 // shared by /schedule and the profile pages' session views.
@@ -33,11 +40,14 @@ export type ViewSession = {
   title: string;
   category: Category | null;
   ages: Ages | null;
+  rsvpIsCommitment: boolean;
   sponsored: boolean;
   locationId: string | null;
   hosts: { name: string }[];
   startsAt: string;
   endsAt: string;
+  /** Shown in the list and the grid's preview card when the caller has it. */
+  description?: string | null;
 };
 
 export type ViewDay<S extends ViewSession> = {
@@ -61,7 +71,7 @@ export type Column = {
 /** Room columns in order, with a "Room TBA" column when anything needs one. */
 export function buildColumns(
   locations: PublicLocation[],
-  roomless: boolean,
+  roomless = false,
 ): Column[] {
   const columns: Column[] = locations.map((l) => ({
     id: l.id,
@@ -90,6 +100,14 @@ export const toggleButton = (active: boolean, i: number) =>
     i > 0 ? "border-l-[1.5px] border-[#1b1530]/25" : ""
   }`;
 
+/** "11/6" from a day key like 2026-11-06, for the phone-sized tabs. */
+const shortDate = (key: string) =>
+  key
+    .split("-")
+    .slice(1)
+    .map((n) => String(Number(n)))
+    .join("/");
+
 export function DayTabs({
   days,
   selected,
@@ -99,6 +117,10 @@ export function DayTabs({
   selected: string;
   onSelect: (key: string) => void;
 }) {
+  // Phones get "Fri 11/6"; the full name and date come in at the sm
+  // breakpoint. Five days (the team sees setup and teardown) don't fit a
+  // narrow phone in a row, so the date goes under the name then.
+  const tight = days.length > 3;
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
       {days.map((d, i) => (
@@ -107,12 +129,21 @@ export function DayTabs({
           type="button"
           role="tab"
           aria-selected={d.key === selected}
+          aria-label={`${d.name} ${d.dateLabel}`}
           onClick={() => onSelect(d.key)}
-          className={`px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${toggleButton(d.key === selected, i)}`}
+          className={`py-1.5 font-[family-name:var(--font-bebas)] text-base tracking-[0.06em] whitespace-nowrap transition-colors sm:px-6 sm:py-2 sm:text-xl ${tight ? "px-2" : "px-2.5"} ${toggleButton(d.key === selected, i)}`}
         >
-          {d.name}
-          <span className="ml-1.5 inline-block text-sm whitespace-nowrap opacity-70">
-            {d.dateLabel}
+          <span className="sm:hidden">{d.name.slice(0, 3)}</span>
+          <span className="hidden sm:inline">{d.name}</span>
+          <span
+            className={`opacity-70 sm:ml-1.5 sm:inline-block sm:text-sm sm:leading-normal ${
+              tight
+                ? "block text-[10px] leading-tight"
+                : "ml-1 inline-block text-[11px]"
+            }`}
+          >
+            <span className="sm:hidden">{shortDate(d.key)}</span>
+            <span className="hidden sm:inline">{d.dateLabel}</span>
           </span>
         </button>
       ))}
@@ -133,25 +164,33 @@ export function ViewToggle({
   onSelect,
   labels,
   views = ["grid", "list"],
+  iconsOnly = false,
+  className = "",
 }: {
   view: View;
   onSelect: (v: View) => void;
   labels?: Partial<Record<View, string>>;
   views?: View[];
+  /** Icons with the names for screen readers only, for a tight row. */
+  iconsOnly?: boolean;
+  className?: string;
 }) {
   return (
-    <div role="group" aria-label="View" className={TOGGLE}>
+    <div role="group" aria-label="View" className={`${TOGGLE} ${className}`}>
       {VIEWS.filter((v) => views.includes(v.id)).map(
         ({ id, label, Icon }, i) => (
           <button
             key={id}
             type="button"
             aria-pressed={view === id}
+            title={iconsOnly ? (labels?.[id] ?? label) : undefined}
             onClick={() => onSelect(id)}
             className={`flex items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(view === id, i)}`}
           >
-            <Icon size={12} />
-            {labels?.[id] ?? label}
+            <Icon size={iconsOnly ? 14 : 12} />
+            <span className={iconsOnly ? "sr-only" : undefined}>
+              {labels?.[id] ?? label}
+            </span>
           </button>
         ),
       )}
@@ -159,8 +198,10 @@ export function ViewToggle({
   );
 }
 
+// No callout or text selection, so a long press brings up the preview card
+// rather than the browser's link menu.
 const BLOCK =
-  "absolute inset-x-0.5 z-10 block overflow-hidden rounded-md border p-1.5 text-left text-[#1b1530]";
+  "absolute inset-x-0.5 z-10 block overflow-hidden rounded-md border p-1.5 text-left text-[#1b1530] select-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]";
 const BLOCK_LINK =
   "transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)]";
 
@@ -183,25 +224,27 @@ function SessionBlock<S extends ViewSession>({
     ...laneInset(lane),
     ...blockStyle(session),
   };
-  const title = `${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}`;
   const body = (
     <>
-      <BlockSummary session={session} />
+      <BlockSummary session={session} titleLines={titleLines(session)} />
       {badge?.(session)}
     </>
   );
+  const preview = { [PREVIEW_ATTR]: session.id };
   const to = href(session);
   if (!to) {
     return (
-      <div title={title} style={style} className={BLOCK}>
+      <div {...preview} style={style} className={BLOCK}>
         {body}
       </div>
     );
   }
   return (
     <Link
-      title={title}
+      {...preview}
       href={to}
+      scroll={false}
+      draggable={false}
       style={style}
       className={`${BLOCK} ${BLOCK_LINK}`}
     >
@@ -275,8 +318,18 @@ export function GridDay<S extends ViewSession>({
   const edge = (i: number) => (i === columns.length - 1 ? "" : "border-r");
   const now = useNow();
   const nowTop = now ? nowLinePx(day.key, day.slots[0], now) : null;
+  const gridRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--board-w:232px] [--col-w:104px] [--time-w:36px] sm:[--board-w:300px] sm:[--col-w:120px] sm:[--time-w:40px]">
+    <div
+      ref={gridRef}
+      className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--board-w:232px] [--col-w:104px] [--time-w:36px] sm:[--board-w:300px] sm:[--col-w:120px] sm:[--time-w:40px]"
+    >
+      <SessionPreview
+        container={gridRef}
+        sessions={day.sessions}
+        columns={columns}
+        href={href}
+      />
       <div className="min-w-fit">
         <div
           className="sticky top-0 z-30 grid bg-[#4096ff] text-white"
@@ -390,7 +443,7 @@ export function GridDay<S extends ViewSession>({
 
 export const ROW = "flex w-full items-stretch gap-3 px-3 py-2.5 text-left";
 
-/** One session as a list row: time, category stripe, title, room and hosts. */
+/** One session as a list row: time, category stripe, title, room, hosts and the start of its description. */
 export function SessionRow<S extends ViewSession>({
   session,
   roomName,
@@ -420,7 +473,7 @@ export function SessionRow<S extends ViewSession>({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-start gap-1.5 leading-tight font-semibold">
           <span>{session.title}</span>
-          <AgeMark ages={session.ages} />
+          <SessionMarks session={session} />
           {session.sponsored && <SponsorTag />}
           {badge?.(session)}
         </div>
@@ -429,6 +482,11 @@ export function SessionRow<S extends ViewSession>({
             .filter(Boolean)
             .join(" · ")}
         </div>
+        {session.description && (
+          <p className="mt-1 line-clamp-2 max-w-prose text-[13px] leading-snug text-[#1b1530]/80">
+            {session.description}
+          </p>
+        )}
       </div>
     </>
   );
@@ -438,6 +496,7 @@ export function SessionRow<S extends ViewSession>({
       {to ? (
         <Link
           href={to}
+          scroll={false}
           className={`${ROW} transition-colors hover:bg-[#1b1530]/[0.04]`}
         >
           {body}

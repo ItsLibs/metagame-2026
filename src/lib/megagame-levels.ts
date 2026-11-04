@@ -36,6 +36,10 @@ export function activeClasses(
   }));
 }
 
+/** The factions joined (any level above 0), in MEGAGAME_CLASSES order. */
+export const activeFactions = (levels: MegagameLevels): MegagameClass[] =>
+  MEGAGAME_CLASSES.filter((c) => levels[c] > 0);
+
 /** "Level 3 Alien" */
 export const classLevelLabel = (c: MegagameClass, level: number) =>
   `Level ${level} ${CLASS_LABELS[c]}`;

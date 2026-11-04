@@ -11,7 +11,6 @@ import MegagameSummary from "./MegagameSummary";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
-import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
@@ -23,6 +22,7 @@ import {
   loadSchedule,
   loadViewerPlans,
 } from "@/lib/schedule-store";
+import { mintReferralCodes, referrerNames } from "@/lib/referral-store";
 import { emailKey, ticketsForUser } from "@/lib/ticket-store";
 import { ticketView } from "@/lib/ticket-view";
 import { Button } from "@/v2/components/ui/button";
@@ -54,7 +54,6 @@ export default async function AccountPage({
     schedule,
     plans,
     counts,
-    linkable,
     admin,
     backstage,
     levels,
@@ -69,12 +68,29 @@ export default async function AccountPage({
     loadSchedule(),
     loadViewerPlans(user.id),
     loadRsvpCounts(),
-    canSeeSchedule(),
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
     loadMegagameLevels(user.id),
   ]);
-  const tickets = rows.map((t) => ticketView(t, user.id, email));
+  // Referral codes are minted the first time their holder looks.
+  const [, referrers] = await Promise.all([
+    mintReferralCodes(rows, user.id, email).catch((err) =>
+      console.error("[account] referral codes not minted:", err),
+    ),
+    referrerNames(
+      rows.flatMap((t) =>
+        t.referredByPaymentId ? [t.referredByPaymentId] : [],
+      ),
+    ),
+  ]);
+  const tickets = rows.map((t) =>
+    ticketView(
+      t,
+      user.id,
+      email,
+      (t.referredByPaymentId && referrers.get(t.referredByPaymentId)) || null,
+    ),
+  );
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.
@@ -83,10 +99,15 @@ export default async function AccountPage({
         initial={initialTab}
         trailing={
           backstage && (
-            <Button asChild variant="navy" size="sm">
+            <Button
+              asChild
+              variant="navy"
+              size="sm"
+              className="max-sm:size-8 max-sm:p-0 max-sm:[&_svg]:size-4"
+            >
               <Link href="/backstage">
                 <GiTheaterCurtains aria-hidden />
-                Backstage
+                <span className="sr-only sm:not-sr-only">Backstage</span>
               </Link>
             </Button>
           )
@@ -130,7 +151,7 @@ export default async function AccountPage({
           ),
           sessions: (
             <SessionsPanel
-              linkable={linkable}
+              linkable
               sessions={accountSessions(
                 user.id,
                 schedule.sessions,

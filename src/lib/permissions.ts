@@ -61,19 +61,39 @@ export const PERMISSIONS = {
     label: "View tickets",
     description: "Each ticket with its buyer, holder and attendee.",
   },
+  "tickets.edit": {
+    audience: "team",
+    group: "Tickets",
+    level: "edit",
+    label: "Edit tickets",
+    description: "Set or clear which ticket referred a ticket, after the fact.",
+    implies: ["tickets.view"],
+  },
+  // Its own permission, not folded into a role: it exposes parents' contact
+  // details and children's medical notes.
+  "children.view": {
+    audience: "team",
+    group: "Childcare",
+    level: "view",
+    label: "View children",
+    description:
+      "Every registered child with their parent's contact details and childcare sessions.",
+  },
   "schedule.preview": {
     audience: "attendee",
     group: "Schedule",
     level: "view",
     label: "Preview schedule",
-    description: "See the public schedule before it opens.",
+    description:
+      "Saw the schedule before it opened to everyone; gates nothing now.",
   },
   "schedule.rsvps": {
     audience: "attendee",
     group: "Schedule",
     level: "view",
     label: "RSVP names",
-    description: "RSVP names on a session page, not just the counts.",
+    description:
+      "RSVP names on every session page, not just the counts; hosts see them on their own sessions regardless.",
   },
   "schedule.volunteer_rooms": {
     audience: "attendee",
@@ -100,6 +120,16 @@ export const PERMISSIONS = {
     label: "Edit schedule",
     description: "On the admin grid and over the API.",
     implies: ["schedule.view"],
+  },
+  // Kept off schedule.manage: column order is one shared view, so only
+  // people who know that should move it.
+  "schedule.rooms": {
+    audience: "team",
+    group: "Schedule",
+    level: "edit",
+    label: "Arrange rooms",
+    description: "Drag rooms to reorder the grid's columns for everyone.",
+    implies: ["schedule.manage"],
   },
   // Attendee, not team: team audience would open the whole /backstage index
   // via hasTeamPermission(), and every ticket holder gets this one.

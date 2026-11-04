@@ -1,1 +1,0 @@
-ALTER TABLE "unconference_notes" ALTER COLUMN "title" SET NOT NULL;
