@@ -62,6 +62,11 @@ export type ScheduleSession = {
   sponsored: boolean;
   /** False until the team opens RSVPs; the button is greyed out meanwhile. */
   rsvpsOpen: boolean;
+  /**
+   * The guest list of an invite-only session, lowercased emails; null when
+   * anyone may RSVP. Team-only: never copied into PublicSession.
+   */
+  inviteEmails: string[] | null;
   /** The Airtable RFP Submissions row this came from. */
   airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
@@ -284,6 +289,40 @@ export type RsvpTicket = {
   has: boolean;
   claimable: { id: string; tier: string }[];
 };
+
+/** Whether an account with this email is on the session's guest list; any account is when there's no list. */
+export function onGuestList(
+  inviteEmails: string[] | null,
+  email: string,
+): boolean {
+  return (
+    inviteEmails === null || inviteEmails.includes(email.trim().toLowerCase())
+  );
+}
+
+const EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+
+/**
+ * A pasted guest list as lowercased, de-duplicated emails: one per line or
+ * separated by commas, semicolons or spaces, and "Name <email>" works too.
+ * Returns the first thing that isn't an email instead.
+ */
+export function parseGuestList(
+  text: string,
+): { emails: string[] } | { invalid: string } {
+  const emails = new Set<string>();
+  for (const line of text.split(/[\n,;]+/)) {
+    const bracketed = line.match(/<([^<>]+)>/);
+    const parts = bracketed ? [bracketed[1]] : line.split(/\s+/);
+    for (const part of parts) {
+      const email = part.trim().toLowerCase();
+      if (!email) continue;
+      if (!EMAIL.test(email)) return { invalid: part.trim() };
+      emails.add(email);
+    }
+  }
+  return { emails: [...emails] };
+}
 
 export function hostNames(session: { hosts: { name: string }[] }): string {
   return session.hosts.map((h) => h.name).join(", ");
@@ -885,7 +924,13 @@ export type PublicSession = Pick<
   | "rsvpIsCommitment"
   | "sponsored"
   | "rsvpsOpen"
-> & { startsAt: string; endsAt: string; hosts: { name: string }[] };
+> & {
+  startsAt: string;
+  endsAt: string;
+  hosts: { name: string }[];
+  /** Only guests may RSVP; who they are stays off the public schedule. */
+  inviteOnly: boolean;
+};
 
 export type PublicLocation = Pick<
   ScheduleLocation,
@@ -952,6 +997,7 @@ export function publicSchedule(
       rsvpIsCommitment: s.rsvpIsCommitment,
       sponsored: s.sponsored,
       rsvpsOpen: s.rsvpsOpen,
+      inviteOnly: s.inviteEmails !== null,
       hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
   const locations = rooms.map((l) => ({

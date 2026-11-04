@@ -156,6 +156,9 @@ export const sessions = pgTable(
     sponsored: boolean().notNull().default(false),
     // Off until the team opens RSVPs; the public button is greyed out meanwhile.
     rsvpsOpen: boolean().notNull().default(true),
+    // Null lets anyone RSVP; a list (lowercased emails, possibly empty) lets
+    // only those accounts. The team can still add anyone from backstage.
+    inviteEmails: text().array(),
     // The accepted RFP this came from, for the Airtable sync.
     airtableRfpRecordId: text().unique(),
     // The committee member who shepherds it through review.

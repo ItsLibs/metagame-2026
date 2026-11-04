@@ -70,6 +70,7 @@ export default function PlanButtons({
   full,
   commitment = false,
   open = true,
+  invited = true,
   conflicts = [],
   ticket,
   onSettled,
@@ -83,6 +84,8 @@ export default function PlanButtons({
   commitment?: boolean;
   /** False while the team hasn't opened RSVPs: the button is greyed out. */
   open?: boolean;
+  /** False when the session is invite-only and the viewer isn't a guest. */
+  invited?: boolean;
   /** The viewer's other sessions at the same time, warned about first. */
   conflicts?: PlanConflict[];
   /** Without it the server's answer is the only ticket check. */
@@ -188,7 +191,15 @@ export default function PlanButtons({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {plan.status === null && !open ? (
+      {plan.status === null && !invited ? (
+        <Button
+          size="sm"
+          disabled
+          title="Only people on the guest list can RSVP to this one."
+        >
+          Invite only
+        </Button>
+      ) : plan.status === null && !open ? (
         <Button
           size="sm"
           disabled

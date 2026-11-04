@@ -9,6 +9,7 @@ import {
   STATUSES,
   fromPacificWall,
   outsideHours,
+  parseGuestList,
   slugify,
   type Ages,
   type Category,
@@ -39,6 +40,8 @@ export type SessionFields = {
   rsvpIsCommitment: boolean;
   sponsored: boolean;
   rsvpsOpen: boolean;
+  /** Undefined when the input doesn't mention it, so it's left as stored. */
+  inviteEmails?: string[] | null;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
   airtableRfpRecordId?: string | null;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
@@ -240,6 +243,9 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
   if (rsvpsOpen === null)
     return { ok: false, field: "rsvpsOpen", error: "true or false." };
 
+  const guests = guestList(raw);
+  if (guests && "error" in guests) return { ok: false, ...guests };
+
   let airtableRfpRecordId: string | null | undefined;
   if ("airtableRfpRecordId" in raw) {
     airtableRfpRecordId = optional(raw, "airtableRfpRecordId");
@@ -286,10 +292,46 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
       rsvpIsCommitment,
       sponsored,
       rsvpsOpen,
+      inviteEmails: guests?.emails,
       airtableRfpRecordId,
       shepherdUserId,
     },
   };
+}
+
+/**
+ * The guest list, or undefined to leave it as stored. The form sends an
+ * `inviteOnly` box with the list as pasted text; JSON sends `inviteEmails`
+ * as null or an array of emails.
+ */
+function guestList(
+  raw: Raw,
+): { emails: string[] | null } | Invalid | undefined {
+  let text: string;
+  if ("inviteOnly" in raw) {
+    const on = flag(raw, "inviteOnly");
+    if (on === null) return { field: "inviteOnly", error: "true or false." };
+    if (!on) return { emails: null };
+    text = str(raw, "inviteEmails");
+  } else if ("inviteEmails" in raw) {
+    const v = raw.inviteEmails;
+    if (v === null) return { emails: null };
+    if (!Array.isArray(v) || v.some((e) => typeof e !== "string"))
+      return {
+        field: "inviteEmails",
+        error: "inviteEmails must be null or an array of emails.",
+      };
+    text = v.join("\n");
+  } else {
+    return undefined;
+  }
+  const parsed = parseGuestList(text);
+  if ("invalid" in parsed)
+    return {
+      field: "inviteEmails",
+      error: `“${parsed.invalid}” isn’t an email.`,
+    };
+  return { emails: parsed.emails };
 }
 
 /** Pacific midnight starting the day `offset` days after `date`, or null. */

@@ -133,6 +133,7 @@ export async function querySchedule(): Promise<Schedule> {
       rsvpIsCommitment: s.rsvpIsCommitment,
       sponsored: s.sponsored,
       rsvpsOpen: s.rsvpsOpen,
+      inviteEmails: s.inviteEmails,
       airtableRfpRecordId: s.airtableRfpRecordId,
       hosts: hostsBySession.get(s.id) ?? [],
       shepherd: shepherdBySession.get(s.id) ?? null,
@@ -157,9 +158,17 @@ export const loadSchedule = unstable_cache(
 
 export type SessionInput = Omit<
   ScheduleSession,
-  "id" | "startsAt" | "endsAt" | "hosts" | "shepherd" | "airtableRfpRecordId"
+  | "id"
+  | "startsAt"
+  | "endsAt"
+  | "hosts"
+  | "shepherd"
+  | "airtableRfpRecordId"
+  | "inviteEmails"
 > & {
   id?: string;
+  /** Left as stored when undefined. */
+  inviteEmails?: string[] | null;
   /** Left as stored when undefined. */
   airtableRfpRecordId?: string | null;
   /** Left as stored when undefined. */

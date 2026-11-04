@@ -4,6 +4,7 @@ import {
   cellSessions,
   hostedSessions,
   NO_ROOM,
+  onGuestList,
   onlySessions,
   publicSchedule,
   summarizeRsvps,
@@ -29,6 +30,7 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   rsvpIsCommitment: false,
   sponsored: false,
   rsvpsOpen: true,
+  inviteEmails: null,
   airtableRfpRecordId: "rec1",
   hosts: [{ userId: "u1", name: "Ada", email: "ada@example.com" }],
   shepherd: { userId: "u9", name: "Grace", email: "grace@example.com" },
@@ -114,6 +116,22 @@ describe("publicSchedule", () => {
       sponsored: true,
       rsvpsOpen: false,
     });
+  });
+
+  it("says a session is invite-only without sending the guest list", () => {
+    const { sessions } = publicSchedule({
+      locations: [room({ id: "r" })],
+      sessions: [
+        session({
+          id: "a",
+          locationId: "r",
+          inviteEmails: ["vip@example.com"],
+        }),
+        session({ id: "b", locationId: "r" }),
+      ],
+    });
+    expect(sessions.map((s) => s.inviteOnly)).toEqual([true, false]);
+    expect(JSON.stringify(sessions)).not.toContain("vip@example.com");
   });
 
   it("does not show a nameless host's email as their name", () => {
@@ -314,5 +332,16 @@ describe("hostedSessions", () => {
     expect(got.get("u1")?.map((s) => s.slug)).toEqual(["a", "b"]);
     expect(got.get("u9")?.map((s) => s.slug)).toEqual(["b"]);
     expect(got.get("u0")).toBeUndefined();
+  });
+});
+
+describe("onGuestList", () => {
+  it("lets anyone in when there's no list", () => {
+    expect(onGuestList(null, "anyone@example.com")).toBe(true);
+  });
+  it("matches the account's email whatever its case", () => {
+    expect(onGuestList(["ada@example.com"], " Ada@Example.com")).toBe(true);
+    expect(onGuestList(["ada@example.com"], "grace@example.com")).toBe(false);
+    expect(onGuestList([], "ada@example.com")).toBe(false);
   });
 });

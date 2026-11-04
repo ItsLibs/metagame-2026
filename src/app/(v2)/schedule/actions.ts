@@ -3,7 +3,12 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { currentSession } from "@/lib/auth";
-import type { RsvpStatus, RsvpTicket, SessionRsvps } from "@/lib/schedule";
+import {
+  onGuestList,
+  type RsvpStatus,
+  type RsvpTicket,
+  type SessionRsvps,
+} from "@/lib/schedule";
 import {
   cancelRsvp,
   loadSessionRsvps,
@@ -54,24 +59,42 @@ async function act(
   }
 }
 
+const INVITE_ONLY =
+  "This one is invite-only, and your account’s email isn’t on the guest list.";
+
+/** Whether the signed-in viewer is on this guest list; admins always are. */
+async function guestListed(guests: string[]): Promise<boolean> {
+  const u = (await currentSession())?.user;
+  if (!u) return false;
+  return u.role === "admin" || onGuestList(guests, u.email);
+}
+
 /** Going, or waitlisted when the session is full. */
 export async function rsvpTo(sessionId: string): Promise<PlanResult> {
   return act(sessionId, async (userId) => {
-    const ticket = await rsvpTicket();
+    const [row] = await getDb()
+      .select({
+        open: schema.sessions.rsvpsOpen,
+        guests: schema.sessions.inviteEmails,
+      })
+      .from(schema.sessions)
+      .where(eq(schema.sessions.id, sessionId))
+      .limit(1);
+    // The button is greyed out, but a stale page could still submit.
+    if (row && !row.open) {
+      return { error: "RSVPs for this session aren’t open yet." };
+    }
+    const guests = row?.guests ?? null;
+    if (guests !== null && !(await guestListed(guests))) {
+      return { error: INVITE_ONLY };
+    }
+    // The guest list is the team's say-so, ticket or not.
+    const ticket = guests === null ? await rsvpTicket() : undefined;
     if (ticket && !ticket.has) {
       return {
         error: "You need a ticket to RSVP.",
         needsTicket: ticket.claimable,
       };
-    }
-    // The button is greyed out, but a stale page could still submit.
-    const [row] = await getDb()
-      .select({ open: schema.sessions.rsvpsOpen })
-      .from(schema.sessions)
-      .where(eq(schema.sessions.id, sessionId))
-      .limit(1);
-    if (row && !row.open) {
-      return { error: "RSVPs for this session aren’t open yet." };
     }
     const status = await rsvp(sessionId, userId);
     return { status, rsvps: await loadSessionRsvps(sessionId) };

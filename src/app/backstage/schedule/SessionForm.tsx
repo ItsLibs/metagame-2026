@@ -114,6 +114,57 @@ function Checkbox({
   );
 }
 
+/** The invite-only box and, while ticked, the guest list it limits RSVPs to. */
+function GuestList({
+  initial,
+  error,
+}: {
+  initial: string[] | null;
+  error: string | null;
+}) {
+  const [on, setOn] = useState(initial !== null);
+  return (
+    <div className="flex flex-col gap-2">
+      <input type="hidden" name="inviteOnly" value="" />
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          name="inviteOnly"
+          checked={on}
+          onChange={(e) => setOn(e.target.checked)}
+          className="mt-0.5 size-4 accent-meeple"
+        />
+        <span>
+          <span className="font-medium text-ink/80">Invite only</span>
+          <span className="block text-xs text-ink/50">
+            Only accounts with these emails can RSVP, ticket or not. You can
+            still add anyone below.
+          </span>
+        </span>
+      </label>
+      {on && (
+        <label className="ml-6 block">
+          <span className="sr-only">Guest emails</span>
+          <textarea
+            name="inviteEmails"
+            rows={5}
+            defaultValue={initial?.join("\n") ?? ""}
+            placeholder="One email per line"
+            className={`${fieldClass} font-mono text-xs`}
+          />
+          <span className="mt-1 block text-xs text-ink/50">
+            {initial !== null && `${initial.length} on the list. `}
+            Paste one per line, or separated by commas.
+          </span>
+          {error && (
+            <span className="mt-1 block text-xs text-meeple">{error}</span>
+          )}
+        </label>
+      )}
+    </div>
+  );
+}
+
 /** Prefill for a new session, e.g. from clicking an empty grid slot. */
 export type SessionDefaults = {
   day: string;
@@ -520,6 +571,12 @@ export default function SessionForm({
               label="RSVPs open"
               hint="Untick to grey out the RSVP button as “RSVPs not yet open” until you’re ready."
               defaultChecked={session?.rsvpsOpen ?? true}
+            />
+            <GuestList
+              initial={session?.inviteEmails ?? null}
+              error={
+                state.field === "inviteEmails" ? (state.error ?? null) : null
+              }
             />
           </div>
 
