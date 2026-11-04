@@ -3,7 +3,6 @@ import { connection } from "next/server";
 import { buildDays } from "@/lib/schedule";
 import { parseView, VIEW_COOKIE } from "@/lib/schedule-view";
 import ContentPage from "@/v2/components/ContentPage";
-import { ModalHost } from "@/v2/components/RouteModal";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import { loadBoard, loadMySessionIds, loadPublicSchedule } from "./data";
 
@@ -21,7 +20,7 @@ export default async function ScheduleLayout({
     [loadPublicSchedule(), loadBoard(), loadMySessionIds(), cookies()],
   );
   return (
-    <ModalHost closeHref="/schedule">
+    <>
       <ContentPage eyebrow="Nov 6–8 at Lighthaven" title="Schedule" wide>
         <PublicSchedule
           days={buildDays(sessions)}
@@ -32,6 +31,6 @@ export default async function ScheduleLayout({
         />
       </ContentPage>
       {children}
-    </ModalHost>
+    </>
   );
 }

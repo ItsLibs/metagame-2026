@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type {
   PlanConflict,
@@ -32,6 +33,7 @@ export default function SessionPlans({
   plan: { status: RsvpStatus | null; bookmarked: boolean } | null;
   signIn: ReactNode;
 }) {
+  const router = useRouter();
   const [rsvps, setRsvps] = useState(initial);
   const [prev, setPrev] = useState(initial);
   if (prev !== initial) {
@@ -57,7 +59,12 @@ export default function SessionPlans({
           open={open}
           conflicts={conflicts}
           ticket={ticket}
-          onSettled={(result) => result.rsvps && setRsvps(result.rsvps)}
+          onSettled={(result) => {
+            if (result.rsvps) setRsvps(result.rsvps);
+            // The page underneath (My sessions, the account lists) didn't
+            // see the change.
+            router.refresh();
+          }}
         />
       ) : (
         signIn

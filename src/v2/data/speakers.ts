@@ -175,3 +175,6 @@ export const SPEAKERS: Speaker[] = [
     logo: metagameLogo,
   },
 ];
+
+export const isSpeakerAccount = (userId: string) =>
+  SPEAKERS.some((s) => s.userId === userId);
