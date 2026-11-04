@@ -9,7 +9,13 @@ import {
   useQrStyle,
   type QrSampleMatrix,
 } from "@/components/QrStylePicker";
-import { MAX_QR_TEXT, posterQrQuery } from "@/lib/qr-styles";
+import {
+  DEFAULT_QR_COLORS,
+  hexColor,
+  MAX_QR_TEXT,
+  posterQrQuery,
+  TRANSPARENT,
+} from "@/lib/qr-styles";
 
 const PNG_SIZE = 2048;
 
@@ -24,6 +30,7 @@ function sample(level: "M" | "H"): QrSampleMatrix {
 export default function QrTool() {
   const [text, setText] = useState("");
   const [qr, setQr] = useQrStyle();
+  const [colors, setColors] = useState(DEFAULT_QR_COLORS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const samples = useMemo(() => ({ M: sample("M"), H: sample("H") }), []);
@@ -42,6 +49,8 @@ export default function QrTool() {
   const query = new URLSearchParams({
     text: trimmed,
     ...posterQrQuery(qr),
+    ...(colors.ink !== DEFAULT_QR_COLORS.ink ? { ink: colors.ink } : {}),
+    ...(colors.bg !== DEFAULT_QR_COLORS.bg ? { bg: colors.bg } : {}),
   }).toString();
 
   async function save(format: "svg" | "png") {
@@ -72,6 +81,8 @@ export default function QrTool() {
           <QrArt
             qr={qr}
             matrix={matrix}
+            ink={colors.ink}
+            bg={colors.bg}
             className="mx-auto aspect-square w-full max-w-md rounded-lg border border-line p-4"
           />
         ) : (
@@ -98,6 +109,19 @@ export default function QrTool() {
           />
         </label>
         <QrStylePicker value={qr} onChange={setQr} samples={samples} />
+        <div className="grid grid-cols-2 gap-3">
+          <ColorField
+            label="Code"
+            value={colors.ink}
+            onChange={(ink) => setColors({ ...colors, ink })}
+          />
+          <ColorField
+            label="Background"
+            value={colors.bg}
+            onChange={(bg) => setColors({ ...colors, bg })}
+            clearable
+          />
+        </div>
         <div className="space-y-2">
           <button
             type="button"
@@ -149,4 +173,72 @@ async function rasterize(svg: Blob): Promise<Blob> {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** A swatch picker beside a hex box; the hex only applies once it's a full #rrggbb. */
+function ColorField({
+  label,
+  value,
+  onChange,
+  clearable,
+}: {
+  label: string;
+  /** A hex, or TRANSPARENT when `clearable`. */
+  value: string;
+  onChange: (value: string) => void;
+  /** Offers a transparent checkbox, keeping the last color for when it's unticked. */
+  clearable?: boolean;
+}) {
+  const [typed, setTyped] = useState(value);
+  const [editing, setEditing] = useState(false);
+  const [last, setLast] = useState(value);
+  const clear = value === TRANSPARENT;
+  const color = clear ? last : value;
+  const shown = editing ? typed : color;
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold">{label}</span>
+      <span className="mt-1 flex items-center gap-2">
+        <input
+          type="color"
+          value={color}
+          disabled={clear}
+          onChange={(event) => onChange(event.target.value)}
+          className="size-9 shrink-0 cursor-pointer rounded border border-line bg-white p-0.5 disabled:opacity-40"
+        />
+        <input
+          type="text"
+          value={shown}
+          spellCheck={false}
+          disabled={clear}
+          onFocus={() => {
+            setTyped(color);
+            setEditing(true);
+          }}
+          onBlur={() => setEditing(false)}
+          onChange={(event) => {
+            setTyped(event.target.value);
+            const hex = hexColor(event.target.value);
+            if (hex) onChange(hex);
+          }}
+          className={`${fieldClass} min-w-0 px-2 py-1.5 font-mono text-sm disabled:opacity-40`}
+        />
+      </span>
+      {clearable && (
+        <span className="mt-1.5 flex items-center gap-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={clear}
+            onChange={(event) => {
+              if (event.target.checked) {
+                setLast(color);
+                onChange(TRANSPARENT);
+              } else onChange(last);
+            }}
+          />
+          Transparent
+        </span>
+      )}
+    </label>
+  );
 }

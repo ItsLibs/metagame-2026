@@ -101,10 +101,15 @@ export function QrArt({
   qr,
   matrix: { size, bits },
   className,
+  ink = "#000",
+  bg = "#fff",
 }: {
   qr: PosterQr;
   matrix: QrSampleMatrix;
   className?: string;
+  ink?: string;
+  /** A color, or "none" for a checkerboard. */
+  bg?: string;
 }) {
   const logo = qr.logo === "none" ? null : qr.logo;
   const clear = logo ? logoClearing(size) : 0;
@@ -122,14 +127,25 @@ export function QrArt({
   const span = size + 2;
   const room = `${((clear - 2 * LOGO_PAD) / span) * 100}%`;
   return (
-    <span className={`relative block bg-white ${className ?? ""}`}>
+    <span
+      className={`relative block ${className ?? ""}`}
+      style={
+        bg === "none"
+          ? {
+              backgroundImage:
+                "repeating-conic-gradient(#ddd 0 25%, #fff 0 50%)",
+              backgroundSize: "16px 16px",
+            }
+          : { backgroundColor: bg }
+      }
+    >
       <svg viewBox={`-1 -1 ${span} ${span}`} className="block size-full">
-        <path d={d} fill="#000" />
+        <path d={d} fill={ink} />
       </svg>
       {logo && (
         <span
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black"
-          style={{ width: room, height: room }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{ width: room, height: room, color: ink }}
         >
           {logo === "mg2" ? (
             <Mg2Die className="size-full" />
