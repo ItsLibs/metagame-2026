@@ -308,12 +308,19 @@ async function homeBoard(
 export default async function Home() {
   // Public rooms only and no per-viewer state, so the page stays static. CI
   // prerenders it with no database (Vercel builds have one), so the grid is
-  // skipped rather than failing the build.
+  // skipped rather than failing the build. The same goes for a database the
+  // code is ahead of: a deploy builds before it migrates, so a schema change
+  // the schedule reads would otherwise fail the build that ships it. The
+  // page revalidates every ten minutes and fills in once the migration has
+  // run.
   // The speakers' Megagame picks ride along for their cards' medals; they're
   // decoration, so if that query fails the cards just go without.
   const [raw, levels] = env.DATABASE_URL
     ? await Promise.all([
-        loadSchedule(),
+        loadSchedule().catch((e: unknown) => {
+          console.error("home schedule", e);
+          return null;
+        }),
         loadMegagameLevelsFor(SPEAKERS.map((s) => s.userId)).catch(
           (e: unknown) => {
             console.error("speaker megagame levels", e);
