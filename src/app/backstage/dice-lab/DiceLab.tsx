@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -16,6 +17,8 @@ import {
   PRESETS,
   cloneSpec,
   heroDie,
+  recolorLetters,
+  spellDice,
   type DieSpec,
   type Face,
 } from "./labDice";
@@ -36,7 +39,7 @@ import { readPngText, stampPng } from "./pngMeta";
 const LabStage = dynamic(() => import("./LabStage"), { ssr: false });
 
 const STORAGE_KEY = "dice-lab:v1";
-const MAX_DICE = 12;
+const MAX_DICE = 24;
 const EXPORT_WIDTHS = [1024, 2048, 4096, 8192];
 const ROT_STEPS = [1, 5, 15, 45, 90];
 
@@ -148,6 +151,8 @@ export default function DiceLab() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [rotStep, setRotStep] = useState(15);
+  const [spell, setSpell] = useState("");
+  const [tint, setTint] = useState("blue");
   // the crop outline shows only while the padding slider is in use
   const [padActive, setPadActive] = useState(false);
 
@@ -286,6 +291,27 @@ export default function DiceLab() {
     setSelected(null);
   };
 
+  const applySpell = (text: string) => {
+    setSpell(text);
+    const { dice, perRow, unsupported } = spellDice(text, s.dice, MAX_DICE);
+    if (dice.length === 0) return;
+    setS((prev) => ({
+      ...prev,
+      dice,
+      layout: { ...prev.layout, perRow },
+    }));
+    if (selected !== null && selected >= dice.length) setSelected(null);
+    setStatus(
+      unsupported.length
+        ? `no die for: ${[...new Set(unsupported)].join(" ")} (letters M E T A G, digits 0 1 2 5 6, up to ${MAX_DICE} dice)`
+        : "",
+    );
+  };
+  const rowOf = (i: number) =>
+    lay.perRow > 0 ? Math.floor(i / lay.perRow) : 0;
+  const applyTint = (pick: (i: number) => boolean) =>
+    set("dice", recolorLetters(s.dice, tint, pick));
+
   const tp = s.throwParams;
   const setTp = <K extends keyof ThrowParams>(k: K, v: ThrowParams[K]) =>
     set("throwParams", { ...tp, [k]: v });
@@ -332,6 +358,13 @@ export default function DiceLab() {
               ))}
             </select>
           </Row>
+          <textarea
+            className={`${INPUT} min-h-14 resize-y`}
+            value={spell}
+            placeholder="Spell it: METAGAME ⏎ 2026"
+            title="One die per character. Letters M E T A G show on the front face, digits 0 1 2 5 6 as top pips; a newline starts a new row."
+            onChange={(e) => applySpell(e.target.value)}
+          />
           <div className="flex flex-wrap items-center gap-1">
             {s.dice.map((_, i) => (
               <button
@@ -355,6 +388,43 @@ export default function DiceLab() {
               title="Add a die"
             >
               +
+            </button>
+          </div>
+          <div
+            className="flex items-center gap-1"
+            title="Repaint every letter face on the chosen dice"
+          >
+            <span className="w-12 shrink-0 text-xs text-neutral-500">
+              Letters
+            </span>
+            <ColorPick color={tint} onChange={setTint} />
+            <button
+              type="button"
+              className={BTN}
+              disabled={selected === null}
+              onClick={() => applyTint((i) => i === selected)}
+              title="Selected die"
+            >
+              die
+            </button>
+            <button
+              type="button"
+              className={BTN}
+              disabled={selected === null}
+              onClick={() =>
+                selected !== null &&
+                applyTint((i) => rowOf(i) === rowOf(selected))
+              }
+              title="The selected die's row"
+            >
+              row
+            </button>
+            <button
+              type="button"
+              className={BTN}
+              onClick={() => applyTint(() => true)}
+            >
+              all
             </button>
           </div>
           {sel && selected !== null ? (
@@ -410,6 +480,7 @@ export default function DiceLab() {
                 >
                   <option value="front">front letter</option>
                   <option value="right">right letter</option>
+                  <option value="top">top pips</option>
                 </select>
               </Row>
               <div className="mt-1 flex items-center gap-2">
@@ -1038,6 +1109,127 @@ function Check({
   );
 }
 
+// Custom colors saved into every color dropdown, shared across pickers and
+// reloads via localStorage.
+const SWATCH_KEY = "dice-lab:swatches";
+const swatchListeners = new Set<() => void>();
+let swatchCache: string[] | null = null;
+function readSwatches(): string[] {
+  if (swatchCache) return swatchCache;
+  try {
+    const raw = localStorage.getItem(SWATCH_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    swatchCache = Array.isArray(parsed)
+      ? parsed.filter((x): x is string => typeof x === "string")
+      : [];
+  } catch {
+    swatchCache = [];
+  }
+  return swatchCache;
+}
+function writeSwatches(next: string[]) {
+  swatchCache = next;
+  try {
+    localStorage.setItem(SWATCH_KEY, JSON.stringify(next));
+  } catch {
+    // private mode / quota: the palette just won't persist
+  }
+  swatchListeners.forEach((fn) => fn());
+}
+function useSwatches() {
+  return useSyncExternalStore(
+    (fn) => {
+      swatchListeners.add(fn);
+      return () => swatchListeners.delete(fn);
+    },
+    readSwatches,
+    () => [],
+  );
+}
+
+// Brand key (blue / orange), a saved swatch, or a custom color editable as a
+// swatch or hex; custom colors can be saved into the dropdown.
+function ColorPick({
+  color,
+  onChange,
+}: {
+  color: string;
+  onChange: (c: string) => void;
+}) {
+  const swatches = useSwatches();
+  const brand = color === "blue" || color === "orange";
+  const saved = swatches.includes(color);
+  // the hex field holds partial input until it's a full #rrggbb
+  const [hex, setHex] = useState(color);
+  const [synced, setSynced] = useState(color);
+  if (synced !== color) {
+    setSynced(color);
+    setHex(color);
+  }
+  return (
+    <>
+      <select
+        className={INPUT}
+        value={brand || saved ? color : "custom"}
+        onChange={(e) =>
+          onChange(e.target.value === "custom" ? "#ffffff" : e.target.value)
+        }
+      >
+        <option value="blue">blue</option>
+        <option value="orange">orange</option>
+        {swatches.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+        <option value="custom">custom</option>
+      </select>
+      {!brand && (
+        <>
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => onChange(e.target.value)}
+            className="h-7 w-8 shrink-0 rounded border border-neutral-700 bg-transparent"
+          />
+          <input
+            type="text"
+            value={hex}
+            spellCheck={false}
+            onChange={(e) => {
+              const v = e.target.value.trim();
+              setHex(v);
+              const full = v.startsWith("#") ? v : `#${v}`;
+              if (/^#[0-9a-f]{6}$/i.test(full)) onChange(full.toLowerCase());
+            }}
+            className={`${INPUT} w-20 flex-none font-mono`}
+            placeholder="#rrggbb"
+          />
+          {saved ? (
+            <button
+              type="button"
+              className={`${BTN} w-7 px-0`}
+              title="Remove this color from the dropdown"
+              onClick={() => writeSwatches(swatches.filter((c) => c !== color))}
+            >
+              ×
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={`${BTN} w-7 px-0`}
+              title="Save this color to the dropdown"
+              onClick={() => writeSwatches([...swatches, color])}
+            >
+              💾
+            </button>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 function FaceEditor({
   name,
   face,
@@ -1047,8 +1239,6 @@ function FaceEditor({
   face: Face;
   onChange: (f: Face) => void;
 }) {
-  const custom =
-    face.kind === "letter" && face.color !== "blue" && face.color !== "orange";
   return (
     <div className="flex items-center gap-1">
       <span className="w-12 shrink-0 text-xs text-neutral-500">{name}</span>
@@ -1077,28 +1267,10 @@ function FaceEditor({
               <option key={l}>{l}</option>
             ))}
           </select>
-          <select
-            className={INPUT}
-            value={custom ? "custom" : face.color}
-            onChange={(e) =>
-              onChange({
-                ...face,
-                color: e.target.value === "custom" ? "#ffffff" : e.target.value,
-              })
-            }
-          >
-            <option value="blue">blue</option>
-            <option value="orange">orange</option>
-            <option value="custom">custom</option>
-          </select>
-          {custom && (
-            <input
-              type="color"
-              value={face.color}
-              onChange={(e) => onChange({ ...face, color: e.target.value })}
-              className="h-7 w-8 shrink-0 rounded border border-neutral-700 bg-transparent"
-            />
-          )}
+          <ColorPick
+            color={face.color}
+            onChange={(color) => onChange({ ...face, color })}
+          />
         </>
       ) : (
         <select
