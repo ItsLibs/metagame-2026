@@ -427,7 +427,7 @@ const POSTERS = [
     id: uuid(1810),
     location_id: locations.ratpark.id,
     board_day: "2026-11-06",
-    session_id: uuid(135),
+    session_id: uuid(190),
     author_user_id: users.admin.id,
     title: "Night Market",
     color: "butter",
@@ -576,7 +576,7 @@ const program = [
   [132, 8, 14, 60, "gardens", "game", "Kids vs Grownups Relay", "A relay. The kids usually win.", "all", 40],
   [133, 8, 15, 60, "courtyard", "talk", "Closing Ceremony & Awards", "Prizes, confessions, and the last hot sauce.", "all", 80],
   [134, 8, 16, 120, "gardens", "other", "Teardown & Pickup Soccer", "Fold a chair, kick a ball.", "all", 40],
-  [135, 6, 19, 180, "ratpark", "other", "Night Market", "Booths, snacks and games from attendees and friends, open to the public.", "all", 300],
+  [190, 6, 19, 180, "ratpark", "other", "Night Market", "Booths, snacks and games from attendees and friends, open to the public.", "all", 300],
 ].map(([n, day, hour, minutes, room, category, title, description, ages, cap, extra]) => ({
   id: uuid(n),
   slug: slugify(title),
@@ -1118,7 +1118,7 @@ counts.profiles = await upsert("profiles", ["user_id"], everyone.map(profile));
 // Team holds everything short of admin.
 const roleRows = await Promise.all(
   [
-    { name: "Attendee", permissions: ["schedule.rsvps"] },
+    { name: "Attendee", permissions: ["schedule.rsvps", "unconference.post"] },
     {
       name: "Team",
       permissions: [
@@ -1190,7 +1190,17 @@ counts.locations = await upsert(
 );
 counts.unconference_notes = await upsert("unconference_notes", ["id"], NOTES);
 counts.sessions = await upsert("sessions", ["id"], sessions);
-// After the sessions, which they point at.
+// After the sessions, which they point at. A poster pinned by hand for one of
+// those sessions carries a random id the prune leaves alone, and a session
+// holds one poster, so it goes before the seed's takes its place.
+await sql.query(
+  `delete from unconference_notes where session_id = any($1::uuid[])
+   and not (id = any($2::uuid[]))`,
+  [
+    pgArray(POSTERS.map((p) => p.session_id)),
+    pgArray(POSTERS.map((p) => p.id)),
+  ],
+);
 counts.unconference_notes += await upsert(
   "unconference_notes",
   ["id"],

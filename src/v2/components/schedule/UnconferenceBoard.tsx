@@ -7,7 +7,6 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { noticeText } from "@/lib/notice-doc";
 import type { PublicSession } from "@/lib/schedule";
 import {
   clampNotePosition,
@@ -498,7 +497,7 @@ function NoteRow({
   note: BoardNote;
   onOpen: (noteId: string) => void;
 }) {
-  const body = noticeText(note.poster);
+  const body = note.summary;
   return (
     <li>
       <button

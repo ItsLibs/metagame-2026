@@ -345,6 +345,21 @@ export async function reactToNote(
 }
 
 /**
+ * A notice with its poster, for the dialog opening it: the board's listing
+ * leaves posters out. Readable by anyone who can see the notice's board.
+ */
+export async function openNote(noteId: string): Promise<NoteState> {
+  if (!UUID.test(noteId)) return { error: GONE };
+  const [session, rooms] = await Promise.all([currentSession(), boardRooms()]);
+  const who = session?.user.id ?? null;
+  const note = await noteById(noteId, who);
+  if (!note || !rooms.some((r) => r.id === note.locationId)) {
+    return { error: GONE };
+  }
+  return { note: boardNote(note, who) };
+}
+
+/**
  * Who reacted with what, for the poster's "View reactions". Readable by
  * anyone who can see the board the notice is on, as the names already are
  * on the chips' tooltips.

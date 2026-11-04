@@ -293,7 +293,7 @@ async function homeBoard(
       null,
     );
     return {
-      notes: notes.map((n) => boardNote(n, null)),
+      notes: notes.map((n) => boardNote(n, null, { withPoster: false })),
       signedIn: false,
       canPost: false,
       isTeam: false,

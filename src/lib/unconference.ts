@@ -3,7 +3,7 @@
 // read the same constants. Positions are fractions of the board, never pixels:
 // the column is 1fr-fluid and its height changes with the day.
 
-import type { NoticeDoc } from "./notice-doc";
+import { noticeText, type NoticeDoc } from "./notice-doc";
 
 /** Mirrors the unconference_note_color pgEnum. */
 export const NOTE_COLORS = [
@@ -76,18 +76,30 @@ export type UnconferenceNote = {
  * and whether it is the viewer's own, decided on the server. No account id,
  * the way PublicSession ships its hosts without one.
  */
-export type BoardNote = Omit<UnconferenceNote, "author"> & {
+export type BoardNote = Omit<UnconferenceNote, "author" | "poster"> & {
   author: { name: string };
   mine: boolean;
+  /**
+   * The poster, or null when it hasn't been sent: the board's listing leaves
+   * a plain notice's poster out (it is the bulk of the payload, and only
+   * one is open at a time) and the dialog fetches it on opening. A session
+   * poster's always comes along, since the board draws it.
+   */
+  poster: NoticeDoc | null;
+  /** The poster's text in one line, for the list view. */
+  summary: string;
 };
 
 export const boardNote = (
   note: UnconferenceNote,
   viewerId: string | null,
+  { withPoster = true }: { withPoster?: boolean } = {},
 ): BoardNote => ({
   ...note,
   author: { name: note.author.name },
   mine: !!viewerId && note.author.userId === viewerId,
+  poster: withPoster || note.session ? note.poster : null,
+  summary: noticeText(note.poster),
 });
 
 /**

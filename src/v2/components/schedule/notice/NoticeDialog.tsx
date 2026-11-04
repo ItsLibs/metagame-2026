@@ -8,20 +8,23 @@ import {
   FACE_SIZE,
   isBlank,
   PAPER_HEX,
+  recolourBox,
   type Face as AnyFace,
   type Ink,
   type NoticeDoc,
   type Paper,
-  type PenWidth,
-  type TextItem,
-  type TextSize,
 } from "@/lib/notice-doc";
 import type { BoardNote, NoteColor } from "@/lib/unconference";
 import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
-import NoticeCanvas, { type Editing, type Tool } from "./NoticeCanvas";
+import NoticeCanvas, { type Editing } from "./NoticeCanvas";
 import NoticeToolbar from "./NoticeToolbar";
 import { PosterPaper, StickyPaper } from "./Paper";
 import { ReactionBar, type Reactors } from "./Reactions";
+import {
+  useMeasuredSize,
+  useNoticeTools,
+  useUndoable,
+} from "./useNoticeEditor";
 
 // A notice blown up: the poster taped to the wall with its sticky note
 // beside it, the author and the reactions underneath. The author edits both
@@ -33,8 +36,6 @@ export type Draft = { sticky: NoticeDoc; poster: NoticeDoc; color: NoteColor };
 type Face = Exclude<AnyFace, "banner">;
 
 const AUTOSAVE_MS = 900;
-/** Typing into one box within this long is one undo step. */
-const COALESCE_MS = 1500;
 const STICKY_W = 220;
 
 const when = (iso: string) =>
@@ -87,24 +88,19 @@ export default function NoticeDialog({
     poster: note?.poster ?? { ...EMPTY_DOC, paper: "white" },
     color: note?.color ?? draftColor ?? "butter",
   };
-  const [draft, setDraft] = useState<Draft>(initial);
-  const draftRef = useRef(draft);
+  const {
+    draft,
+    draftRef,
+    commit,
+    replace,
+    undo: undoDraft,
+    canUndo,
+    resetKey,
+  } = useUndoable<Draft>(initial);
   const [editing, setEditing] = useState(!note && canEdit);
   const [face, setFace] = useState<Face>("sticky");
-  const [tool, setTool] = useState<Tool>("type");
-  const [ink, setInk] = useState<Ink>("ink");
-  const [width, setWidth] = useState<PenWidth>(5);
-  const [textSize, setTextSize] = useState<TextSize>("l");
-  const [activeText, setActiveText] = useState<{
-    el: HTMLElement;
-    id: string;
-    face: Face;
-  } | null>(null);
-  const [resetKey, setResetKey] = useState(0);
-
-  const history = useRef<Draft[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
-  const lastKey = useRef<{ key: string; at: number } | null>(null);
+  const tools = useNoticeTools<{ face: Face }>();
+  const { tool, ink, width, textSize, activeText, setActiveText } = tools;
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -123,37 +119,27 @@ export default function NoticeDialog({
   const stored = useRef(JSON.stringify(initial));
   const inFlight = useRef<Promise<void> | null>(null);
 
-  const commit = useCallback((next: Draft, key?: string) => {
-    const now = Date.now();
-    const same =
-      key &&
-      lastKey.current?.key === key &&
-      now - lastKey.current.at < COALESCE_MS;
-    if (!same) {
-      history.current.push(draftRef.current);
-      if (history.current.length > 100) history.current.shift();
-      setCanUndo(true);
-    }
-    lastKey.current = key ? { key, at: now } : null;
-    draftRef.current = next;
-    setDraft(next);
-  }, []);
+  // The board's listing leaves posters out, so an opened notice's arrives a
+  // moment after the dialog does; it is taken in once, with no edits
+  // allowed until then.
+  const loaded = !note || note.poster !== null;
+  const tookPoster = useRef(loaded);
+  useEffect(() => {
+    if (tookPoster.current || !note?.poster) return;
+    tookPoster.current = true;
+    const next = { ...draftRef.current, poster: note.poster };
+    replace(next);
+    stored.current = JSON.stringify(next);
+  }, [note?.poster, draftRef, replace]);
 
   const changeFace = useCallback(
     (f: Face, doc: NoticeDoc, key?: string) =>
       commit({ ...draftRef.current, [f]: doc }, key),
-    [commit],
+    [commit, draftRef],
   );
 
   function undo() {
-    const prev = history.current.pop();
-    if (!prev) return;
-    setCanUndo(history.current.length > 0);
-    lastKey.current = null;
-    draftRef.current = prev;
-    setDraft(prev);
-    setActiveText(null);
-    setResetKey((k) => k + 1);
+    if (undoDraft()) setActiveText(null);
   }
 
   const save = useCallback(async (): Promise<void> => {
@@ -181,7 +167,7 @@ export default function NoticeDialog({
     inFlight.current = run;
     await run;
     inFlight.current = null;
-  }, [onSave]);
+  }, [onSave, draftRef]);
 
   useEffect(() => {
     if (!editing) return;
@@ -214,44 +200,13 @@ export default function NoticeDialog({
 
   // The poster takes what width the dialog has; the sticky sits beside it on
   // a wide screen and above it on a phone.
-  // A callback ref: the dialog mounts its content after this component, so
-  // an effect would run before there is anything to measure.
-  const [room, setRoom] = useState(0);
-  const observer = useRef<ResizeObserver | null>(null);
-  const body = useCallback((el: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    observer.current = null;
-    if (!el) return;
-    // Measured now too: an observer only reports on a frame the page paints.
-    const cs = getComputedStyle(el);
-    setRoom(
-      el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
-    );
-    const ro = new ResizeObserver(([e]) => setRoom(e.contentRect.width));
-    ro.observe(el);
-    observer.current = ro;
-  }, []);
+  const [body, { w: room }] = useMeasuredSize();
   const wide = room >= 700;
   const posterW = Math.max(
     200,
     Math.min(FACE_SIZE.poster.w, wide ? room - STICKY_W - 56 : room - 24),
   );
   const stickyW = wide ? STICKY_W : Math.min(180, Math.round(room * 0.55));
-
-  // A box that stops being editable keeps focus and its selection without
-  // ever firing blur, so it is let go of explicitly; otherwise the toolbar
-  // would go on formatting a box nobody is looking at.
-  function releaseText() {
-    const el = document.activeElement;
-    if (el instanceof HTMLElement && el.isContentEditable) el.blur();
-    window.getSelection()?.removeAllRanges();
-    setActiveText(null);
-  }
-
-  function pickTool(t: Tool) {
-    if (t !== "type") releaseText();
-    setTool(t);
-  }
 
   const editingFor = (f: Face): Editing | undefined =>
     editing
@@ -263,7 +218,7 @@ export default function NoticeDialog({
           resetKey,
           active: face === f,
           onActivate: () => {
-            if (activeText && activeText.face !== f) releaseText();
+            if (activeText && activeText.face !== f) tools.releaseText();
             setFace(f);
           },
           onChange: (doc, key) => changeFace(f, doc, key),
@@ -275,21 +230,13 @@ export default function NoticeDialog({
       : undefined;
 
   function pickInk(i: Ink) {
-    setInk(i);
+    tools.setInk(i);
     // A focused text box takes the colour too.
     if (!activeText) return;
     const d = draftRef.current;
-    const doc = d[activeText.face];
     commit({
       ...d,
-      [activeText.face]: {
-        ...doc,
-        items: doc.items.map((it) =>
-          it.id === activeText.id && it.kind === "text"
-            ? ({ ...it, ink: i } satisfies TextItem)
-            : it,
-        ),
-      },
+      [activeText.face]: recolourBox(d[activeText.face], activeText.id, i),
     });
   }
 
@@ -367,16 +314,14 @@ export default function NoticeDialog({
             <NoticeToolbar
               face={face}
               tool={tool}
-              onTool={pickTool}
+              onTool={tools.pickTool}
               ink={ink}
               onInk={pickInk}
               width={width}
-              onWidth={setWidth}
+              onWidth={tools.setWidth}
               textSize={textSize}
-              onTextSize={setTextSize}
-              activeText={
-                activeText?.el.isContentEditable ? activeText.el : null
-              }
+              onTextSize={tools.setTextSize}
+              activeText={tools.activeEditable}
               color={draft.color}
               onColor={(c) => commit({ ...draftRef.current, color: c })}
               paper={paper}
@@ -390,7 +335,8 @@ export default function NoticeDialog({
               onUndo={undo}
             />
           ) : (
-            canEdit && (
+            canEdit &&
+            loaded && (
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -406,7 +352,14 @@ export default function NoticeDialog({
               role="status"
               className={`text-xs ${error ? "text-[#c02f4e]" : "text-[#1b1530]/50"}`}
             >
-              {error ?? (saving ? "Saving…" : editing && liveId ? "Saved" : "")}
+              {error ??
+                (!loaded
+                  ? "Loading…"
+                  : saving
+                    ? "Saving…"
+                    : editing && liveId
+                      ? "Saved"
+                      : "")}
             </span>
             {editing && (
               <button

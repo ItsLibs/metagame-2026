@@ -1,37 +1,42 @@
 "use client";
 
 import { XIcon } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import type { NoteState } from "@/app/(v2)/schedule/note-actions";
 import {
   bannerSize,
   isBlank,
   PAPER_HEX,
+  recolourBox,
   textDoc,
   type Ink,
   type NoticeDoc,
   type Paper,
-  type PenWidth,
-  type TextItem,
-  type TextSize,
 } from "@/lib/notice-doc";
-import { formatPacificTime, type PublicSession } from "@/lib/schedule";
-import type { BoardNote, PosterSession } from "@/lib/unconference";
+import {
+  durationMinutes,
+  formatPacificTime,
+  type PublicSession,
+} from "@/lib/schedule";
+import type { PosterSession } from "@/lib/unconference";
 import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
-import NoticeCanvas, { type Tool } from "./NoticeCanvas";
+import NoticeCanvas from "./NoticeCanvas";
 import NoticeToolbar from "./NoticeToolbar";
 import { PosterPaper } from "./Paper";
+import type { SessionPoster } from "./SessionPosters";
+import {
+  useMeasuredSize,
+  useNoticeTools,
+  useUndoable,
+} from "./useNoticeEditor";
 
 // The schedule team's editor for a session poster: the same tools as a
 // notice's poster, on a canvas the shape the poster takes on the board, and
 // a choice of which session it stands for.
 
-const minutesOf = (s: { startsAt: string; endsAt: string }) =>
-  (Date.parse(s.endsAt) - Date.parse(s.startsAt)) / 60_000;
-
 /** The poster as it starts out: the session's details, ready to rework. */
 export function draftFromSession(s: PosterSession): NoticeDoc {
-  const { w } = bannerSize(minutesOf(s));
+  const { w } = bannerSize(durationMinutes(s));
   return textDoc(
     "banner",
     [
@@ -56,7 +61,7 @@ export default function SessionPosterEditor({
   onSave,
   onClose,
 }: {
-  note: BoardNote & { session: PosterSession };
+  note: SessionPoster;
   /** The day's sessions it could stand for. */
   sessions: PublicSession[];
   /** Sessions that already have a poster, this one's own aside. */
@@ -67,28 +72,19 @@ export default function SessionPosterEditor({
   }) => Promise<NoteState>;
   onClose: () => void;
 }) {
-  const [doc, setDoc] = useState<NoticeDoc>(() =>
-    note.poster.items.length > 0 ? note.poster : draftFromSession(note.session),
-  );
-  const docRef = useRef(doc);
-  const history = useRef<NoticeDoc[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
-  const lastKey = useRef<{ key: string; at: number } | null>(null);
-  const [resetKey, setResetKey] = useState(0);
+  const { draft, draftRef, commit, reload, undo, canUndo, resetKey } =
+    useUndoable<NoticeDoc>(
+      note.poster.items.length > 0
+        ? note.poster
+        : draftFromSession(note.session),
+    );
+  const tools = useNoticeTools();
   const [sessionId, setSessionId] = useState(note.session.id);
-  const [tool, setTool] = useState<Tool>("type");
-  const [ink, setInk] = useState<Ink>("ink");
-  const [width, setWidth] = useState<PenWidth>(5);
-  const [textSize, setTextSize] = useState<TextSize>("l");
-  const [activeText, setActiveText] = useState<{
-    el: HTMLElement;
-    id: string;
-  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const picked = sessions.find((s) => s.id === sessionId);
-  const linkedPoster: PosterSession = picked
+  const linked: PosterSession = picked
     ? {
         id: picked.id,
         slug: picked.slug,
@@ -99,78 +95,26 @@ export default function SessionPosterEditor({
         hosts: picked.hosts.map((h) => h.name),
       }
     : note.session;
-  const size = bannerSize(minutesOf(linkedPoster));
-
-  const commit = useCallback((next: NoticeDoc, key?: string) => {
-    const now = Date.now();
-    const same =
-      key && lastKey.current?.key === key && now - lastKey.current.at < 1500;
-    if (!same) {
-      history.current.push(docRef.current);
-      setCanUndo(true);
-    }
-    lastKey.current = key ? { key, at: now } : null;
-    docRef.current = next;
-    setDoc(next);
-  }, []);
-
-  function undo() {
-    const prev = history.current.pop();
-    if (!prev) return;
-    setCanUndo(history.current.length > 0);
-    lastKey.current = null;
-    docRef.current = prev;
-    setDoc(prev);
-    setActiveText(null);
-    setResetKey((k) => k + 1);
-  }
-
-  function pickTool(t: Tool) {
-    if (t !== "type") {
-      const el = document.activeElement;
-      if (el instanceof HTMLElement && el.isContentEditable) el.blur();
-      setActiveText(null);
-    }
-    setTool(t);
-  }
+  const size = bannerSize(durationMinutes(linked));
 
   function pickInk(i: Ink) {
-    setInk(i);
-    if (!activeText) return;
-    const d = docRef.current;
-    commit({
-      ...d,
-      items: d.items.map((it) =>
-        it.id === activeText.id && it.kind === "text"
-          ? ({ ...it, ink: i } satisfies TextItem)
-          : it,
-      ),
-    });
+    tools.setInk(i);
+    // A focused text box takes the colour too.
+    if (tools.activeText) {
+      commit(recolourBox(draftRef.current, tools.activeText.id, i));
+    }
   }
 
   // As wide as the dialog allows, up to a comfortable editing size.
-  const [room, setRoom] = useState(0);
-  const observer = useRef<ResizeObserver | null>(null);
-  const measure = useCallback((el: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    if (!el) return;
-    // Measured now too: an observer only reports on a frame the page paints.
-    const cs = getComputedStyle(el);
-    setRoom(
-      el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
-    );
-    const ro = new ResizeObserver(([e]) => setRoom(e.contentRect.width));
-    ro.observe(el);
-    observer.current = ro;
-  }, []);
-  const canvasW = Math.max(220, Math.min(420, room - 40));
-  const paper = (doc.paper ?? "white") as Paper;
+  const [body, room] = useMeasuredSize();
+  const canvasW = Math.max(220, Math.min(420, room.w - 40));
+  const paper = (draft.paper ?? "white") as Paper;
 
   async function save() {
     setSaving(true);
     setError(null);
     // A blank page means the design drawn from the session's details.
-    const poster = isBlank(doc) ? { v: 1 as const, items: [] } : doc;
+    const poster = isBlank(draft) ? { v: 1 as const, items: [] } : draft;
     const result = await onSave({ poster, sessionId });
     setSaving(false);
     if (result.error) setError(result.error);
@@ -191,21 +135,23 @@ export default function SessionPosterEditor({
         <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 bg-[#ece2cb]/95 px-3 py-2 backdrop-blur-sm">
           <NoticeToolbar
             face="poster"
-            tool={tool}
-            onTool={pickTool}
-            ink={ink}
+            tool={tools.tool}
+            onTool={tools.pickTool}
+            ink={tools.ink}
             onInk={pickInk}
-            width={width}
-            onWidth={setWidth}
-            textSize={textSize}
-            onTextSize={setTextSize}
-            activeText={activeText?.el.isContentEditable ? activeText.el : null}
+            width={tools.width}
+            onWidth={tools.setWidth}
+            textSize={tools.textSize}
+            onTextSize={tools.setTextSize}
+            activeText={tools.activeEditable}
             color="butter"
             onColor={() => {}}
             paper={paper}
-            onPaper={(p) => commit({ ...docRef.current, paper: p })}
+            onPaper={(p) => commit({ ...draftRef.current, paper: p })}
             canUndo={canUndo}
-            onUndo={undo}
+            onUndo={() => {
+              if (undo()) tools.setActiveText(null);
+            }}
           />
           <button
             type="button"
@@ -217,7 +163,7 @@ export default function SessionPosterEditor({
           </button>
         </div>
 
-        <div ref={measure} className="flex flex-col gap-4 px-4 pt-3 pb-5">
+        <div ref={body} className="flex flex-col gap-4 px-4 pt-3 pb-5">
           <label className="flex flex-col gap-1 text-xs font-semibold">
             Links to session
             <select
@@ -238,25 +184,25 @@ export default function SessionPosterEditor({
             </span>
           </label>
 
-          {room > 0 && (
+          {room.w > 0 && (
             <div className="flex justify-center py-3">
               <PosterPaper paper={PAPER_HEX[paper]}>
                 <NoticeCanvas
                   face="banner"
                   size={size}
-                  doc={doc}
+                  doc={draft}
                   width={canvasW}
                   editing={{
-                    tool,
-                    ink,
-                    width,
-                    textSize,
+                    tool: tools.tool,
+                    ink: tools.ink,
+                    width: tools.width,
+                    textSize: tools.textSize,
                     resetKey,
                     active: true,
                     onActivate: () => {},
                     onChange: commit,
                     onFocusText: (el, id) =>
-                      setActiveText(el && id ? { el, id } : null),
+                      tools.setActiveText(el && id ? { el, id } : null),
                   }}
                 />
               </PosterPaper>
@@ -274,10 +220,7 @@ export default function SessionPosterEditor({
             </button>
             <button
               type="button"
-              onClick={() => {
-                commit(draftFromSession(linkedPoster));
-                setResetKey((k) => k + 1);
-              }}
+              onClick={() => reload(draftFromSession(linked))}
               className="rounded-md border-[1.5px] border-[#1b1530]/30 bg-cream px-3 py-1.5 text-xs font-semibold hover:bg-white"
             >
               Start over from the session’s details

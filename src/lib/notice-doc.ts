@@ -36,6 +36,16 @@ export function bannerSize(minutes: number): { w: number; h: number } {
 /** Faces that carry their own paper colour, rather than a sticky's. */
 const hasPaper = (face: Face) => face !== "sticky";
 
+/** The document with one text box's ink changed. */
+export function recolourBox(doc: NoticeDoc, id: string, ink: Ink): NoticeDoc {
+  return {
+    ...doc,
+    items: doc.items.map((it) =>
+      it.id === id && it.kind === "text" ? { ...it, ink } : it,
+    ),
+  };
+}
+
 export const TEXT_SIZES = ["s", "m", "l", "xl"] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
 

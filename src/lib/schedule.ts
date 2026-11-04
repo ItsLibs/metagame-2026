@@ -608,6 +608,10 @@ export function movedTimes(
   return { startsAt: start, endsAt: new Date(start.getTime() + ms) };
 }
 
+/** How long a placed session runs, in minutes. */
+export const durationMinutes = (s: { startsAt: string; endsAt: string }) =>
+  (Date.parse(s.endsAt) - Date.parse(s.startsAt)) / 60_000;
+
 type BoardWindow = Pick<ScheduleLocation, "boardStartsAt" | "boardEndsAt">;
 
 /** Whether the unconference board ever takes over this room's column. */

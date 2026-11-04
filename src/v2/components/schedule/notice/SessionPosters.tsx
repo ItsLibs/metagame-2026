@@ -2,7 +2,7 @@
 
 import { PencilIcon, XIcon } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NoteState } from "@/app/(v2)/schedule/note-actions";
 import {
   bannerSize,
@@ -11,6 +11,7 @@ import {
   type Paper,
 } from "@/lib/notice-doc";
 import {
+  durationMinutes,
   formatPacificTime,
   heightPx,
   offsetPx,
@@ -21,6 +22,7 @@ import { useSessionHref } from "../SessionModalHost";
 import NoticeCanvas from "./NoticeCanvas";
 import { PosterPaper } from "./Paper";
 import SessionPosterEditor from "./SessionPosterEditor";
+import { useMeasuredSize } from "./useNoticeEditor";
 
 // Session posters: the team's notices for sessions on the board's days.
 // Each spans the board's width at its session's own time rows, over every
@@ -32,28 +34,17 @@ const SIDE = 14;
 const timeRange = (from: string, to: string) =>
   `${formatPacificTime(from)}–${formatPacificTime(to)}`;
 
-type SessionPoster = BoardNote & { session: PosterSession };
-
-const minutesOf = (s: PosterSession) =>
-  (Date.parse(s.endsAt) - Date.parse(s.startsAt)) / 60_000;
+/** A session poster always comes with its design; the board draws it. */
+export type SessionPoster = BoardNote & {
+  session: PosterSession;
+  poster: NoticeDoc;
+};
 
 /** A design made in the editor, scaled to fit the poster without cropping. */
 function Designed({ note }: { note: SessionPoster }) {
-  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
-  const observer = useRef<ResizeObserver | null>(null);
-  const measure = useCallback((el: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    if (!el) return;
-    // Measured now too: an observer only reports on a frame the page paints.
-    setBox({ w: el.clientWidth, h: el.clientHeight });
-    const ro = new ResizeObserver(([e]) =>
-      setBox({ w: e.contentRect.width, h: e.contentRect.height }),
-    );
-    ro.observe(el);
-    observer.current = ro;
-  }, []);
-  const size = bannerSize(minutesOf(note.session));
-  const width = box ? Math.min(box.w, (box.h * size.w) / size.h) : 0;
+  const [measure, box] = useMeasuredSize();
+  const size = bannerSize(durationMinutes(note.session));
+  const width = Math.min(box.w, (box.h * size.w) / size.h);
   return (
     <div ref={measure} className="flex h-full items-center justify-center">
       {width > 0 && (
@@ -208,7 +199,9 @@ export function SessionPosterLayer({
   ) => Promise<NoteState>;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
-  const posters = notes.filter((n): n is SessionPoster => n.session !== null);
+  const posters = notes.filter(
+    (n): n is SessionPoster => n.session !== null && n.poster !== null,
+  );
   const open = posters.find((p) => p.id === editing);
   if (posters.length === 0) return null;
   return (

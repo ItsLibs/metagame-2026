@@ -51,20 +51,24 @@ export const boardRooms = cache(async (): Promise<PublicLocation[]> => {
 export const loadBoard = cache(async (): Promise<BoardData | null> => {
   const rooms = await boardRooms();
   if (rooms.length === 0) return null;
-  const [session, post, team] = await Promise.all([
-    currentSession(),
+  // The viewer first, since the notes are read as them; the rest together.
+  const session = await currentSession();
+  const viewerId = session?.user.id ?? null;
+  const [post, team, notes] = await Promise.all([
     can("unconference.post"),
     can("schedule.manage"),
+    listNotesIn(
+      rooms.map((r) => r.id),
+      viewerId,
+    ),
   ]);
-  const viewerId = session?.user.id ?? null;
-  const notes = await listNotesIn(
-    rooms.map((r) => r.id),
-    viewerId,
-  );
   return {
     // Mapped, not sent as read: the client needs the author's name and
-    // whether the note is its own, never an account id.
-    notes: notes.map((note) => boardNote(note, viewerId)),
+    // whether the note is its own, never an account id. Posters stay
+    // behind until a notice is opened.
+    notes: notes.map((note) =>
+      boardNote(note, viewerId, { withPoster: false }),
+    ),
     signedIn: !!session,
     canPost: !!post && !session?.user.banned,
     isTeam: !!team,

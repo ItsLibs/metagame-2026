@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -11,6 +12,7 @@ import {
 import Link from "next/link";
 import {
   noteReactors,
+  openNote as fetchNote,
   pinNote,
   pinSessionPoster,
   reactToNote,
@@ -25,7 +27,6 @@ import {
   canDeleteNote,
   canEditNote,
   canMoveNote,
-  NOTE_COLORS,
   pickNoteColor,
   type BoardData,
   type BoardNote,
@@ -156,11 +157,17 @@ export default function BoardNotes({
   // A fresh server render wins: it is the only thing that can know about a
   // note somebody else pinned up.
   if (state.props !== board.notes) {
-    setState({
-      shown: board.notes,
-      confirmed: board.notes,
-      props: board.notes,
+    // The listing carries no posters, so one already fetched is kept while
+    // the note is otherwise unchanged; an edit by someone else (a newer
+    // updatedAt) drops it, and the open dialog fetches the new one.
+    const notes = board.notes.map((n) => {
+      if (n.poster) return n;
+      const had = state.shown.find((o) => o.id === n.id);
+      return had?.poster && had.updatedAt === n.updatedAt
+        ? { ...n, poster: had.poster }
+        : n;
     });
+    setState({ shown: notes, confirmed: notes, props: board.notes });
   }
 
   const notesIn = useCallback(
@@ -171,12 +178,15 @@ export default function BoardNotes({
 
   const editorOf = (note: BoardNote) => boardEditor(note, board);
 
-  const adopt = (note: BoardNote) =>
-    setState((s) => ({
-      ...s,
-      shown: withNote(s.shown, note),
-      confirmed: withNote(s.confirmed, note),
-    }));
+  const adopt = useCallback(
+    (note: BoardNote) =>
+      setState((s) => ({
+        ...s,
+        shown: withNote(s.shown, note),
+        confirmed: withNote(s.confirmed, note),
+      })),
+    [],
+  );
 
   const commit = useCallback(async (noteId: string, x: number, y: number) => {
     const seq = (latest.current.get(noteId) ?? 0) + 1;
@@ -306,6 +316,23 @@ export default function BoardNotes({
 
   const editor = openNote ? editorOf(openNote) : null;
 
+  // The listing leaves posters out, and a fresh server render drops them
+  // again, so the open notice's poster is fetched whenever it is missing.
+  const fetching = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openNote || openNote.poster || fetching.current === openNote.id) {
+      return;
+    }
+    const id = openNote.id;
+    fetching.current = id;
+    void (async () => {
+      const result = await safely(() => fetchNote(id));
+      fetching.current = null;
+      if (result.note) adopt(result.note);
+      else setError(result.error ?? FAILED);
+    })();
+  }, [openNote, adopt]);
+
   // What to do instead of reacting, for a viewer who can't.
   const reactHint =
     board.canPost || board.readOnly ? null : board.signedIn ? (
@@ -340,15 +367,15 @@ export default function BoardNotes({
         // so an author who has lost it is offered no drag it can only refuse.
         canMove: (note) => board.canPost && canMoveNote(editorOf(note)),
         open: (noteId) => setPending({ kind: "open", noteId }),
+        // The paper cycles through the pad as that board fills up, so
+        // neighbours tend to differ; the author can repaint it anyway.
         compose: (locationId, day, spot) =>
           setPending({
             kind: "new",
             locationId,
             day,
             spot,
-            color: pickNoteColor(
-              Math.floor(Math.random() * NOTE_COLORS.length),
-            ),
+            color: pickNoteColor(notesIn(locationId, day).length),
           }),
         commit,
       }}
