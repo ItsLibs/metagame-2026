@@ -425,8 +425,10 @@ export default function UnconferenceBoard({
       <SessionPosterLayer
         notes={all}
         firstSlot={firstSlot}
-        canTakeDown={team}
+        sessions={sessions}
+        canManage={team}
         onTakeDown={(noteId) => void board.takeDown(noteId)}
+        onSave={board.saveSessionPoster}
       />
     </div>
   );

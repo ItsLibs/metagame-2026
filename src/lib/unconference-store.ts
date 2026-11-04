@@ -307,6 +307,28 @@ export async function updateNote(
   if (!updated) throw new Error("That note is no longer on the board.");
 }
 
+/**
+ * A session poster's design and the session it stands for. Re-linking moves
+ * it to the new session's day; the unique key refuses a session that
+ * already has a poster.
+ */
+export async function updateSessionPoster(
+  noteId: string,
+  fields: { poster: NoticeDoc; sessionId: string; day: string; title: string },
+): Promise<void> {
+  const [updated] = await getDb()
+    .update(unconferenceNotes)
+    .set({
+      poster: fields.poster,
+      sessionId: fields.sessionId,
+      boardDay: fields.day,
+      title: fields.title.slice(0, 120),
+    })
+    .where(eq(unconferenceNotes.id, noteId))
+    .returning({ id: unconferenceNotes.id });
+  if (!updated) throw new Error("That poster is no longer on the board.");
+}
+
 /** Position only, clamped: the board's check constraints refuse the rest. */
 export async function moveNote(
   noteId: string,

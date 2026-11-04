@@ -36,6 +36,7 @@ import {
   recentNoteCount,
   recordNotePost,
   toggleReaction,
+  updateSessionPoster,
   updateNote,
 } from "@/lib/unconference-store";
 import { boardRooms, loadRawSchedule } from "./data";
@@ -194,28 +195,77 @@ export async function pinSessionPoster(
   if (!UUID.test(sessionId)) return { error: "That session doesn't exist." };
 
   return act(async () => {
-    const [rooms, raw] = await Promise.all([boardRooms(), loadRawSchedule()]);
-    const room = rooms.find((r) => r.id === locationId);
-    if (!room) return { error: "That board isn't on the schedule." };
-    const target = raw.sessions.find((s) => s.id === sessionId);
-    if (!target || target.status !== "published") {
-      return { error: "Only a published session can have a poster." };
-    }
-    if (!target.startsAt || !target.endsAt) {
-      return { error: "Give the session a time first." };
-    }
-    const day = pacificDayKey(target.startsAt);
-    if (!boardOnDay(room, day)) {
-      return { error: "The board isn't up the day that session is on." };
-    }
+    const linked = await posterSession(locationId, sessionId);
+    if (!("day" in linked)) return linked;
     const note = await createSessionPoster({
       locationId,
       sessionId,
-      day,
+      day: linked.day,
       authorUserId: session.user.id,
-      title: target.title,
+      title: linked.title,
     });
     return { note: boardNote(note, session.user.id), savedAt: Date.now() };
+  });
+}
+
+/** The session a poster on `locationId`'s board may stand for, or why not. */
+async function posterSession(
+  locationId: string,
+  sessionId: string,
+): Promise<{ day: string; title: string } | NoteState> {
+  const [rooms, raw] = await Promise.all([boardRooms(), loadRawSchedule()]);
+  const room = rooms.find((r) => r.id === locationId);
+  if (!room) return { error: "That board isn't on the schedule." };
+  const target = raw.sessions.find((s) => s.id === sessionId);
+  if (!target || target.status !== "published") {
+    return { error: "Only a published session can have a poster." };
+  }
+  if (!target.startsAt || !target.endsAt) {
+    return { error: "Give the session a time first." };
+  }
+  const day = pacificDayKey(target.startsAt);
+  if (!boardOnDay(room, day)) {
+    return { error: "The board isn't up the day that session is on." };
+  }
+  return { day, title: target.title };
+}
+
+/**
+ * Redesign a session poster, or point it at another session. The schedule
+ * team's, whoever pinned it up. An empty design goes back to the one drawn
+ * from the session's own details.
+ */
+export async function saveSessionPoster(
+  noteId: string,
+  input: { poster: unknown; sessionId: string },
+): Promise<NoteState> {
+  const session = await can("schedule.manage");
+  if (!session) {
+    return { error: "Only the schedule team can change a session poster." };
+  }
+  if (!UUID.test(noteId) || !UUID.test(input.sessionId)) {
+    return { error: GONE };
+  }
+  const design = parseNoticeDoc(input.poster, "banner");
+  if ("error" in design) return { error: `Poster: ${design.error}` };
+
+  return act(async () => {
+    const note = await noteById(noteId, session.user.id);
+    if (!note) return { error: GONE };
+    if (!note.session) return { error: "That isn't a session poster." };
+    const linked = await posterSession(note.locationId, input.sessionId);
+    if (!("day" in linked)) return linked;
+    await updateSessionPoster(noteId, {
+      poster: design.doc,
+      sessionId: input.sessionId,
+      day: linked.day,
+      title: linked.title,
+    });
+    const saved = await noteById(noteId, session.user.id);
+    return {
+      note: boardNote(saved ?? note, session.user.id),
+      savedAt: Date.now(),
+    };
   });
 }
 

@@ -4,14 +4,37 @@
 // seed all read the same rules. Everything from the client goes through
 // parseNoticeDoc before it is stored.
 
-export const FACES = ["sticky", "poster"] as const;
+/**
+ * "banner" is a session poster's face: as wide as the board and as tall as
+ * its session, so its height varies (see bannerSize); the size here is the
+ * most it can be, which is what a stored one is clamped to.
+ */
+export const FACES = ["sticky", "poster", "banner"] as const;
 export type Face = (typeof FACES)[number];
 
 /** Logical size of each face; the board and the dialog scale these. */
 export const FACE_SIZE: Record<Face, { w: number; h: number }> = {
   sticky: { w: 200, h: 200 },
   poster: { w: 480, h: 640 },
+  banner: { w: 300, h: 1600 },
 };
+
+/** The narrowest the board's poster area gets on a desktop, in px. */
+const BANNER_REF_W = 272;
+
+/**
+ * A session poster's logical canvas for a session this many minutes long:
+ * 300 wide, with the board's shape at its narrowest, so a design made in
+ * the editor fits the board without cropping.
+ */
+export function bannerSize(minutes: number): { w: number; h: number } {
+  const px = Math.max(30, minutes) * 2 - 12;
+  const h = Math.round((px * FACE_SIZE.banner.w) / BANNER_REF_W);
+  return { w: FACE_SIZE.banner.w, h: Math.min(h, FACE_SIZE.banner.h) };
+}
+
+/** Faces that carry their own paper colour, rather than a sticky's. */
+const hasPaper = (face: Face) => face !== "sticky";
 
 export const TEXT_SIZES = ["s", "m", "l", "xl"] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
@@ -233,7 +256,7 @@ export function parseNoticeDoc(
   return {
     doc: {
       v: 1,
-      ...(face === "poster" && {
+      ...(hasPaper(face) && {
         paper: isOneOf(PAPERS, paper) ? paper : "white",
       }),
       items: out,
@@ -286,7 +309,7 @@ export function textDoc(
   const { w: W } = FACE_SIZE[face];
   return {
     v: 1,
-    ...(face === "poster" && { paper: paper ?? "white" }),
+    ...(hasPaper(face) && { paper: paper ?? "white" }),
     items: [
       {
         id: itemId(),

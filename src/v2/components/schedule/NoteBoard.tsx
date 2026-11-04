@@ -16,6 +16,7 @@ import {
   reactToNote,
   repinNote,
   saveNote,
+  saveSessionPoster,
   unpinNote,
   type NoteState,
 } from "@/app/(v2)/schedule/note-actions";
@@ -31,6 +32,7 @@ import {
   type NoteColor,
   type Reaction,
 } from "@/lib/unconference";
+import type { NoticeDoc } from "@/lib/notice-doc";
 import NoticeDialog, { type Draft } from "./notice/NoticeDialog";
 
 // Every note surface — the board column in grid view and the rows in list
@@ -55,6 +57,11 @@ export type NoteBoard = {
   pinSession: (locationId: string, sessionId: string) => Promise<NoteState>;
   /** Takes a notice down; for a session poster, which opens no dialog. */
   takeDown: (noteId: string) => Promise<NoteState>;
+  /** The team saves a session poster's design and the session it links to. */
+  saveSessionPoster: (
+    noteId: string,
+    input: { poster: NoticeDoc; sessionId: string },
+  ) => Promise<NoteState>;
   /** Whether this viewer may drag a note around, by the server's own rule. */
   canMove: (note: BoardNote) => boolean;
   open: (noteId: string) => void;
@@ -262,6 +269,15 @@ export default function BoardNotes({
     return result;
   }
 
+  async function savePoster(
+    noteId: string,
+    input: { poster: NoticeDoc; sessionId: string },
+  ): Promise<NoteState> {
+    const result = await safely(() => saveSessionPoster(noteId, input));
+    if (result.note) adopt(result.note);
+    return result;
+  }
+
   async function remove(noteId: string) {
     setError(null);
     setState((s) => ({ ...s, shown: without(s.shown, noteId) }));
@@ -319,6 +335,7 @@ export default function BoardNotes({
         react: (noteId, emoji) => void react(noteId, emoji),
         pinSession,
         takeDown: remove,
+        saveSessionPoster: savePoster,
         // canPost as well as authorship: every write re-checks the permission,
         // so an author who has lost it is offered no drag it can only refuse.
         canMove: (note) => board.canPost && canMoveNote(editorOf(note)),

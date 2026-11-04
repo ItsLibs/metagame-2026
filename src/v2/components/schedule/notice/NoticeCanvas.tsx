@@ -320,6 +320,7 @@ export default function NoticeCanvas({
   face,
   doc,
   width,
+  size,
   editing,
   className = "",
 }: {
@@ -327,10 +328,13 @@ export default function NoticeCanvas({
   doc: NoticeDoc;
   /** Rendered width in CSS px; the height follows the face's proportions. */
   width: number;
+  /** Logical size, for a face whose shape varies (a session poster's). */
+  size?: { w: number; h: number };
   editing?: Editing;
   className?: string;
 }) {
-  const { w: W, h: H } = FACE_SIZE[face];
+  const bounds = size ?? FACE_SIZE[face];
+  const { w: W, h: H } = bounds;
   const scale = width / W;
   const surface = useRef<HTMLDivElement>(null);
   const [live, setLive] = useState<number[] | null>(null);
@@ -486,7 +490,7 @@ export default function NoticeCanvas({
               key={`${t.id}:${editing.resetKey}`}
               item={t}
               scale={scale}
-              bounds={FACE_SIZE[face]}
+              bounds={bounds}
               editing={editing}
               autoFocus={fresh === t.id}
               onChange={replace}

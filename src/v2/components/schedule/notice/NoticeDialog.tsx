@@ -8,7 +8,7 @@ import {
   FACE_SIZE,
   isBlank,
   PAPER_HEX,
-  type Face,
+  type Face as AnyFace,
   type Ink,
   type NoticeDoc,
   type Paper,
@@ -28,6 +28,9 @@ import { ReactionBar, type Reactors } from "./Reactions";
 // faces in place; it saves itself, the way the old post-it did.
 
 export type Draft = { sticky: NoticeDoc; poster: NoticeDoc; color: NoteColor };
+
+/** The two faces a notice dialog edits; a session poster has its own editor. */
+type Face = Exclude<AnyFace, "banner">;
 
 const AUTOSAVE_MS = 900;
 /** Typing into one box within this long is one undo step. */
@@ -219,6 +222,11 @@ export default function NoticeDialog({
     observer.current?.disconnect();
     observer.current = null;
     if (!el) return;
+    // Measured now too: an observer only reports on a frame the page paints.
+    const cs = getComputedStyle(el);
+    setRoom(
+      el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+    );
     const ro = new ResizeObserver(([e]) => setRoom(e.contentRect.width));
     ro.observe(el);
     observer.current = ro;

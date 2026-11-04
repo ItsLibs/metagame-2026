@@ -1,17 +1,26 @@
 "use client";
 
-import { XIcon } from "lucide-react";
+import { PencilIcon, XIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { NoteState } from "@/app/(v2)/schedule/note-actions";
+import {
+  bannerSize,
+  PAPER_HEX,
+  type NoticeDoc,
+  type Paper,
+} from "@/lib/notice-doc";
 import {
   formatPacificTime,
   heightPx,
   offsetPx,
   type PublicSession,
 } from "@/lib/schedule";
-import type { BoardNote } from "@/lib/unconference";
+import type { BoardNote, PosterSession } from "@/lib/unconference";
 import { useSessionHref } from "../SessionModalHost";
+import NoticeCanvas from "./NoticeCanvas";
 import { PosterPaper } from "./Paper";
+import SessionPosterEditor from "./SessionPosterEditor";
 
 // Session posters: the team's notices for sessions on the board's days.
 // Each spans the board's width at its session's own time rows, over every
@@ -23,16 +32,54 @@ const SIDE = 14;
 const timeRange = (from: string, to: string) =>
   `${formatPacificTime(from)}–${formatPacificTime(to)}`;
 
+type SessionPoster = BoardNote & { session: PosterSession };
+
+const minutesOf = (s: PosterSession) =>
+  (Date.parse(s.endsAt) - Date.parse(s.startsAt)) / 60_000;
+
+/** A design made in the editor, scaled to fit the poster without cropping. */
+function Designed({ note }: { note: SessionPoster }) {
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  const observer = useRef<ResizeObserver | null>(null);
+  const measure = useCallback((el: HTMLDivElement | null) => {
+    observer.current?.disconnect();
+    if (!el) return;
+    // Measured now too: an observer only reports on a frame the page paints.
+    setBox({ w: el.clientWidth, h: el.clientHeight });
+    const ro = new ResizeObserver(([e]) =>
+      setBox({ w: e.contentRect.width, h: e.contentRect.height }),
+    );
+    ro.observe(el);
+    observer.current = ro;
+  }, []);
+  const size = bannerSize(minutesOf(note.session));
+  const width = box ? Math.min(box.w, (box.h * size.w) / size.h) : 0;
+  return (
+    <div ref={measure} className="flex h-full items-center justify-center">
+      {width > 0 && (
+        <NoticeCanvas
+          face="banner"
+          size={size}
+          doc={note.poster}
+          width={width}
+        />
+      )}
+    </div>
+  );
+}
+
 function Poster({
   note,
   firstSlot,
-  canTakeDown,
+  canManage,
   onTakeDown,
+  onEdit,
 }: {
-  note: BoardNote & { session: NonNullable<BoardNote["session"]> };
+  note: SessionPoster;
   firstSlot: number;
-  canTakeDown: boolean;
+  canManage: boolean;
   onTakeDown: () => void;
+  onEdit: () => void;
 }) {
   const href = useSessionHref();
   const [confirming, setConfirming] = useState(false);
@@ -41,40 +88,66 @@ function Poster({
   const height = heightPx(s);
   // Short sessions get a poster with just the title and time.
   const roomy = height >= 150;
+  const designed = note.poster.items.length > 0;
+  const paper = designed
+    ? PAPER_HEX[(note.poster.paper ?? "white") as Paper]
+    : "#fffdf8";
   return (
     <div
       style={{ top: top + 6, height: height - 12, left: SIDE, right: SIDE }}
       className="pointer-events-auto absolute"
     >
-      <PosterPaper paper="#fffdf8" className="h-full">
-        <Link
-          href={href(s.slug)}
-          scroll={false}
-          className="flex h-full flex-col items-center justify-center gap-1 overflow-hidden px-3 py-2 text-center text-[#1b1530] transition-colors hover:bg-[#1b1530]/[0.03]"
-        >
-          <span className="text-[10px] font-bold tracking-[0.18em] text-[#d6405f] uppercase">
-            {timeRange(s.startsAt, s.endsAt)}
-          </span>
-          <span className="font-[family-name:var(--font-bebas)] text-[34px] leading-[0.95] tracking-wide sm:text-[40px]">
-            {s.title}
-          </span>
-          {roomy && s.hosts.length > 0 && (
-            <span className="text-xs font-semibold text-[#1b1530]/70">
-              with {s.hosts.join(", ")}
+      <PosterPaper paper={paper} className="h-full">
+        {designed ? (
+          <Link
+            href={href(s.slug)}
+            scroll={false}
+            aria-label={`${s.title}: see the session`}
+            className="block h-full overflow-hidden transition-colors hover:bg-[#1b1530]/[0.03]"
+          >
+            <Designed note={note} />
+          </Link>
+        ) : (
+          <Link
+            href={href(s.slug)}
+            scroll={false}
+            className="flex h-full flex-col items-center justify-center gap-1 overflow-hidden px-3 py-2 text-center text-[#1b1530] transition-colors hover:bg-[#1b1530]/[0.03]"
+          >
+            <span className="text-[10px] font-bold tracking-[0.18em] text-[#d6405f] uppercase">
+              {timeRange(s.startsAt, s.endsAt)}
             </span>
-          )}
-          {roomy && s.description && (
-            <span className="line-clamp-3 max-w-[32ch] text-xs leading-snug text-[#1b1530]/70">
-              {s.description}
+            <span className="font-[family-name:var(--font-bebas)] text-[34px] leading-[0.95] tracking-wide sm:text-[40px]">
+              {s.title}
             </span>
-          )}
-          <span className="mt-1 text-[10px] font-semibold text-[#3f6fd1] underline underline-offset-2">
-            See the session
-          </span>
-        </Link>
+            {roomy && s.hosts.length > 0 && (
+              <span className="text-xs font-semibold text-[#1b1530]/70">
+                with {s.hosts.join(", ")}
+              </span>
+            )}
+            {roomy && s.description && (
+              <span className="line-clamp-3 max-w-[32ch] text-xs leading-snug text-[#1b1530]/70">
+                {s.description}
+              </span>
+            )}
+            <span className="mt-1 text-[10px] font-semibold text-[#3f6fd1] underline underline-offset-2">
+              See the session
+            </span>
+          </Link>
+        )}
       </PosterPaper>
-      {canTakeDown && (
+      {canManage && (
         <div className="absolute top-1.5 right-1.5 z-20 flex items-center gap-1">
+          {!confirming && (
+            <button
+              type="button"
+              aria-label={`Edit the ${s.title} poster`}
+              title="Edit this poster"
+              onClick={onEdit}
+              className="rounded-full bg-cream/90 p-0.5 text-[#1b1530]/50 ring-1 ring-[#1b1530]/15 hover:text-[#3f6fd1]"
+            >
+              <PencilIcon className="size-3.5" />
+            </button>
+          )}
           {confirming ? (
             <>
               <button
@@ -117,18 +190,26 @@ function Poster({
 export function SessionPosterLayer({
   notes,
   firstSlot,
-  canTakeDown,
+  sessions,
+  canManage,
   onTakeDown,
+  onSave,
 }: {
   notes: BoardNote[];
   firstSlot: number;
-  canTakeDown: boolean;
+  /** The day's sessions, for re-linking a poster in the editor. */
+  sessions: PublicSession[];
+  /** The schedule team: may edit and take posters down. */
+  canManage: boolean;
   onTakeDown: (noteId: string) => void;
+  onSave: (
+    noteId: string,
+    input: { poster: NoticeDoc; sessionId: string },
+  ) => Promise<NoteState>;
 }) {
-  const posters = notes.filter(
-    (n): n is BoardNote & { session: NonNullable<BoardNote["session"]> } =>
-      n.session !== null,
-  );
+  const [editing, setEditing] = useState<string | null>(null);
+  const posters = notes.filter((n): n is SessionPoster => n.session !== null);
+  const open = posters.find((p) => p.id === editing);
   if (posters.length === 0) return null;
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
@@ -137,10 +218,23 @@ export function SessionPosterLayer({
           key={note.id}
           note={note}
           firstSlot={firstSlot}
-          canTakeDown={canTakeDown}
+          canManage={canManage}
           onTakeDown={() => onTakeDown(note.id)}
+          onEdit={() => setEditing(note.id)}
         />
       ))}
+      {open && (
+        <SessionPosterEditor
+          key={open.id}
+          note={open}
+          sessions={sessions}
+          taken={
+            new Set(posters.filter((p) => p !== open).map((p) => p.session.id))
+          }
+          onSave={(input) => onSave(open.id, input)}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }
