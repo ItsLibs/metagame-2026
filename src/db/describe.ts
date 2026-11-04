@@ -69,7 +69,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
 
 // What each table is for, in one line. Reviewed alongside the columns.
 const TABLE_NOTES: Record<string, string> = {
-  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL. wizard_level, pirate_level and alien_level are the Megagame class levels, 0–5 (check constraints); Better Auth doesn't know them, so only our code sets them (for now, the Megagame tab on /account).",
+  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL.",
   session:
     "Signed-in browser sessions. Deleting a user removes their sessions (cascade).",
   account:
@@ -86,7 +86,7 @@ const TABLE_NOTES: Record<string, string> = {
   user_permission_grants:
     "Permissions an account holds on top of its roles, one row each. Grants only: there is no deny.",
   profiles:
-    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive. website is a link the person gave (a host\'s RFP "Link").',
+    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive. website is a link the person gave (a host\'s RFP "Link"). wizard_level, pirate_level and alien_level are the Megagame class levels, 0–5 (check constraints), set from the Megagame tab on /account.',
   tickets:
     "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id (the attendee) is set only by claiming the ticket code, never by email match. holder_user_id is who has the code to pass on or claim; null means the buyer (purchaser_email). purchaser_discord is the Discord handle typed at checkout (leading @ stripped), used to prefill an empty profile Discord. Unclaiming clears the owner, makes them the holder and issues a fresh random code.",
   locations:
