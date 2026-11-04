@@ -275,22 +275,22 @@ export default function BoardNotes({
   const editor = openNote ? editorOf(openNote) : null;
 
   // What to do instead of reacting, for a viewer who can't.
-  const reactHint = board.canPost ? null : board.readOnly ? (
-    <Link href="/schedule" className="underline underline-offset-2">
-      React on the full schedule
-    </Link>
-  ) : board.signedIn ? (
-    <Link href="/account?tab=tickets" className="underline underline-offset-2">
-      Claim your ticket to react
-    </Link>
-  ) : (
-    <Link
-      href="/login?next=%2Fschedule"
-      className="underline underline-offset-2"
-    >
-      Sign in to react
-    </Link>
-  );
+  const reactHint =
+    board.canPost || board.readOnly ? null : board.signedIn ? (
+      <Link
+        href="/account?tab=tickets"
+        className="underline underline-offset-2"
+      >
+        Claim your ticket to react
+      </Link>
+    ) : (
+      <Link
+        href="/login?next=%2Fschedule"
+        className="underline underline-offset-2"
+      >
+        Sign in to react
+      </Link>
+    );
 
   return (
     <Context.Provider
