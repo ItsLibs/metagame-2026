@@ -294,6 +294,9 @@ const profile = (u) => {
     is_adult: u.kind === "attendee" || u === users.attendee ? true : null,
     bringing_children: u.kind === "attendee" ? i % 8 === 1 : null,
     share_with_recruiters: u.kind === "attendee" ? i % 3 === 0 : null,
+    wizard_level: u.levels?.wizard ?? 0,
+    pirate_level: u.levels?.pirate ?? 0,
+    alien_level: u.levels?.alien ?? 0,
   };
 };
 
@@ -1018,9 +1021,6 @@ const userRow = (u) => ({
   role: u.role ?? "user",
   banned: u.banned ?? false,
   ban_reason: u.ban_reason ?? null,
-  wizard_level: u.levels?.wizard ?? 0,
-  pirate_level: u.levels?.pirate ?? 0,
-  alien_level: u.levels?.alien ?? 0,
 });
 const credential = (u) => ({
   id: `${u.id}-credential`,
