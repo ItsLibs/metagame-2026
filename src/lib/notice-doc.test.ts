@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bannerSize,
   FACE_SIZE,
   isBlank,
   noticeHeadline,
@@ -7,10 +8,11 @@ import {
   simplifyStroke,
   strokeHit,
   textDoc,
+  type Face,
   type StrokeItem,
 } from "./notice-doc";
 
-const ok = (raw: unknown, face: "sticky" | "poster" = "poster") => {
+const ok = (raw: unknown, face: Face = "poster") => {
   const r = parseNoticeDoc(raw, face);
   if ("error" in r) throw new Error(r.error);
   return r.doc;
@@ -159,6 +161,22 @@ describe("isBlank", () => {
         ],
       }),
     ).toBe(false);
+  });
+});
+
+describe("bannerSize", () => {
+  it("is the board's width and grows with the session, up to the cap", () => {
+    const hour = bannerSize(60);
+    const three = bannerSize(180);
+    expect(hour.w).toBe(300);
+    expect(three.w).toBe(300);
+    expect(three.h).toBeGreaterThan(hour.h * 2.5);
+    expect(bannerSize(24 * 60).h).toBe(1600);
+  });
+
+  it("keeps a session poster's paper, like a poster's", () => {
+    const doc = ok({ paper: "kraft", items: [] }, "banner");
+    expect(doc.paper).toBe("kraft");
   });
 });
 
