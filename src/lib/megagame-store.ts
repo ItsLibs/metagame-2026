@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { NO_LEVELS, type MegagameLevels } from "./megagame-levels";
 
