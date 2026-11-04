@@ -25,9 +25,9 @@ export default async function ScheduleLayout({
         <PublicSchedule
           days={buildDays(sessions)}
           locations={locations}
-          board={board}
           mine={mine}
           initialView={parseView(cookieStore.get(VIEW_COOKIE)?.value)}
+          board={board}
         />
       </ContentPage>
       {children}

@@ -65,7 +65,9 @@ describe("titleLines", () => {
   });
   it("grows with the block, leaving room for the hosts", () => {
     expect(titleLines(timed(60))).toBe(5);
-    expect(titleLines(timed(120))).toBe(12);
+    // 13, not 12, since META-4874 made the badge row conditional and this
+    // block carries no badges: (240 - 12 padding - 16 hosts) / 16.
+    expect(titleLines(timed(120))).toBe(13);
   });
   it("gives a line up to the Sponsor tag", () => {
     expect(titleLines({ ...timed(60), sponsored: true })).toBe(4);
