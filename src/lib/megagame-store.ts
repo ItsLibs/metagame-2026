@@ -5,15 +5,15 @@ import { NO_LEVELS, type MegagameLevels } from "./megagame-levels";
 export async function loadMegagameLevels(
   userId: string,
 ): Promise<MegagameLevels> {
-  const { user } = schema;
+  const { profiles } = schema;
   const [row] = await getDb()
     .select({
-      wizard: user.wizardLevel,
-      pirate: user.pirateLevel,
-      alien: user.alienLevel,
+      wizard: profiles.wizardLevel,
+      pirate: profiles.pirateLevel,
+      alien: profiles.alienLevel,
     })
-    .from(user)
-    .where(eq(user.id, userId))
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
     .limit(1);
   return row ?? NO_LEVELS;
 }
@@ -23,13 +23,14 @@ export async function setMegagameLevels(
   userId: string,
   levels: MegagameLevels,
 ): Promise<void> {
-  const { user } = schema;
+  const { profiles } = schema;
+  const values = {
+    wizardLevel: levels.wizard,
+    pirateLevel: levels.pirate,
+    alienLevel: levels.alien,
+  };
   await getDb()
-    .update(user)
-    .set({
-      wizardLevel: levels.wizard,
-      pirateLevel: levels.pirate,
-      alienLevel: levels.alien,
-    })
-    .where(eq(user.id, userId));
+    .insert(profiles)
+    .values({ userId, ...values })
+    .onConflictDoUpdate({ target: profiles.userId, set: values });
 }
