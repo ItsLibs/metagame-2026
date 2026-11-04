@@ -1,6 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
 import { ArmchairIcon } from "lucide-react";
-import { hostNames, type Ages, type Category } from "@/lib/schedule";
+import {
+  hasBadgeRow,
+  hostNames,
+  type Ages,
+  type Category,
+} from "@/lib/schedule";
 import { CATEGORY_STYLES, LEGEND } from "@/v2/lib/schedule-styles";
 
 // Pieces of a schedule session block shared by the admin editor and the
@@ -132,17 +137,18 @@ export function BlockSummary({
 }) {
   return (
     <>
-      {/* Above the title, so a short block's overflow can't clip it. */}
-      {session.sponsored && (
-        <span className="mb-0.5 flex">
-          <SponsorTag />
+      {/* Above the title, so a short block's overflow can't clip them. */}
+      {hasBadgeRow(session) && (
+        <span className="mb-0.5 flex flex-wrap items-center gap-1">
+          {session.sponsored && <SponsorTag />}
+          <SessionMarks session={session} />
         </span>
       )}
-      <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
-        <span className="line-clamp-3" style={{ WebkitLineClamp: titleLines }}>
-          {session.title}
-        </span>
-        <SessionMarks session={session} />
+      <span
+        className="line-clamp-3 text-[13px] leading-tight font-semibold"
+        style={{ WebkitLineClamp: titleLines }}
+      >
+        {session.title}
       </span>
       {session.hosts.length > 0 && (
         <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
