@@ -221,11 +221,6 @@ const at = (value: string | Date): number =>
 /**
  * Notes back to front: the LAST one paints on top, so the NEWEST note sits on
  * top, like the last thing pinned to a real board.
- *
- * This was the other way round until 2026-11-02 — oldest on top, so nothing
- * got buried — and the test below was written to catch anyone reversing it.
- * It did its job: the reversal is now deliberate, and the test pins this
- * direction instead.
  */
 export function notesInPaintOrder<T extends Pinned>(notes: readonly T[]): T[] {
   return [...notes].sort((a, b) => {

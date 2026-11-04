@@ -30,7 +30,8 @@ export type ScheduleLocation = {
   visibility: LocationVisibility;
   /**
    * When the unconference bulletin board takes over this room's column (ISO);
-   * null for a room that never hosts it. Sessions can't overlap the window.
+   * null for a room that never hosts it. Sessions may still be placed in the
+   * room; grid view shows them only through a session poster on the board.
    */
   boardStartsAt: string | null;
   /** When the board comes down; null runs it to the end of the schedule. */

@@ -108,7 +108,8 @@ export const locations = pgTable(
     visibility: locationVisibility().notNull().default("hidden"),
     // When the unconference bulletin board takes over this room's column;
     // null for a room that never hosts it. A null end runs it to the end of
-    // the schedule. Sessions may not overlap the window.
+    // the schedule. Sessions may still be placed here; the grid shows them
+    // only through a session poster on the board.
     boardStartsAt: timestamp({ withTimezone: true }),
     boardEndsAt: timestamp({ withTimezone: true }),
     // Vercel Blob URLs; images never live in the database. The thumbnail is

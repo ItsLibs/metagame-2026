@@ -180,7 +180,7 @@ export default function UnconferenceBoard({
     // The tile's own size is the part of the board its corner can't reach,
     // which is exactly what `offset` takes out again.
     const spanX = rect.width - TILE_PX;
-    const spanY = rect.height - TILE_PX;
+    const spanY = rect.height - NOTE_H;
     return clampNotePosition(
       spanX > 0 ? (clientX - rect.left - d.dx) / spanX : 0,
       spanY > 0 ? (clientY - rect.top - d.dy) / spanY : 0,
@@ -202,7 +202,7 @@ export default function UnconferenceBoard({
     drag.current = {
       noteId: note.id,
       dx: e.clientX - cork.left - (cork.width - TILE_PX) * note.x,
-      dy: e.clientY - cork.top - (cork.height - TILE_PX) * note.y,
+      dy: e.clientY - cork.top - (cork.height - NOTE_H) * note.y,
       origin: { x: e.clientX, y: e.clientY },
       from: { x: note.x, y: note.y },
       moved: false,

@@ -324,8 +324,14 @@ export async function reactToNote(
   if (!UUID.test(noteId)) return { error: GONE };
 
   return act(async () => {
-    const note = await noteById(noteId, who);
-    if (!note) return { error: GONE };
+    const [note, rooms] = await Promise.all([
+      noteById(noteId, who),
+      boardRooms(),
+    ]);
+    // A note on a board this viewer can't see is as good as gone.
+    if (!note || !rooms.some((r) => r.id === note.locationId)) {
+      return { error: GONE };
+    }
     const known = note.reactions.some((r) => r.emoji === parsed);
     if (
       !known &&
@@ -364,9 +370,10 @@ export async function unpinNote(noteId: string): Promise<NoteState> {
     const { editor, note } = await target(noteId);
     if (!note) return { error: GONE };
     if (!editor || !canDeleteNote(editor)) return { error: NOT_YOURS };
-    // A team member clearing the board may hold no ticket, so the attendee
-    // permission can't be the only key to it.
-    if (editor.via !== "team" && !(await can("unconference.post"))) {
+    // The team takes anything down, ticket or not, including a session
+    // poster one of them pinned up (which makes them its author, not
+    // "team", in noteEditor's eyes). Everyone else needs the attendee key.
+    if (!(await can("schedule.manage")) && !(await can("unconference.post"))) {
       return { error: NEEDS_TICKET };
     }
     await deleteNote(noteId);

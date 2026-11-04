@@ -1,6 +1,6 @@
 {
-  "id": "c1286e73-acd3-409c-a78c-9f4c350715aa",
-  "prevId": "c1286e73-acd3-409c-a78c-9f4c3507159a",
+  "id": "eedcbd65-34f5-40a5-96ae-f0280001e124",
+  "prevId": "1042f07c-af8a-44fc-9743-63658bf56146",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -477,27 +477,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "wizard_level": {
-          "name": "wizard_level",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "pirate_level": {
-          "name": "pirate_level",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "alien_level": {
-          "name": "alien_level",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -524,20 +503,7 @@
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "user_wizard_level_range": {
-          "name": "user_wizard_level_range",
-          "value": "\"user\".\"wizard_level\" between 0 and 5"
-        },
-        "user_pirate_level_range": {
-          "name": "user_pirate_level_range",
-          "value": "\"user\".\"pirate_level\" between 0 and 5"
-        },
-        "user_alien_level_range": {
-          "name": "user_alien_level_range",
-          "value": "\"user\".\"alien_level\" between 0 and 5"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.verification": {
@@ -672,6 +638,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "wizard_level": {
+          "name": "wizard_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "pirate_level": {
+          "name": "pirate_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "alien_level": {
+          "name": "alien_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -706,6 +693,18 @@
         "profiles_image_url_https": {
           "name": "profiles_image_url_https",
           "value": "\"profiles\".\"image_url\" like 'https://%'"
+        },
+        "profiles_wizard_level_range": {
+          "name": "profiles_wizard_level_range",
+          "value": "\"profiles\".\"wizard_level\" between 0 and 5"
+        },
+        "profiles_pirate_level_range": {
+          "name": "profiles_pirate_level_range",
+          "value": "\"profiles\".\"pirate_level\" between 0 and 5"
+        },
+        "profiles_alien_level_range": {
+          "name": "profiles_alien_level_range",
+          "value": "\"profiles\".\"alien_level\" between 0 and 5"
         }
       },
       "isRLSEnabled": false
@@ -1058,13 +1057,17 @@
           "notNull": true,
           "default": "'hidden'"
         },
-        "layout": {
-          "name": "layout",
-          "type": "location_layout",
-          "typeSchema": "public",
+        "board_starts_at": {
+          "name": "board_starts_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'grid'"
+          "notNull": false
+        },
+        "board_ends_at": {
+          "name": "board_ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "thumbnail_url": {
           "name": "thumbnail_url",
@@ -1114,6 +1117,10 @@
         "locations_capacity_positive": {
           "name": "locations_capacity_positive",
           "value": "\"locations\".\"capacity\" > 0"
+        },
+        "locations_board_window": {
+          "name": "locations_board_window",
+          "value": "\"locations\".\"board_ends_at\" is null OR (\"locations\".\"board_starts_at\" is not null AND \"locations\".\"board_ends_at\" > \"locations\".\"board_starts_at\")"
         },
         "locations_thumbnail_url_https": {
           "name": "locations_thumbnail_url_https",
@@ -1650,6 +1657,89 @@
       },
       "isRLSEnabled": false
     },
+    "public.unconference_note_reactions": {
+      "name": "unconference_note_reactions",
+      "schema": "",
+      "columns": {
+        "note_id": {
+          "name": "note_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "emoji": {
+          "name": "emoji",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "unconference_note_reactions_user_id_idx": {
+          "name": "unconference_note_reactions_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "unconference_note_reactions_note_id_unconference_notes_id_fk": {
+          "name": "unconference_note_reactions_note_id_unconference_notes_id_fk",
+          "tableFrom": "unconference_note_reactions",
+          "tableTo": "unconference_notes",
+          "columnsFrom": ["note_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "unconference_note_reactions_user_id_user_id_fk": {
+          "name": "unconference_note_reactions_user_id_user_id_fk",
+          "tableFrom": "unconference_note_reactions",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "unconference_note_reactions_note_id_user_id_emoji_pk": {
+          "name": "unconference_note_reactions_note_id_user_id_emoji_pk",
+          "columns": ["note_id", "user_id", "emoji"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "unconference_note_reactions_emoji_length": {
+          "name": "unconference_note_reactions_emoji_length",
+          "value": "char_length(\"unconference_note_reactions\".\"emoji\") > 0 AND char_length(\"unconference_note_reactions\".\"emoji\") <= 32"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.unconference_notes": {
       "name": "unconference_notes",
       "schema": "",
@@ -1673,17 +1763,37 @@
           "primaryKey": false,
           "notNull": true
         },
+        "board_day": {
+          "name": "board_day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "title": {
           "name": "title",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
-        },
-        "body": {
-          "name": "body",
-          "type": "text",
-          "primaryKey": false,
           "notNull": false
+        },
+        "sticky": {
+          "name": "sticky",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"v\":1,\"items\":[]}'::jsonb"
+        },
+        "poster": {
+          "name": "poster",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"v\":1,\"items\":[]}'::jsonb"
         },
         "color": {
           "name": "color",
@@ -1730,6 +1840,12 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
+            },
+            {
+              "expression": "board_day",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1771,19 +1887,30 @@
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "unconference_notes_session_id_sessions_id_fk": {
+          "name": "unconference_notes_session_id_sessions_id_fk",
+          "tableFrom": "unconference_notes",
+          "tableTo": "sessions",
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "unconference_notes_sessionId_unique": {
+          "name": "unconference_notes_sessionId_unique",
+          "nullsNotDistinct": false,
+          "columns": ["session_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "unconference_notes_title_length": {
           "name": "unconference_notes_title_length",
-          "value": "char_length(\"unconference_notes\".\"title\") > 0 AND char_length(\"unconference_notes\".\"title\") <= 120"
-        },
-        "unconference_notes_body_length": {
-          "name": "unconference_notes_body_length",
-          "value": "\"unconference_notes\".\"body\" is null OR (char_length(\"unconference_notes\".\"body\") > 0 AND char_length(\"unconference_notes\".\"body\") <= 1000)"
+          "value": "\"unconference_notes\".\"title\" is null OR char_length(\"unconference_notes\".\"title\") <= 120"
         },
         "unconference_notes_x_fraction": {
           "name": "unconference_notes_x_fraction",
@@ -2500,11 +2627,6 @@
       "name": "discord_status",
       "schema": "public",
       "values": ["not_yet", "needs_role", "session_host", "refused"]
-    },
-    "public.location_layout": {
-      "name": "location_layout",
-      "schema": "public",
-      "values": ["grid", "board"]
     },
     "public.location_visibility": {
       "name": "location_visibility",
