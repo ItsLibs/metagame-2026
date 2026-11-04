@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState } from "react";
 import { chooseMegagameClass, type ClassState } from "./actions";
 import {
   activeClasses,
@@ -27,25 +27,11 @@ const BRIEFS: Record<MegagameClass, string> = {
 const BRIEF =
   "text-[15px] leading-snug text-ink/80 transition duration-200 sm:pointer-fine:translate-y-1 sm:pointer-fine:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100";
 
-export default function MegagamePanel({
-  levels,
-  joining = null,
-}: {
-  levels: MegagameLevels;
-  /** A faction someone came to join, from a speaker card's medal (?join=). */
-  joining?: MegagameClass | null;
-}) {
+export default function MegagamePanel({ levels }: { levels: MegagameLevels }) {
   const [state, action, pending] = useActionState<ClassState, FormData>(
     chooseMegagameClass,
     {},
   );
-  // The link's #faction hash doesn't survive a login redirect, so scroll here.
-  useEffect(() => {
-    if (joining && levels[joining] === 0)
-      document
-        .getElementById(`faction-${joining}`)
-        ?.scrollIntoView({ block: "center" });
-  }, [joining, levels]);
   const joined = activeClasses(levels).length > 0;
   return (
     <div className="flex max-w-[960px] flex-col gap-10">
@@ -99,11 +85,9 @@ export default function MegagamePanel({
         >
           {MEGAGAME_CLASSES.map((c) => {
             const level = levels[c];
-            const asked = joining === c && level === 0;
             return (
               <button
                 key={c}
-                id={`faction-${c}`}
                 type="submit"
                 name="class"
                 value={c}
@@ -114,7 +98,7 @@ export default function MegagamePanel({
                     : `Join the ${FACTION_NAMES[c]}`
                 }
                 aria-describedby={`brief-${c}`}
-                className={`group flex items-center gap-4 rounded-2xl p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-navy enabled:cursor-pointer disabled:cursor-default sm:flex-col sm:gap-3 sm:text-center ${asked ? "scroll-mt-24 bg-white ring-2 ring-meeple" : ""}`}
+                className="group flex items-center gap-4 rounded-2xl p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-navy enabled:cursor-pointer disabled:cursor-default sm:flex-col sm:gap-3 sm:text-center"
               >
                 <span className="relative w-36 shrink-0 sm:w-full sm:max-w-[240px]">
                   <FactionPatch
@@ -124,11 +108,6 @@ export default function MegagamePanel({
                   {level > 0 && (
                     <span className="absolute -top-2 left-1/2 -translate-x-1/2 rotate-[-4deg] rounded-full border-2 border-navy bg-tan px-3 py-0.5 font-space-mono text-[11px] font-bold tracking-[0.08em] whitespace-nowrap text-navy uppercase">
                       Joined · Lv {level}
-                    </span>
-                  )}
-                  {asked && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 rotate-[-4deg] rounded-full border-2 border-navy bg-meeple px-3 py-0.5 font-space-mono text-[11px] font-bold tracking-[0.08em] whitespace-nowrap text-cream uppercase">
-                      Join them?
                     </span>
                   )}
                 </span>
