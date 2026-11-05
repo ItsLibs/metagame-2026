@@ -16,6 +16,8 @@ export default function SessionPlans({
   capacity,
   commitment,
   open,
+  inviteOnly = false,
+  invited = true,
   conflicts,
   rsvps: initial,
   ticket,
@@ -26,6 +28,9 @@ export default function SessionPlans({
   capacity: number | null;
   commitment: boolean;
   open: boolean;
+  inviteOnly?: boolean;
+  /** On the guest list, or the session isn't invite-only. */
+  invited?: boolean;
   conflicts: PlanConflict[];
   rsvps: SessionRsvps;
   ticket?: RsvpTicket;
@@ -43,6 +48,15 @@ export default function SessionPlans({
 
   return (
     <>
+      {inviteOnly && (
+        <p className="text-sm text-[#1b1530]/70">
+          {!plan
+            ? "This one is invite-only. If you were invited, sign in with the email your invite went to."
+            : invited
+              ? "This one is invite-only, and you’re on the guest list."
+              : "This one is invite-only, and your account’s email isn’t on the guest list. If you were invited, sign in with the email your invite went to, or ask whoever invited you to add this email."}
+        </p>
+      )}
       {commitment && (
         <p className="text-sm text-[#1b1530]/70">
           Spots are limited and the host is counting on you, so only RSVP if
@@ -57,6 +71,7 @@ export default function SessionPlans({
           full={capacity !== null && rsvps.going >= capacity}
           commitment={commitment}
           open={open}
+          invited={invited}
           conflicts={conflicts}
           ticket={ticket}
           onSettled={(result) => {

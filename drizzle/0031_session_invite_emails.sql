@@ -1,0 +1,1 @@
+ALTER TABLE "sessions" ADD COLUMN "invite_emails" text[];

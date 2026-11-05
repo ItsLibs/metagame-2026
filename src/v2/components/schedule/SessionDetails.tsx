@@ -17,6 +17,8 @@ import {
   formatPacificDay,
   formatPacificTime,
   hostNames,
+  linkedSession,
+  onGuestList,
   planConflicts,
   type Ages,
   type Category,
@@ -46,12 +48,13 @@ const AGES_LABEL: Record<Ages, string> = {
   adults: "18+",
 };
 
-/** The shown session with that slug and its room, or null. */
+/** The shown (or link-only) session with that slug and its room, or null. */
 export async function lookupSession(slug: string) {
   const { sessions, locations } = await loadPublicSchedule();
   const session = sessions.find((s) => s.slug === slug);
   const room = session && locations.find((l) => l.id === session.locationId);
-  return session && room ? { session, room } : null;
+  if (session && room) return { session, room };
+  return linkedSession(await loadRawSchedule(), slug);
 }
 
 async function findSession(slug: string) {
@@ -173,10 +176,20 @@ export default async function SessionDetails({ slug }: { slug: string }) {
   ]);
   // Only sessions this viewer can see, as loadMySessionIds does.
   const visible = new Set(shown?.sessions.map((s) => s.id));
+  // The guest list stays server-side; the page only learns whether the
+  // viewer is on it.
+  const guests =
+    raw?.sessions.find((s) => s.id === session.id)?.inviteEmails ?? null;
+  const invited =
+    !session.inviteOnly ||
+    (!!account &&
+      (account.user.role === "admin" ||
+        onGuestList(guests, account.user.email)));
 
   const tags = [
     session.category ? CATEGORY_LABEL[session.category] : null,
     session.ages ? AGES_LABEL[session.ages] : null,
+    session.inviteOnly ? "Invite only" : null,
     session.rsvpIsCommitment ? "Limited spots" : null,
     session.sponsored ? "Sponsor" : null,
   ].filter(Boolean) as string[];
@@ -273,6 +286,8 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           capacity={cap}
           commitment={session.rsvpIsCommitment}
           open={session.rsvpsOpen}
+          inviteOnly={session.inviteOnly}
+          invited={invited}
           conflicts={
             viewerId && plans && raw
               ? planConflicts(
@@ -284,7 +299,12 @@ export default async function SessionDetails({ slug }: { slug: string }) {
               : []
           }
           rsvps={rsvps}
-          ticket={ticket}
+          // Guests need no ticket, as rsvpTo agrees.
+          ticket={
+            session.inviteOnly && invited
+              ? { has: true, claimable: [] }
+              : ticket
+          }
           plan={
             plans && {
               status: plans.rsvps[session.id] ?? null,

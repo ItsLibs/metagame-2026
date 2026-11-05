@@ -79,9 +79,11 @@ export const discordStatus = pgEnum("discord_status", [
   "session_host",
   "refused",
 ]);
-// Who a room shows up for on the schedule; "hidden" is the team's own view.
+// Who a room shows up for on the schedule; "hidden" is the team's own view,
+// and an "unlisted" room's sessions open only from their own links.
 export const locationVisibility = pgEnum("location_visibility", [
   "public",
+  "unlisted",
   "volunteer",
   "hidden",
 ]);
@@ -156,6 +158,9 @@ export const sessions = pgTable(
     sponsored: boolean().notNull().default(false),
     // Off until the team opens RSVPs; the public button is greyed out meanwhile.
     rsvpsOpen: boolean().notNull().default(true),
+    // Null lets anyone RSVP; a list (lowercased emails, possibly empty) lets
+    // only those accounts. The team can still add anyone from backstage.
+    inviteEmails: text().array(),
     // The accepted RFP this came from, for the Airtable sync.
     airtableRfpRecordId: text().unique(),
     // The committee member who shepherds it through review.

@@ -376,3 +376,47 @@ describe("parseHostSessionFields", () => {
     );
   });
 });
+
+describe("guest list", () => {
+  const base = { title: "VIP Dinner" };
+  const emails = (raw: Record<string, unknown>) => {
+    const r = parseSessionFields({ ...base, ...raw });
+    return r.ok ? r.value.inviteEmails : `bad ${r.field}`;
+  };
+  it("is left as stored when not mentioned", () => {
+    expect(emails({})).toBeUndefined();
+  });
+  it("reads the form's pasted list, lowercased and de-duplicated", () => {
+    expect(
+      emails({
+        inviteOnly: "on",
+        inviteEmails:
+          "Ada@Example.com\n grace@example.com, ada@example.com;\nAlan Turing <alan@example.com>\n\n",
+      }),
+    ).toEqual(["ada@example.com", "grace@example.com", "alan@example.com"]);
+  });
+  it("is cleared when the form's box is unticked, whatever the list says", () => {
+    expect(emails({ inviteOnly: "", inviteEmails: "ada@example.com" })).toBe(
+      null,
+    );
+  });
+  it("keeps an empty list invite-only, so nobody can RSVP yet", () => {
+    expect(emails({ inviteOnly: "on", inviteEmails: "" })).toEqual([]);
+    expect(emails({ inviteEmails: [] })).toEqual([]);
+  });
+  it("takes JSON null or an array", () => {
+    expect(emails({ inviteEmails: null })).toBeNull();
+    expect(emails({ inviteEmails: ["Ada@example.com"] })).toEqual([
+      "ada@example.com",
+    ]);
+  });
+  it("rejects anything that isn't an email", () => {
+    expect(
+      emails({ inviteOnly: "on", inviteEmails: "ada@example.com\nGrace" }),
+    ).toBe("bad inviteEmails");
+    expect(emails({ inviteEmails: "ada@example.com" })).toBe(
+      "bad inviteEmails",
+    );
+    expect(emails({ inviteEmails: [1] })).toBe("bad inviteEmails");
+  });
+});

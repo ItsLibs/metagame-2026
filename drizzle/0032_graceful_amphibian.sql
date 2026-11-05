@@ -1,0 +1,1 @@
+ALTER TYPE "public"."location_visibility" ADD VALUE 'unlisted' BEFORE 'volunteer';

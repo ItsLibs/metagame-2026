@@ -6,7 +6,12 @@
 export const CATEGORIES = ["talk", "workshop", "game", "other"] as const;
 export const AGES = ["all", "kids", "adults"] as const;
 export const STATUSES = ["draft", "published"] as const;
-export const LOCATION_VISIBILITIES = ["public", "volunteer", "hidden"] as const;
+export const LOCATION_VISIBILITIES = [
+  "public",
+  "unlisted",
+  "volunteer",
+  "hidden",
+] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Ages = (typeof AGES)[number];
@@ -16,6 +21,7 @@ export type LocationVisibility = (typeof LOCATION_VISIBILITIES)[number];
 /** Who a room is for, as the backstage room list and form say it. */
 export const VISIBILITY_LABEL: Record<LocationVisibility, string> = {
   public: "Everyone",
+  unlisted: "Only by a session's link",
   volunteer: "Volunteers and team",
   hidden: "Team only",
 };
@@ -62,6 +68,11 @@ export type ScheduleSession = {
   sponsored: boolean;
   /** False until the team opens RSVPs; the button is greyed out meanwhile. */
   rsvpsOpen: boolean;
+  /**
+   * The guest list of an invite-only session, lowercased emails; null when
+   * anyone may RSVP. Team-only: never copied into PublicSession.
+   */
+  inviteEmails: string[] | null;
   /** The Airtable RFP Submissions row this came from. */
   airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
@@ -284,6 +295,40 @@ export type RsvpTicket = {
   has: boolean;
   claimable: { id: string; tier: string }[];
 };
+
+/** Whether an account with this email is on the session's guest list; any account is when there's no list. */
+export function onGuestList(
+  inviteEmails: string[] | null,
+  email: string,
+): boolean {
+  return (
+    inviteEmails === null || inviteEmails.includes(email.trim().toLowerCase())
+  );
+}
+
+const EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+
+/**
+ * A pasted guest list as lowercased, de-duplicated emails: one per line or
+ * separated by commas, semicolons or spaces, and "Name <email>" works too.
+ * Returns the first thing that isn't an email instead.
+ */
+export function parseGuestList(
+  text: string,
+): { emails: string[] } | { invalid: string } {
+  const emails = new Set<string>();
+  for (const line of text.split(/[\n,;]+/)) {
+    const bracketed = line.match(/<([^<>]+)>/);
+    const parts = bracketed ? [bracketed[1]] : line.split(/\s+/);
+    for (const part of parts) {
+      const email = part.trim().toLowerCase();
+      if (!email) continue;
+      if (!EMAIL.test(email)) return { invalid: part.trim() };
+      emails.add(email);
+    }
+  }
+  return { emails: [...emails] };
+}
 
 export function hostNames(session: { hosts: { name: string }[] }): string {
   return session.hosts.map((h) => h.name).join(", ");
@@ -885,7 +930,13 @@ export type PublicSession = Pick<
   | "rsvpIsCommitment"
   | "sponsored"
   | "rsvpsOpen"
-> & { startsAt: string; endsAt: string; hosts: { name: string }[] };
+> & {
+  startsAt: string;
+  endsAt: string;
+  hosts: { name: string }[];
+  /** Only guests may RSVP; who they are stays off the public schedule. */
+  inviteOnly: boolean;
+};
 
 export type PublicLocation = Pick<
   ScheduleLocation,
@@ -914,7 +965,8 @@ export function roomVisible(
   if (viewer === "team") return true;
   if (location.visibility === "public") return true;
   if (location.visibility === "volunteer") return viewer === "volunteer";
-  // "hidden" means team only, with no exception for a room that happens to
+  // An "unlisted" room is reached only through a session's own page (see
+  // linkedSession), never listed. "hidden" means team only, with no exception for a room that happens to
   // hold a published session — that exception made every such room public.
   return false;
 }
@@ -952,6 +1004,7 @@ export function publicSchedule(
       rsvpIsCommitment: s.rsvpIsCommitment,
       sponsored: s.sponsored,
       rsvpsOpen: s.rsvpsOpen,
+      inviteOnly: s.inviteEmails !== null,
       hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
   const locations = rooms.map((l) => ({
@@ -968,6 +1021,27 @@ export function publicSchedule(
   // of the team's own room order. Stable, so the rest keep theirs.
   locations.sort((a, b) => Number(hostsBoard(b)) - Number(hostsBoard(a)));
   return { locations, sessions };
+}
+
+/**
+ * A published session in an "unlisted" room, for its own page: anyone with
+ * the link may open it, but the grid, the list and profiles all read
+ * publicSchedule(), so it never shows up there.
+ */
+export function linkedSession(
+  schedule: { locations: ScheduleLocation[]; sessions: ScheduleSession[] },
+  slug: string,
+): { session: PublicSession; room: PublicLocation } | null {
+  const session = schedule.sessions.find((s) => s.slug === slug);
+  const room =
+    session && schedule.locations.find((l) => l.id === session.locationId);
+  if (!session || room?.visibility !== "unlisted") return null;
+  const shown = publicSchedule(
+    { locations: [room], sessions: [session] },
+    "team",
+  );
+  const [found] = shown.sessions;
+  return found ? { session: found, room: shown.locations[0] } : null;
 }
 
 /** The session's own page, under /schedule. */
