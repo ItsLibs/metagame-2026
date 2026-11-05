@@ -1,9 +1,11 @@
 import { Mail } from "lucide-react";
 import Image from "next/image";
 import { contactEmail } from "@/lib/contact-recipients";
+import type { MegagameClass } from "@/lib/megagame-levels";
 import type { Person } from "@/v2/data/team";
 import HatImage from "@/v2/hat-trick/HatImage";
 import ContactLink from "./contact/ContactLink";
+import FactionMedals from "./megagame/FactionMedals";
 import { HEADING } from "./styles";
 
 const initials = (name: string) =>
@@ -15,7 +17,10 @@ const initials = (name: string) =>
     .toUpperCase();
 
 // One team member: the photo *is* the card — full-bleed portrait on top, a
-// slim caption strip below. `compact` is the home page's mini carousel.
+// slim caption strip below, and the Megagame factions they've joined as
+// medals on the photo's corner (FactionMedals, shared with the speaker
+// cards). `compact` is the home page's mini carousel, which clips to its
+// rounded corners; the full card doesn't, so the medals can overhang.
 export default function PersonCard({
   name,
   title,
@@ -23,38 +28,45 @@ export default function PersonCard({
   photo,
   contactKey,
   hats,
+  factions = [],
   compact = false,
-}: Person & { compact?: boolean }) {
+}: Omit<Person, "userId"> & {
+  factions?: MegagameClass[];
+  compact?: boolean;
+}) {
   return (
     <div
-      className={`flex h-full flex-col overflow-hidden border ${compact ? "rounded-2xl" : ""} border-navy/[0.16] bg-white shadow-[0_8px_24px_rgba(23,48,89,0.08)]`}
+      className={`flex h-full flex-col border ${compact ? "overflow-hidden rounded-2xl" : ""} border-navy/[0.16] bg-white shadow-[0_8px_24px_rgba(23,48,89,0.08)]`}
     >
-      {photo && hats?.length ? (
-        <HatImage
-          src={photo}
-          alt={name}
-          hats={hats}
-          className={`w-full ${compact ? "aspect-square" : "aspect-[4/5]"}`}
-          sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 33vw"
-        />
-      ) : photo ? (
-        <Image
-          src={photo}
-          alt={name}
-          className={`w-full object-cover ${compact ? "aspect-square" : "aspect-[4/5]"}`}
-          sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 33vw"
-        />
-      ) : (
-        // Placeholder until there's a photo: initials on navy, same footprint.
-        <div
-          aria-hidden
-          className={`${HEADING} flex w-full items-center justify-center bg-navy text-3xl text-cream sm:text-6xl ${
-            compact ? "aspect-square" : "aspect-[4/5]"
-          }`}
-        >
-          {initials(name)}
-        </div>
-      )}
+      <div className="relative">
+        {photo && hats?.length ? (
+          <HatImage
+            src={photo}
+            alt={name}
+            hats={hats}
+            className={`w-full ${compact ? "aspect-square" : "aspect-[4/5]"}`}
+            sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 33vw"
+          />
+        ) : photo ? (
+          <Image
+            src={photo}
+            alt={name}
+            className={`w-full object-cover ${compact ? "aspect-square" : "aspect-[4/5]"}`}
+            sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 33vw"
+          />
+        ) : (
+          // Placeholder until there's a photo: initials on navy, same footprint.
+          <div
+            aria-hidden
+            className={`${HEADING} flex w-full items-center justify-center bg-navy text-3xl text-cream sm:text-6xl ${
+              compact ? "aspect-square" : "aspect-[4/5]"
+            }`}
+          >
+            {initials(name)}
+          </div>
+        )}
+        <FactionMedals factions={factions} />
+      </div>
       <div
         className={`flex flex-1 flex-col items-center px-1 py-2 text-center ${compact ? "sm:px-4 sm:py-3" : "sm:px-5 sm:py-4"}`}
       >

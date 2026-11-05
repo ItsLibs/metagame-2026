@@ -12,6 +12,7 @@ import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
 import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
 import { invalidateSchedule } from "@/lib/schedule-store";
 import { isSpeakerAccount } from "@/v2/data/speakers";
+import { isTeamAccount } from "@/v2/data/team-accounts";
 import {
   claimOwnTicket,
   claimTicket,
@@ -281,8 +282,10 @@ export async function chooseMegagameClass(
   await setMegagameLevels(session.user.id, starterLevels(chosen));
   revalidatePath("/account");
   revalidatePath(`/u/${session.user.id}`);
-  // A featured speaker's pick shows on their home-page card.
+  // A featured speaker's pick shows on their home-page card, and a team
+  // member's or advisor's on their /team card.
   if (isSpeakerAccount(session.user.id)) revalidatePath("/");
+  if (isTeamAccount(session.user.id)) revalidatePath("/team");
   return {};
 }
 
