@@ -17,6 +17,7 @@ import {
   formatPacificDay,
   formatPacificTime,
   hostNames,
+  linkedSession,
   onGuestList,
   planConflicts,
   type Ages,
@@ -47,12 +48,13 @@ const AGES_LABEL: Record<Ages, string> = {
   adults: "18+",
 };
 
-/** The shown session with that slug and its room, or null. */
+/** The shown (or link-only) session with that slug and its room, or null. */
 export async function lookupSession(slug: string) {
   const { sessions, locations } = await loadPublicSchedule();
   const session = sessions.find((s) => s.slug === slug);
   const room = session && locations.find((l) => l.id === session.locationId);
-  return session && room ? { session, room } : null;
+  if (session && room) return { session, room };
+  return linkedSession(await loadRawSchedule(), slug);
 }
 
 async function findSession(slug: string) {

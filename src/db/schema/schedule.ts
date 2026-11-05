@@ -79,9 +79,11 @@ export const discordStatus = pgEnum("discord_status", [
   "session_host",
   "refused",
 ]);
-// Who a room shows up for on the schedule; "hidden" is the team's own view.
+// Who a room shows up for on the schedule; "hidden" is the team's own view,
+// and an "unlisted" room's sessions open only from their own links.
 export const locationVisibility = pgEnum("location_visibility", [
   "public",
+  "unlisted",
   "volunteer",
   "hidden",
 ]);

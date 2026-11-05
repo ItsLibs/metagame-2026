@@ -3,6 +3,7 @@ import {
   buildDays,
   cellSessions,
   hostedSessions,
+  linkedSession,
   NO_ROOM,
   onGuestList,
   onlySessions,
@@ -212,6 +213,49 @@ describe("publicSchedule", () => {
   it("gives the team every room, used or not", () => {
     const { locations } = publicSchedule(levels, "team");
     expect(locations.map((l) => l.id)).toEqual(["open", "ops", "backstage"]);
+  });
+});
+
+describe("linkedSession", () => {
+  const raw = {
+    locations: [
+      room({ id: "open" }),
+      room({ id: "garden", visibility: "unlisted" }),
+      room({ id: "backstage", visibility: "hidden" }),
+    ],
+    sessions: [
+      session({ id: "a", slug: "a", locationId: "open" }),
+      session({ id: "dinner", slug: "dinner", locationId: "garden" }),
+      session({
+        id: "draft",
+        slug: "draft",
+        locationId: "garden",
+        status: "draft",
+      }),
+      session({ id: "secret", slug: "secret", locationId: "backstage" }),
+    ],
+  };
+
+  it("keeps unlisted rooms off the schedule for everyone but the team", () => {
+    for (const viewer of ["public", "volunteer"] as const) {
+      const { locations, sessions } = publicSchedule(raw, viewer);
+      expect(locations.map((l) => l.id)).toEqual(["open"]);
+      expect(sessions.map((s) => s.id)).toEqual(["a"]);
+    }
+  });
+
+  it("opens a published session in an unlisted room by its slug", () => {
+    const found = linkedSession(raw, "dinner");
+    expect(found?.session.id).toBe("dinner");
+    expect(found?.room.id).toBe("garden");
+    expect(JSON.stringify(found)).not.toMatch(/ada@|internal notes|Grace/);
+  });
+
+  it("opens nothing in a hidden room, a draft, or a listed room", () => {
+    expect(linkedSession(raw, "secret")).toBeNull();
+    expect(linkedSession(raw, "draft")).toBeNull();
+    expect(linkedSession(raw, "a")).toBeNull();
+    expect(linkedSession(raw, "nope")).toBeNull();
   });
 });
 

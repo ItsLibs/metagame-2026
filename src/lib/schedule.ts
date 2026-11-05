@@ -6,7 +6,12 @@
 export const CATEGORIES = ["talk", "workshop", "game", "other"] as const;
 export const AGES = ["all", "kids", "adults"] as const;
 export const STATUSES = ["draft", "published"] as const;
-export const LOCATION_VISIBILITIES = ["public", "volunteer", "hidden"] as const;
+export const LOCATION_VISIBILITIES = [
+  "public",
+  "unlisted",
+  "volunteer",
+  "hidden",
+] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Ages = (typeof AGES)[number];
@@ -16,6 +21,7 @@ export type LocationVisibility = (typeof LOCATION_VISIBILITIES)[number];
 /** Who a room is for, as the backstage room list and form say it. */
 export const VISIBILITY_LABEL: Record<LocationVisibility, string> = {
   public: "Everyone",
+  unlisted: "Only by a session's link",
   volunteer: "Volunteers and team",
   hidden: "Team only",
 };
@@ -959,7 +965,8 @@ export function roomVisible(
   if (viewer === "team") return true;
   if (location.visibility === "public") return true;
   if (location.visibility === "volunteer") return viewer === "volunteer";
-  // "hidden" means team only, with no exception for a room that happens to
+  // An "unlisted" room is reached only through a session's own page (see
+  // linkedSession), never listed. "hidden" means team only, with no exception for a room that happens to
   // hold a published session — that exception made every such room public.
   return false;
 }
@@ -1014,6 +1021,27 @@ export function publicSchedule(
   // of the team's own room order. Stable, so the rest keep theirs.
   locations.sort((a, b) => Number(hostsBoard(b)) - Number(hostsBoard(a)));
   return { locations, sessions };
+}
+
+/**
+ * A published session in an "unlisted" room, for its own page: anyone with
+ * the link may open it, but the grid, the list and profiles all read
+ * publicSchedule(), so it never shows up there.
+ */
+export function linkedSession(
+  schedule: { locations: ScheduleLocation[]; sessions: ScheduleSession[] },
+  slug: string,
+): { session: PublicSession; room: PublicLocation } | null {
+  const session = schedule.sessions.find((s) => s.slug === slug);
+  const room =
+    session && schedule.locations.find((l) => l.id === session.locationId);
+  if (!session || room?.visibility !== "unlisted") return null;
+  const shown = publicSchedule(
+    { locations: [room], sessions: [session] },
+    "team",
+  );
+  const [found] = shown.sessions;
+  return found ? { session: found, room: shown.locations[0] } : null;
 }
 
 /** The session's own page, under /schedule. */
