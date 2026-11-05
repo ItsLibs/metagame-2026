@@ -34,7 +34,7 @@ import {
   loadRawSchedule,
   rsvpTicket,
 } from "@/app/(v2)/schedule/data";
-import FactionMedals from "@/v2/components/megagame/FactionMedals";
+import { InlineFactionMedals } from "@/v2/components/megagame/InlineFactionMedals";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import SessionSignIn from "@/v2/components/schedule/SessionSignIn";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
@@ -293,7 +293,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
               {session.hosts.map((host, i) => (
                 <span key={i} className="inline-flex items-center">
                   {host.name}
-                  <FactionMedals
+                  <InlineFactionMedals
                     factions={factions?.[i] ?? []}
                     className="ml-1"
                   />

@@ -5,8 +5,10 @@ import { FactionMedal } from "./FactionPatch";
  * A person's faction medals inline with their name: one small disc per
  * faction joined, text-height, named for screen readers and on hover.
  * Nothing when they've joined none, so bylines without picks don't change.
+ * (FactionMedals, beside this, is the card-corner cluster on speaker and
+ * team cards.)
  */
-export default function FactionMedals({
+export function InlineFactionMedals({
   factions,
   className,
 }: {
