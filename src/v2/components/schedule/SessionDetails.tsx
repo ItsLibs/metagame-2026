@@ -16,7 +16,6 @@ import { gradingSummary } from "@/lib/rfp-sessions";
 import {
   formatPacificDay,
   formatPacificTime,
-  hostNames,
   linkedSession,
   onGuestList,
   planConflicts,
@@ -25,10 +24,17 @@ import {
 } from "@/lib/schedule";
 import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
 import {
+  activeFactions,
+  NO_LEVELS,
+  type MegagameClass,
+} from "@/lib/megagame-levels";
+import { loadMegagameLevelsFor } from "@/lib/megagame-store";
+import {
   loadPublicSchedule,
   loadRawSchedule,
   rsvpTicket,
 } from "@/app/(v2)/schedule/data";
+import FactionMedals from "@/v2/components/megagame/FactionMedals";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import SessionSignIn from "@/v2/components/schedule/SessionSignIn";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
@@ -72,6 +78,28 @@ export async function sessionMetadata(slug: string): Promise<Metadata> {
 }
 
 const MUTED = "text-sm text-[#1b1530]/60";
+
+/**
+ * The Megagame factions each host has joined, in the session's host order,
+ * for the medals after their names. PublicSession carries host names but no
+ * ids, so this pairs them with the raw schedule's hosts (the same list, in
+ * the same order; the raw read is cached and stays server-side). Decoration:
+ * null if either read fails, and the byline shows names alone.
+ */
+async function hostFactions(
+  sessionId: string,
+): Promise<MegagameClass[][] | null> {
+  try {
+    const { sessions } = await loadRawSchedule();
+    const hosts = sessions.find((s) => s.id === sessionId)?.hosts ?? [];
+    if (hosts.length === 0) return null;
+    const levels = await loadMegagameLevelsFor(hosts.map((h) => h.userId));
+    return hosts.map((h) => activeFactions(levels.get(h.userId) ?? NO_LEVELS));
+  } catch (err) {
+    console.error("host megagame levels", sessionId, err);
+    return null;
+  }
+}
 
 async function GraderNotes({ sessionId }: { sessionId: string }) {
   let summary = null;
@@ -164,16 +192,18 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
-  const [rsvps, plans, editor, raw, shown, ticket] = await Promise.all([
-    loadSessionRsvps(session.id),
-    viewerId ? loadViewerPlans(viewerId) : null,
-    // PublicSession carries host names but no ids, so ownership is its own read.
-    viewerId ? editSessionAccess(session.id) : null,
-    // Host ids and shepherds aren't public, so clashes read the raw schedule.
-    viewerId ? loadRawSchedule() : null,
-    viewerId ? loadPublicSchedule() : null,
-    rsvpTicket(),
-  ]);
+  const [rsvps, plans, editor, raw, shown, ticket, factions] =
+    await Promise.all([
+      loadSessionRsvps(session.id),
+      viewerId ? loadViewerPlans(viewerId) : null,
+      // PublicSession carries host names but no ids, so ownership is its own read.
+      viewerId ? editSessionAccess(session.id) : null,
+      // Host ids and shepherds aren't public, so clashes read the raw schedule.
+      viewerId ? loadRawSchedule() : null,
+      viewerId ? loadPublicSchedule() : null,
+      rsvpTicket(),
+      hostFactions(session.id),
+    ]);
   // Only sessions this viewer can see, as loadMySessionIds does.
   const visible = new Set(shown?.sessions.map((s) => s.id));
   // The guest list stays server-side; the page only learns whether the
@@ -259,7 +289,18 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           <div className="flex items-center gap-2.5">
             <dt className="sr-only">Hosts</dt>
             <FaUserFriends aria-hidden className="shrink-0 text-[#eaa35a]" />
-            <dd>{hostNames(session)}</dd>
+            <dd className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              {session.hosts.map((host, i) => (
+                <span key={i} className="inline-flex items-center">
+                  {host.name}
+                  <FactionMedals
+                    factions={factions?.[i] ?? []}
+                    className="ml-1"
+                  />
+                  {i < session.hosts.length - 1 && ","}
+                </span>
+              ))}
+            </dd>
           </div>
         )}
         {cap !== null && (
