@@ -35,6 +35,10 @@
 //                              and names in src/v2/data/speaker-accounts.ts
 //                              (placeholder TODO ids skipped), each co-hosting
 //                              one to three published sessions
+//   team-<key>@metagame.games  the /team cards' people, with the ids and names
+//                              in src/v2/data/team-accounts.ts (TODO ids and
+//                              the speakers among them skipped); some have
+//                              faction levels, so /team shows medals
 // Plus 60 purchases from people with no account at all, and one API key for
 // admin: x-api-key mg_seed_metabot_000000000000000000000000000000000000000000000000000.
 //
@@ -45,6 +49,7 @@ import { readFileSync } from "node:fs";
 import { neon } from "@neondatabase/serverless";
 import { textDoc } from "../src/lib/notice-doc.ts";
 import { SPEAKER_ACCOUNTS } from "../src/v2/data/speaker-accounts.ts";
+import { TEAM_ACCOUNTS } from "../src/v2/data/team-accounts.ts";
 
 for (const file of [
   ".env.local",
@@ -255,6 +260,29 @@ const speakers = Object.entries(SPEAKER_ACCOUNTS)
     verified: true,
     i: 200 + i,
   }));
+// The team and advisors, under the ids the /team cards look up. Those who
+// are also featured speakers are in already; a few get faction levels.
+const TEAM_EMAIL = "team-%@metagame.games";
+const TEAM_LEVELS = {
+  benKarcher: { wizard: 2 },
+  johnBromels: { pirate: 3, alien: 1 },
+  jiskKopczynski: { pirate: 1 },
+  kaiGeffen: { wizard: 1, pirate: 1, alien: 1 },
+  brendanHurst: { alien: 2 },
+};
+const team = Object.entries(TEAM_ACCOUNTS)
+  .filter(
+    ([, { userId }]) =>
+      !userId.startsWith("TODO") && !speakers.some((s) => s.id === userId),
+  )
+  .map(([key, { name, userId }], i) => ({
+    id: userId,
+    name,
+    email: TEAM_EMAIL.replace("%", key.toLowerCase()),
+    verified: true,
+    levels: TEAM_LEVELS[key],
+    i: 240 + i,
+  }));
 const everyone = [
   ...Object.values(users).map((u) => ({
     ...u,
@@ -263,6 +291,7 @@ const everyone = [
   })),
   ...crowd,
   ...speakers,
+  ...team,
 ];
 // Bought a ticket, never made an account: most purchasers, early on.
 const ghosts = Array.from({ length: 60 }, (_, i) => ({

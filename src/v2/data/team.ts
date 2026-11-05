@@ -1,5 +1,6 @@
 import type { StaticImageData } from "next/image";
 import { HATS, type Hat } from "@/v2/hat-trick/hats";
+import { TEAM_ACCOUNTS } from "./team-accounts";
 import ben from "../../../public/images/team/ben.jpg";
 import brendan from "../../../public/images/team/brendan.jpg";
 import brian from "../../../public/images/team/brian.jpg";
@@ -19,9 +20,14 @@ import yemima from "../../../public/images/team/yemima.jpg";
 // /team in display order. TeamCarousel also reads TEAM but isn't mounted
 // anywhere right now. To add someone: add an entry and import their photo from
 // public/images/team/ (800px JPEGs). Omit `photo` for an initials placeholder,
-// `contactKey` if they'd rather not be contacted directly.
+// `contactKey` if they'd rather not be contacted directly. Spread their entry
+// from team-accounts.ts in for the name and account id, so their card can wear
+// the Megagame faction they've joined.
 export type Person = {
   name: string;
+  // Their account (team-accounts.ts, speaker-accounts.ts), for the Megagame
+  // faction medals on their card. Speakers always have one.
+  userId?: string;
   title: string;
   // When set, the title renders as a link (speaker bylines).
   titleUrl?: string;
@@ -35,47 +41,47 @@ export type Person = {
 
 export const TEAM: Person[] = [
   {
-    name: "Ricki Heicklen",
+    ...TEAM_ACCOUNTS.rickiHeicklen,
     title: "Game and Conference Master",
     photo: ricki,
     contactKey: "ricki",
   },
   {
-    name: "Ben Karcher",
+    ...TEAM_ACCOUNTS.benKarcher,
     title: "Chief of Staff",
     photo: ben,
     contactKey: "ben",
   },
   {
-    name: "Brian Smiley",
+    ...TEAM_ACCOUNTS.brianSmiley,
     title: "Operations Lead",
     photo: brian,
     contactKey: "brian",
   },
   {
-    name: "Yemima Morris",
+    ...TEAM_ACCOUNTS.yemimaMorris,
     title: "Volunteer Coordinator",
     photo: yemima,
     contactKey: "yemima",
   },
-  { name: "John Bromels", title: "Megagame Lead", photo: john },
+  { ...TEAM_ACCOUNTS.johnBromels, title: "Megagame Lead", photo: john },
   {
-    name: "Jisk Kopczynski",
+    ...TEAM_ACCOUNTS.jiskKopczynski,
     title: "Megagame Chief of Staff",
     photo: jisk,
     hats: [HATS.pirate],
   },
   {
-    name: "David Holt",
+    ...TEAM_ACCOUNTS.davidHolt,
     title: "Marketing & Sponsorships",
     photo: davidHolt,
     contactKey: "david",
   },
-  { name: "Sparr Risher", title: "Generalist", photo: sparr },
-  { name: "Kai Geffen", title: "Generalist", photo: kai },
-  { name: "Michael Sheely", title: "Generalist", photo: michael },
+  { ...TEAM_ACCOUNTS.sparrRisher, title: "Generalist", photo: sparr },
+  { ...TEAM_ACCOUNTS.kaiGeffen, title: "Generalist", photo: kai },
+  { ...TEAM_ACCOUNTS.michaelSheely, title: "Generalist", photo: michael },
   {
-    name: "Damon Pourtahmaseb-Sasi",
+    ...TEAM_ACCOUNTS.damonPourtahmasebSasi,
     title: "Community Health Liaison",
     photo: damon,
     contactKey: "damon",
@@ -84,11 +90,11 @@ export const TEAM: Person[] = [
 
 export const ADVISORS: Person[] = [
   {
-    name: "Brendan Hurst",
+    ...TEAM_ACCOUNTS.brendanHurst,
     title: "Advisor",
     photo: brendan,
     hats: [HATS.sequin],
   },
-  { name: "Tommy Honton", title: "Advisor", photo: tommy },
-  { name: "Patrick McKenzie", title: "Advisor", photo: patrick },
+  { ...TEAM_ACCOUNTS.tommyHonton, title: "Advisor", photo: tommy },
+  { ...TEAM_ACCOUNTS.patrickMcKenzie, title: "Advisor", photo: patrick },
 ];
